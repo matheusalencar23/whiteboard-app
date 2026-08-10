@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import "./style.css";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { useCanvasStore } from "../../store/useCanvasStore";
 import { useCanvasEvents } from "../../hooks/useCanvasEvents";
 import { render } from "../../lib/canvas/engine";
 import { panBy, zoomAtScreenPoint } from "../../lib/canvas/camera";
+import { TextEditorOverlay } from "../TextEditor/TextEditorOverlay";
+import "./style.css";
 
 const PAN_SPEED = 1.5;
 
@@ -22,8 +23,12 @@ export function Canvas() {
     cursor,
   } = useCanvasStore();
 
-  const { handlePointerDown, handlePointerMove, handlePointerUp } =
-    useCanvasEvents();
+  const {
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+    handleDoubleClick,
+  } = useCanvasEvents();
 
   const [dimensions, setDimensions] = useState({
     width: window.innerWidth,
@@ -82,14 +87,18 @@ export function Canvas() {
   }, [cursor]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="canvas"
-      width={dimensions.width}
-      height={dimensions.height}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      onPointerMove={handlePointerMove}
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        className="canvas"
+        width={dimensions.width}
+        height={dimensions.height}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerMove={handlePointerMove}
+        onDoubleClick={handleDoubleClick}
+      />
+      <TextEditorOverlay />
+    </>
   );
 }

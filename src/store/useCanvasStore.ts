@@ -21,6 +21,11 @@ interface CanvasStore {
   deleteSelectedElements: () => void;
   toggleElementId: (id: string) => void;
 
+  editingElementId: string | null;
+  editingBeforeSnapshot: CanvasElement[];
+  startEditingSession: (id: string, before: CanvasElement[]) => void;
+  endEditingSession: () => void;
+
   selectionBox: { start: Point; current: Point } | null;
   setSelectionBox: (box: { start: Point; current: Point } | null) => void;
 
@@ -76,6 +81,13 @@ export const useCanvasStore = create<CanvasStore>((set) => ({
         ? state.selectedElementIds.filter((existingId) => existingId !== id)
         : [...state.selectedElementIds, id],
     })),
+
+  editingElementId: null,
+  editingBeforeSnapshot: [],
+  startEditingSession: (id, before) =>
+    set({ editingElementId: id, editingBeforeSnapshot: before }),
+  endEditingSession: () =>
+    set({ editingElementId: null, editingBeforeSnapshot: [] }),
 
   selectionBox: null,
   setSelectionBox: (box) => set({ selectionBox: box }),

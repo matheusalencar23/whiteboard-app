@@ -26,6 +26,12 @@ import {
   getArrowGeometry,
 } from "./shapes/arrow";
 import { toShapeSpace } from "./coordinates";
+import {
+  drawText,
+  getTextBounds,
+  getTextGeometry,
+  textContainsPoint,
+} from "./shapes/text";
 
 export const MIN_DRAW_SIZE = 2;
 
@@ -43,6 +49,8 @@ export function drawElement(
       return drawLine(el, rc, ctx);
     case "arrow":
       return drawArrow(el, rc, ctx);
+    case "text":
+      return drawText(el, ctx);
   }
 }
 export function elementContainsPoint(el: CanvasElement, point: Point): boolean {
@@ -58,6 +66,8 @@ export function elementContainsPoint(el: CanvasElement, point: Point): boolean {
       return lineContainsPoint(el, testPoint);
     case "arrow":
       return arrowContainsPoint(el, testPoint);
+    case "text":
+      return textContainsPoint(el, testPoint);
   }
 }
 
@@ -71,6 +81,8 @@ export function getElementGeometry(el: CanvasElement): Bounds {
       return getLineGeometry(el);
     case "arrow":
       return getArrowGeometry(el);
+    case "text":
+      return getTextGeometry(el);
   }
 }
 
@@ -84,6 +96,8 @@ export function getElementBounds(el: CanvasElement): Bounds {
       return getLineBounds(el);
     case "arrow":
       return getArrowBounds(el);
+    case "text":
+      return getTextBounds(el);
   }
 }
 
@@ -156,6 +170,17 @@ export function applyBoundsToElement(
       x: originX,
       y: originY,
       points: mapped.map((p) => ({ x: p.x - originX, y: p.y - originY })),
+    });
+  }
+
+  if (el.type === "text") {
+    const scale = newBounds.height / (oldBounds.height || 1);
+    return cloneElement(el, {
+      x: newBounds.x,
+      y: newBounds.y,
+      width: newBounds.width,
+      height: newBounds.height,
+      fontSize: Math.max(4, el.fontSize * scale),
     });
   }
 

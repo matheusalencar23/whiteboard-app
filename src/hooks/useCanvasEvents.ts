@@ -7,6 +7,8 @@ import { useResizeMode } from "./useResizeMode";
 import { useRotationMode } from "./useRotationMode";
 import { useSelectioMode } from "./useSelectionMode";
 import { type CanvasElement } from "../lib/geometry/types";
+import { useTextMode } from "./useTextMode";
+import { elementContainsPoint } from "../lib/geometry/elementOperations";
 
 export function useCanvasEvents() {
   const { camera, activeTool } = useCanvasStore();
@@ -16,6 +18,7 @@ export function useCanvasEvents() {
   const moveMode = useMoveMode();
   const resizeMode = useResizeMode();
   const rotationMode = useRotationMode();
+  const textMode = useTextMode();
 
   function worldPointFromPointerEvent(event: React.PointerEvent) {
     return screenToWorld(camera, {
@@ -25,9 +28,16 @@ export function useCanvasEvents() {
   }
 
   function handlePointerDown(event: React.PointerEvent) {
-    beforeElements.current = useCanvasStore.getState().elements;
+    if (useCanvasStore.getState().editingElementId) return;
 
+    beforeElements.current = useCanvasStore.getState().elements;
     const worldPoint = worldPointFromPointerEvent(event);
+
+    if (activeTool === "text") {
+      event.preventDefault();
+      textMode.startCreating(worldPoint);
+      return;
+    }
 
     if (activeTool === "selection") {
       if (!event.shiftKey) {
@@ -49,6 +59,8 @@ export function useCanvasEvents() {
   }
 
   function handlePointerMove(event: React.PointerEvent) {
+    if (useCanvasStore.getState().editingElementId) return;
+
     const worldPoint = worldPointFromPointerEvent(event);
 
     const anyGestureActive =
@@ -86,6 +98,8 @@ export function useCanvasEvents() {
   }
 
   function handlePointerUp() {
+    if (useCanvasStore.getState().editingElementId) return;
+
     drawMode.stopDrawing();
     selectionMode.stopSelection();
     moveMode.stopMoving();
@@ -95,5 +109,25 @@ export function useCanvasEvents() {
     useCanvasStore.getState().commitHistory(beforeElements.current);
   }
 
-  return { handlePointerDown, handlePointerMove, handlePointerUp };
+  function handleDoubleClick(event: React.PointerEvent | React.MouseEvent) {
+    if (activeTool !== "selection") return;
+
+    const worldPoint = worldPointFromPointerEvent(event as React.PointerEvent);
+    const { elements } = useCanvasStore.getState();
+
+    for (let i = elements.length - 1; i >= 0; i--) {
+      const el = elements[i];
+      if (el.type === "text" && elementContainsPoint(el, worldPoint)) {
+        textMode.startEditingExisting(el.id);
+        return;
+      }
+    }
+  }
+
+  return {
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+    handleDoubleClick,
+  };
 }

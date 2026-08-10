@@ -8,7 +8,9 @@ import type {
   LineElement,
   Point,
   RectangleElement,
+  TextElement,
 } from "./types";
+import { measureText } from "./shapes/text";
 
 interface NewElementInput {
   x: number;
@@ -35,6 +37,8 @@ const DEFAULT_STYLE = {
   fill: null as string | null,
   fillStyle: "hachure",
 };
+
+const DEFAULT_FONT_SIZE = 20;
 
 export function createElement(
   tool: DrawingTool,
@@ -111,6 +115,25 @@ export function createElement(
         startArrowhead: input.startArrowhead ?? "none",
         endArrowhead: input.endArrowhead ?? "triangle",
       } satisfies ArrowElement;
+    case "text": {
+      const { width, height } = measureText("", DEFAULT_FONT_SIZE);
+      return {
+        id,
+        type: "text",
+        angle,
+        seed,
+        x: input.x,
+        y: input.y,
+        width,
+        height,
+        stroke: style.stroke,
+        strokeWidth: style.strokeWidth,
+        roughness: style.roughness,
+        bowing: style.bowing,
+        text: "",
+        fontSize: DEFAULT_FONT_SIZE,
+      } satisfies TextElement;
+    }
   }
 }
 

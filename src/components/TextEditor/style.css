@@ -1,0 +1,12 @@
+.text-editor-overlay {
+  position: fixed;
+  border: none;
+  outline: none;
+  background: transparent;
+  resize: none;
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
+  line-height: 1.25;
+  white-space: pre;
+}

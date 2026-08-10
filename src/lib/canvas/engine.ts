@@ -42,9 +42,15 @@ export function render(
   drawGrid(ctx, width, height, camera);
 
   const rc = rough.canvas(canvas);
-  elements.forEach((el) => drawElement(el, rc, ctx));
+  
+  const { selectionBox, selectedElementIds, editingElementId } =
+    useCanvasStore.getState();
 
-  const { selectionBox, selectedElementIds } = useCanvasStore.getState();
+  elements.forEach((el) => {
+    if (el.id === editingElementId) return;
+    drawElement(el, rc, ctx);
+  });
+
   if (selectionBox) {
     drawSelectionRect(ctx, camera.zoom, selectionBox);
   }

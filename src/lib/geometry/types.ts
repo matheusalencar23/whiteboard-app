@@ -53,6 +53,14 @@ export interface EllipseElement extends ElementBase {
   fillStyle: string;
 }
 
+export interface TextElement extends ElementBase {
+  type: "text";
+  width: number;
+  height: number;
+  text: string;
+  fontSize: number;
+}
+
 export interface LineElement extends LinearElementBase {
   type: "line";
 }
@@ -69,4 +77,5 @@ export type CanvasElement =
   | RectangleElement
   | EllipseElement
   | LineElement
-  | ArrowElement;
+  | ArrowElement
+  | TextElement;

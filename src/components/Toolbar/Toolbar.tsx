@@ -2,11 +2,11 @@ import type { Tool } from "../../lib/canvas/types";
 import { useCanvasStore } from "../../store/useCanvasStore";
 import { FaMousePointer } from "react-icons/fa";
 import { RiRectangleLine } from "react-icons/ri";
-import "./style.css";
 import type { IconType } from "react-icons";
 import { IoEllipseOutline } from "react-icons/io5";
-import { TbArrowLeftCircle, TbLine } from "react-icons/tb";
+import { TbArrowLeftCircle, TbLetterT, TbLine } from "react-icons/tb";
 // import { exportToJsonFile, importFromJsonFile } from "../../lib/persistence/fileTransfer";
+import "./style.css";
 
 const tools: { name: Tool; icon: IconType; style?: React.CSSProperties }[] = [
   {
@@ -32,12 +32,22 @@ const tools: { name: Tool; icon: IconType; style?: React.CSSProperties }[] = [
       transform: "rotate(135deg)",
     },
   },
+  {
+    name: "text",
+    icon: TbLetterT,
+  },
 ];
 
 export function Toolbar() {
   const { activeTool, setTool, setSelectedElementIds } = useCanvasStore();
 
   function selectTool(tool: Tool) {
+    const { editingElementId } = useCanvasStore.getState();
+
+    if (editingElementId) {
+      (document.activeElement as HTMLElement)?.blur();
+    }
+
     setSelectedElementIds([]);
     setTool(tool);
   }

@@ -1,62 +1,51 @@
 import { getRotatedEnvelope } from "../envelope";
 import type { Bounds, Point, TextElement } from "../types";
 
-export const FONT_FAMILY = "'Caveat', sans-serif";
+export const FONT_FAMILY = "'Caveat', cursive";
 export const LINE_HEIGHT_RATIO = 1.25;
 const MIN_WIDTH = 4;
 
-let measureCtx: CanvasRenderingContext2D | null = null;
+let measurer: HTMLDivElement | null = null;
 
-/** Contexto 2D offscreen, reaproveitado só para medir texto (nunca desenhado). */
-function getMeasureContext(): CanvasRenderingContext2D {
-  if (!measureCtx) {
-    measureCtx = document.createElement("canvas").getContext("2d")!;
-  }
+function getMeasurer() {
+  if (measurer) return measurer;
 
-  return measureCtx;
+  measurer = document.createElement("div");
+  Object.assign(measurer.style, {
+    position: "fixed",
+    left: "-9999px",
+    top: "-9999px",
+    visibility: "hidden",
+    pointerEvents: "none",
+    width: "max-content",
+    whiteSpace: "pre",
+    fontFamily: FONT_FAMILY,
+    lineHeight: String(LINE_HEIGHT_RATIO),
+  });
+  document.body.append(measurer);
+  return measurer;
 }
 
-/** Calcula width/height necessários para conter `text` no tamanho de fonte dado. */
+/** Mede pelo DOM, a mesma plataforma responsável por exibir a fonte web. */
 export function measureText(
   text: string,
   fontSize: number,
 ): { width: number; height: number } {
-  const ctx = getMeasureContext();
-  ctx.font = `${fontSize}px ${FONT_FAMILY}`;
+  const element = getMeasurer();
+  const lines = (text || " ").split("\n");
+  const fragment = document.createDocumentFragment();
 
-  const lines = text.split("\n");
-  const width = Math.max(
-    MIN_WIDTH,
-    ...lines.map((line) => ctx.measureText(line).width),
-  );
-  const height = lines.length * fontSize * LINE_HEIGHT_RATIO;
-
-  return { width, height };
-}
-
-export function drawText(el: TextElement, ctx: CanvasRenderingContext2D) {
-  const cx = el.x + el.width / 2;
-  const cy = el.y + el.height / 2;
-
-  ctx.save();
-
-  if (el.angle !== 0) {
-    ctx.translate(cx, cy);
-    ctx.rotate((el.angle * Math.PI) / 180);
-    ctx.translate(-cx, -cy);
-  }
-
-  ctx.font = `${el.fontSize}px ${FONT_FAMILY}`;
-  ctx.fillStyle = el.stroke;
-  ctx.textBaseline = "top";
-
-  const lineHeight = el.fontSize * LINE_HEIGHT_RATIO;
-
-  el.text.split("\n").forEach((line, i) => {
-    ctx.fillText(line, el.x, el.y + i * lineHeight);
+  lines.forEach((line, index) => {
+    // O espaço de largura zero mantém uma line box para linhas vazias,
+    // inclusive a linha criada por uma quebra final ("texto\\n").
+    fragment.append(document.createTextNode(line || "\u200B"));
+    if (index < lines.length - 1) fragment.append(document.createElement("br"));
   });
 
-  ctx.restore();
+  element.replaceChildren(fragment);
+  element.style.fontSize = `${fontSize}px`;
+  const { width, height } = element.getBoundingClientRect();
+  return { width: Math.max(width, MIN_WIDTH), height };
 }
 
 export function textContainsPoint(el: TextElement, point: Point): boolean {

@@ -27,7 +27,6 @@ import {
 } from "./shapes/arrow";
 import { toShapeSpace } from "./coordinates";
 import {
-  drawText,
   getTextBounds,
   getTextGeometry,
   measureText,
@@ -53,7 +52,7 @@ export function drawElement(
     case "arrow":
       return drawArrow(el, rc, ctx);
     case "text":
-      return drawText(el, ctx);
+      return;
   }
 }
 export function elementContainsPoint(el: CanvasElement, point: Point): boolean {

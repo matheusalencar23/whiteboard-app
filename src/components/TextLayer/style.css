@@ -3,3 +3,17 @@
   inset: 0;
   pointer-events: none;
 }
+
+.text-element {
+  display: block;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  white-space: pre;
+  overflow: visible;
+  transform-origin: center;
+}
+
+.text-display {
+  position: fixed;
+}

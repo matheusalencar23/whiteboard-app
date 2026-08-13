@@ -1,8 +1,13 @@
+import { useEffect } from "react";
 import { worldToScreen } from "../../lib/canvas/camera";
-import { FONT_FAMILY, LINE_HEIGHT_RATIO } from "../../lib/geometry/shapes/text";
+import {
+  FONT_FAMILY,
+  LINE_HEIGHT_RATIO,
+  measureText,
+} from "../../lib/geometry/shapes/text";
 import type { TextElement } from "../../lib/geometry/types";
 import { useCanvasStore } from "../../store/useCanvasStore";
-import "../TextEditor/style.css";
+import { cloneElement } from "../../lib/geometry/createElement";
 import "./style.css";
 
 function TextDisplay({ element }: { element: TextElement }) {
@@ -25,14 +30,47 @@ function TextDisplay({ element }: { element: TextElement }) {
         lineHeight: LINE_HEIGHT_RATIO,
       }}
     >
-      {element.text}
+      {renderText(element.text)}
     </div>
   );
+}
+
+/** Mantém uma última linha vazia visível após uma quebra final. */
+function renderText(text: string) {
+  return text.endsWith("\n") ? `${text}\u200B` : text || "\u200B";
 }
 
 /** Camada DOM dos textos; eventos passam pelo texto para o canvas. */
 export function TextLayer() {
   const { elements, editingElementId } = useCanvasStore();
+
+  useEffect(() => {
+    let disposed = false;
+
+    document.fonts.ready.then(() => {
+      if (disposed) return;
+
+      const { elements: currentElements, updateElement } =
+        useCanvasStore.getState();
+      currentElements.forEach((element) => {
+        if (element.type !== "text") return;
+
+        const measured = measureText(element.text, element.fontSize);
+        if (
+          Math.abs(measured.width - element.width) < 0.01 &&
+          Math.abs(measured.height - element.height) < 0.01
+        ) {
+          return;
+        }
+
+        updateElement(element.id, cloneElement(element, measured));
+      });
+    });
+
+    return () => {
+      disposed = true;
+    };
+  }, []);
 
   return (
     <div className="text-layer">

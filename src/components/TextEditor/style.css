@@ -1,12 +1,27 @@
-.text-editor-overlay {
+.text-element {
+  display: block;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  white-space: pre;
+  overflow: visible;
+  transform-origin: center;
+}
+
+.text-display {
   position: fixed;
+}
+
+.text-editor-overlay {
   border: none;
   outline: none;
   background: transparent;
-  resize: none;
-  overflow: hidden;
-  padding: 0;
-  margin: 0;
-  line-height: 1.25;
-  white-space: pre;
+  pointer-events: auto;
+}
+
+/* O contenteditable pode criar nós ao pressionar Enter. */
+.text-editor-overlay * {
+  font: inherit;
+  color: inherit;
+  line-height: inherit;
 }

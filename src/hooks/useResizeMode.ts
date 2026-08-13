@@ -54,7 +54,7 @@ export function useResizeMode() {
         handle,
         worldPoint,
       );
-      updateElement(el.id, applyBoundsToElement(el, oldGeometry, newBounds));
+      updateElement(el.id, applyBoundsToElement(el, oldGeometry, newBounds, handle));
       return;
     }
 
@@ -68,7 +68,7 @@ export function useResizeMode() {
     resized.forEach(({ id, bounds: newBounds }) => {
       const el = snapshot.find((e) => e.id === id)!;
       const oldGeometry = getElementGeometry(el);
-      updateElement(id, applyBoundsToElement(el, oldGeometry, newBounds));
+      updateElement(id, applyBoundsToElement(el, oldGeometry, newBounds, handle));
     });
   }
 

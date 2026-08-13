@@ -1,5 +1,4 @@
-import { cloneElement, createElement } from "../lib/geometry/createElement";
-import { measureText } from "../lib/geometry/shapes/text";
+import { createElement } from "../lib/geometry/createElement";
 import type { Point } from "../lib/geometry/types";
 import { useCanvasStore } from "../store/useCanvasStore";
 
@@ -20,13 +19,11 @@ export function useTextMode() {
   }
 
   function finishEditing(id: string, text: string) {
-    console.trace("[text] finishEditing chamado com text:", JSON.stringify(text));
     const {
       elements,
       editingBeforeSnapshot,
       endEditingSession,
       deleteElement,
-      updateElement,
       setSelectedElementIds,
       commitHistory,
     } = useCanvasStore.getState();
@@ -36,16 +33,54 @@ export function useTextMode() {
     if (!el || el.type !== "text") return;
 
     if (text.trim() === "") {
-      deleteElement(id);
-      commitHistory(editingBeforeSnapshot);
+      // Um texto novo e vazio não é uma ação do documento. Para um texto já
+      // existente, manter o conteúdo anterior é menos surpreendente do que
+      // apagá-lo ao abrir o editor e sair sem digitar nada.
+      const previous = editingBeforeSnapshot.find((element) => element.id === id);
+      if (!previous) {
+        deleteElement(id);
+      } else {
+        useCanvasStore.getState().updateElement(id, previous);
+        setSelectedElementIds([id]);
+      }
       return;
     }
 
-    const { width, height } = measureText(text, el.fontSize);
-    updateElement(id, cloneElement(el, { text, width, height }));
+    const previous = editingBeforeSnapshot.find((element) => element.id === id);
+    if (previous?.type === "text" && previous.text === text) {
+      setSelectedElementIds([id]);
+      return;
+    }
+
+    // Durante a edição o elemento já é atualizado a cada tecla, para que o
+    // Canvas seja a única camada que desenha o texto. Aqui apenas fechamos a
+    // transação no histórico.
     setSelectedElementIds([id]);
     commitHistory(editingBeforeSnapshot);
   }
 
-  return { startCreating, startEditingExisting, finishEditing };
+  function cancelEditing(id: string) {
+    const {
+      editingBeforeSnapshot,
+      deleteElement,
+      endEditingSession,
+      setSelectedElementIds,
+      updateElement,
+    } = useCanvasStore.getState();
+
+    // O conteúdo é atualizado durante a edição para o Canvas poder desenhá-lo;
+    // cancelar restaura o snapshot original sem criar histórico.
+    if (!editingBeforeSnapshot.some((element) => element.id === id)) {
+      deleteElement(id);
+      setSelectedElementIds([]);
+    } else {
+      const previous = editingBeforeSnapshot.find(
+        (element) => element.id === id,
+      );
+      if (previous) updateElement(id, previous);
+    }
+    endEditingSession();
+  }
+
+  return { startCreating, startEditingExisting, finishEditing, cancelEditing };
 }

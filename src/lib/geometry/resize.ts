@@ -194,7 +194,7 @@ function resolveUniformScale(
 }
 
 /** Canto/aresta de `bounds` oposto a `handle` — o ponto que fica fixo durante o resize. */
-function getAnchorPoint(bounds: Bounds, handle: HandleType): Point {
+export function getAnchorPoint(bounds: Bounds, handle: HandleType): Point {
   const { x, y, width, height } = bounds;
   switch (handle) {
     case "se":
@@ -225,4 +225,49 @@ function normalizeBounds(b: Bounds): Bounds {
   const x = b.width < 0 ? b.x + b.width : b.x;
   const y = b.height < 0 ? b.y + b.height : b.y;
   return { x, y, width, height };
+}
+
+/** Ponto de `bounds` sob o próprio handle (o canto/aresta sendo arrastado). */
+export function getHandlePoint(bounds: Bounds, handle: HandleType): Point {
+  const { x, y, width, height } = bounds;
+  switch (handle) {
+    case "nw":
+      return { x, y };
+    case "n":
+      return { x: x + width / 2, y };
+    case "ne":
+      return { x: x + width, y };
+    case "e":
+      return { x: x + width, y: y + height / 2 };
+    case "se":
+      return { x: x + width, y: y + height };
+    case "s":
+      return { x: x + width / 2, y: y + height };
+    case "sw":
+      return { x, y: y + height };
+    case "w":
+      return { x, y: y + height / 2 };
+    default:
+      return { x: x + width / 2, y: y + height / 2 };
+  }
+}
+
+/** Reconstrói x/y de uma caixa a partir do anchor fixo, do handle arrastado e do novo tamanho. */
+export function resolveBoxPosition(
+  anchor: Point,
+  handle: HandleType,
+  width: number,
+  height: number,
+): Point {
+  const x = handle.includes("w")
+    ? anchor.x - width
+    : handle.includes("e")
+      ? anchor.x
+      : anchor.x - width / 2;
+  const y = handle.includes("n")
+    ? anchor.y - height
+    : handle.includes("s")
+      ? anchor.y
+      : anchor.y - height / 2;
+  return { x, y };
 }

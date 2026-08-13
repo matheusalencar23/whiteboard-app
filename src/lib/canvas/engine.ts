@@ -43,11 +43,10 @@ export function render(
 
   const rc = rough.canvas(canvas);
   
-  const { selectionBox, selectedElementIds, editingElementId } =
-    useCanvasStore.getState();
+  const { selectionBox, selectedElementIds } = useCanvasStore.getState();
 
   elements.forEach((el) => {
-    if (el.id === editingElementId) return;
+    if (el.type === "text") return;
     drawElement(el, rc, ctx);
   });
 

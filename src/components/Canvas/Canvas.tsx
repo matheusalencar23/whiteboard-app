@@ -5,6 +5,7 @@ import { useCanvasEvents } from "../../hooks/useCanvasEvents";
 import { render } from "../../lib/canvas/engine";
 import { panBy, zoomAtScreenPoint } from "../../lib/canvas/camera";
 import { TextEditorOverlay } from "../TextEditor/TextEditorOverlay";
+import { TextLayer } from "../TextLayer/TextLayer";
 import "./style.css";
 
 const PAN_SPEED = 1.5;
@@ -21,6 +22,7 @@ export function Canvas() {
     selectedElementIds,
     selectionBox,
     cursor,
+    editingElementId,
   } = useCanvasStore();
 
   const {
@@ -48,7 +50,14 @@ export function Canvas() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     render(canvas, elements, camera);
-  }, [elements, camera, dimensions, selectedElementIds, selectionBox]);
+  }, [
+    elements,
+    camera,
+    dimensions,
+    selectedElementIds,
+    selectionBox,
+    editingElementId,
+  ]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -98,6 +107,7 @@ export function Canvas() {
         onPointerMove={handlePointerMove}
         onDoubleClick={handleDoubleClick}
       />
+      <TextLayer />
       <TextEditorOverlay />
     </>
   );

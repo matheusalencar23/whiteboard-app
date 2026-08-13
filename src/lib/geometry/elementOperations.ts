@@ -1,5 +1,5 @@
 import type { RoughCanvas } from "roughjs/bin/canvas";
-import type { Bounds, CanvasElement, Point } from "./types";
+import type { Bounds, CanvasElement, HandleType, Point } from "./types";
 import {
   drawRectangle,
   getRectangleBounds,
@@ -30,8 +30,11 @@ import {
   drawText,
   getTextBounds,
   getTextGeometry,
+  measureText,
   textContainsPoint,
 } from "./shapes/text";
+import { getAnchorPoint, getHandlePoint } from "./resize";
+import { rotatePoint } from "./transform";
 
 export const MIN_DRAW_SIZE = 2;
 
@@ -149,6 +152,7 @@ export function applyBoundsToElement(
   el: CanvasElement,
   oldBounds: Bounds,
   newBounds: Bounds,
+  handle: HandleType,
 ): CanvasElement {
   if (el.type === "line" || el.type === "arrow") {
     const scaleX = newBounds.width / (oldBounds.width || 1);
@@ -174,14 +178,48 @@ export function applyBoundsToElement(
   }
 
   if (el.type === "text") {
-    const scale = newBounds.height / (oldBounds.height || 1);
-    return cloneElement(el, {
-      x: newBounds.x,
-      y: newBounds.y,
-      width: newBounds.width,
-      height: newBounds.height,
-      fontSize: Math.max(4, el.fontSize * scale),
-    });
+    const anchor = getAnchorPoint(oldBounds, handle);
+    const originalHandlePoint = getHandlePoint(oldBounds, handle);
+    const newHandlePoint = getHandlePoint(newBounds, handle);
+
+    const originalDistance =
+      Math.hypot(
+        originalHandlePoint.x - anchor.x,
+        originalHandlePoint.y - anchor.y,
+      ) || 1;
+    const newDistance = Math.hypot(
+      newHandlePoint.x - anchor.x,
+      newHandlePoint.y - anchor.y,
+    );
+
+    const scale = newDistance / originalDistance;
+    const newFontSize = Math.max(4, el.fontSize * scale);
+    const { width, height } = measureText(el.text, newFontSize);
+
+    // `newBounds` descreve a caixa local calculada pelo resize. Para texto
+    // rotacionado, reconstruir x/y diretamente nela deslocava o ponto oposto
+    // ao handle. Mantemos esse ponto fixo também no espaço rotacionado.
+    const resizedCenter = {
+      x: newBounds.x + newBounds.width / 2,
+      y: newBounds.y + newBounds.height / 2,
+    };
+    const resizedAnchor = getAnchorPoint(newBounds, handle);
+    const fixedAnchor = rotatePoint(resizedAnchor, resizedCenter, el.angle);
+    const localAnchor = getAnchorPoint({ x: 0, y: 0, width, height }, handle);
+    const localCenter = { x: width / 2, y: height / 2 };
+    const rotatedAnchorOffset = rotatePoint(
+      localAnchor,
+      localCenter,
+      el.angle,
+    );
+    const newCenter = {
+      x: fixedAnchor.x - (rotatedAnchorOffset.x - localCenter.x),
+      y: fixedAnchor.y - (rotatedAnchorOffset.y - localCenter.y),
+    };
+    const x = newCenter.x - width / 2;
+    const y = newCenter.y - height / 2;
+
+    return cloneElement(el, { x, y, width, height, fontSize: newFontSize });
   }
 
   return cloneElement(el, {

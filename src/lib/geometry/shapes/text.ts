@@ -1,8 +1,8 @@
 import { getRotatedEnvelope } from "../envelope";
 import type { Bounds, Point, TextElement } from "../types";
 
-export const FONT_FAMILY = "Excalifont, 'Segoe Print', sans-serif";
-const LINE_HEIGHT_RATIO = 1.25;
+export const FONT_FAMILY = "'Caveat', sans-serif";
+export const LINE_HEIGHT_RATIO = 1.25;
 const MIN_WIDTH = 4;
 
 let measureCtx: CanvasRenderingContext2D | null = null;

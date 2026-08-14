@@ -1,67 +1,58 @@
-// import { useSelectedElements } from "../../../hooks/useSelectedElements";
-// import { useCanvasStore } from "../../../store/useCanvasStore";
-// import { Divider } from "../../../ui/Divider/Divider";
-// import { cloneElement } from "../../../lib/geometry/createElement";
-// import { BlockPicker, type ColorResult } from "react-color";
-// import "./style.css";
-// import { useState } from "react";
+import { useState } from "react";
+import { useElementStyle } from "../../../hooks/useElementStyle";
+import { BlockPicker, type ColorResult } from "react-color";
+import { Divider } from "../../../ui/Divider/Divider";
+import "./style.css";
 
-// const STROKE_COLORS = ["#000000", "#ff0000", "#00ff00", "#0000ff"];
+const STROKE_COLORS = ["#000000", "#e03131", "#2f9e44", "#1971c2", "#f08c00"];
 
-// export function StrokeColorSelection() {
-//   const { updateElement } = useCanvasStore();
-//   const { selected, getSelectedPropertyValue } = useSelectedElements();
-//   const selectedStrokeColor = getSelectedPropertyValue("stroke") ?? "transparent";
+export function StrokeColorSelection() {
+  const { property, apply, commit } = useElementStyle("stroke");
+  const [showPicker, setShowPicker] = useState(false);
 
-//   const [showPicker, setShowPicker] = useState(false);
+  function changeColor(color: string) {
+    apply(color);
+    commit();
+  }
 
-//   function changeStrokeColor(color: string) {
-//     selected.forEach((el) =>
-//       updateElement(el.id, cloneElement(el, { stroke: color })),
-//     );
-//   }
+  function handlePickerChange(color: ColorResult) {
+    changeColor(color.hex);
+  }
 
-//   function handleColorPicker(color: ColorResult) {
-//     changeStrokeColor(color.hex);
-//     setShowPicker(false);
-//   }
-
-//   return (
-//     <>
-//       <div className="stroke-color-container">
-//         {STROKE_COLORS.map((color) => (
-//           <div
-//             key={color}
-//             className={`stroke-color-item ${color === selectedStrokeColor ? "active" : ""}`}
-//           >
-//             <button
-//               className="stroke-color-button"
-//               onClick={() => changeStrokeColor(color)}
-//               style={{ backgroundColor: color }}
-//             ></button>
-//           </div>
-//         ))}
-//         <Divider />
-//         <div
-//           className={`stroke-color-item ${selectedStrokeColor ? "active" : ""}`}
-//         >
-//           <button
-//             className="stroke-color-button"
-//             onClick={() => setShowPicker((value) => !value)}
-//             style={{ backgroundColor: selectedStrokeColor || "transparent" }}
-//           ></button>
-//         </div>
-//         {showPicker && (
-//           <div className="stroke-color-picker">
-//             <BlockPicker
-//               width="300px"
-//               triangle="hide"
-//               color={selectedStrokeColor || "transparent"}
-//               onChange={handleColorPicker}
-//             />
-//           </div>
-//         )}
-//       </div>
-//     </>
-//   );
-// }
+  return (
+    <div className="stroke-color-container">
+      {STROKE_COLORS.map((color) => (
+        <div
+          key={color}
+          className={`stroke-color-item ${!property.mixed && property.value === color ? "active" : ""}`}
+        >
+          <button
+            className="stroke-color-button"
+            onClick={() => changeColor(color)}
+            style={{ backgroundColor: color }}
+          />
+        </div>
+      ))}
+      <Divider />
+      <div className="stroke-color-item active">
+        <button
+          className="stroke-color-button"
+          onClick={() => setShowPicker((v) => !v)}
+          style={{
+            backgroundColor: property.mixed ? "transparent" : property.value,
+          }}
+        />
+      </div>
+      {showPicker && (
+        <div className="stroke-color-picker">
+          <BlockPicker
+            width="300px"
+            triangle="hide"
+            color={property.mixed ? "#000000" : property.value}
+            onChange={handlePickerChange}
+          />
+        </div>
+      )}
+    </div>
+  );
+}

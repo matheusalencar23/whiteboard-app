@@ -35,12 +35,10 @@ function TextDisplay({ element }: { element: TextElement }) {
   );
 }
 
-/** Mantém uma última linha vazia visível após uma quebra final. */
 function renderText(text: string) {
   return text.endsWith("\n") ? `${text}\u200B` : text || "\u200B";
 }
 
-/** Camada DOM dos textos; eventos passam pelo texto para o canvas. */
 export function TextLayer() {
   const { elements, editingElementId } = useCanvasStore();
 

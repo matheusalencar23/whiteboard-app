@@ -1,11 +1,12 @@
+
 import { useEffect } from "react";
 import "./App.css";
 import { Canvas } from "./components/Canvas/Canvas";
-// import { StylePanel } from "./components/StylePanel/StylePanel";
 import { Toolbar } from "./components/Toolbar/Toolbar";
 import { useAutosave } from "./hooks/useAutosave";
 import { useCanvasStore } from "./store/useCanvasStore";
 import { loadFromLocalStorage } from "./lib/persistence/storage";
+import { StylePanel } from "./components/StylePanel/StylePanel";
 
 function App() {
   const { setElements } = useCanvasStore();
@@ -20,9 +21,10 @@ function App() {
     <>
       <Toolbar />
       <Canvas />
-      {/* <StylePanel /> */}
+      <StylePanel />
     </>
   );
 }
+
 
 export default App;

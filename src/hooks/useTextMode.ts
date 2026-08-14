@@ -33,9 +33,6 @@ export function useTextMode() {
     if (!el || el.type !== "text") return;
 
     if (text.trim() === "") {
-      // Um texto novo e vazio não é uma ação do documento. Para um texto já
-      // existente, manter o conteúdo anterior é menos surpreendente do que
-      // apagá-lo ao abrir o editor e sair sem digitar nada.
       const previous = editingBeforeSnapshot.find((element) => element.id === id);
       if (!previous) {
         deleteElement(id);
@@ -52,9 +49,6 @@ export function useTextMode() {
       return;
     }
 
-    // Durante a edição o elemento já é atualizado a cada tecla, para que o
-    // Canvas seja a única camada que desenha o texto. Aqui apenas fechamos a
-    // transação no histórico.
     setSelectedElementIds([id]);
     commitHistory(editingBeforeSnapshot);
   }
@@ -68,8 +62,6 @@ export function useTextMode() {
       updateElement,
     } = useCanvasStore.getState();
 
-    // O conteúdo é atualizado durante a edição para o Canvas poder desenhá-lo;
-    // cancelar restaura o snapshot original sem criar histórico.
     if (!editingBeforeSnapshot.some((element) => element.id === id)) {
       deleteElement(id);
       setSelectedElementIds([]);

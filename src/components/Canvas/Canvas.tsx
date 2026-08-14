@@ -92,6 +92,18 @@ export function Canvas() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    function handleClick(event: Event) {
+      console.log(event);
+      event.preventDefault();
+    }
+
+    canvas.addEventListener("auxclick", handleClick);
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     canvas.style.cursor = cursor;
   }, [cursor]);
 

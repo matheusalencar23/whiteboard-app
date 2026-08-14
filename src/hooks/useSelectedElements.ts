@@ -5,6 +5,10 @@ import {
 import type { CanvasElement } from "../lib/geometry/types";
 import { useCanvasStore } from "../store/useCanvasStore";
 
+export type PropertyValue<T> =
+  | { value: T; mixed: false }
+  | { value: null; mixed: true };
+
 export function useSelectedElements() {
   const { elements: allElements, selectedElementIds } = useCanvasStore();
 
@@ -21,11 +25,13 @@ export function useSelectedElements() {
 
   function getSelectedPropertyValue<K extends keyof CanvasElement>(
     key: K,
-  ): CanvasElement[K] | null {
-    if (selected.length === 0) return null;
+  ): PropertyValue<CanvasElement[K]> {
+    if (selected.length === 0) return { value: null, mixed: true };
     const first = selected[0][key];
     const allSame = selected.every((el) => el[key] === first);
-    return allSame ? first : null;
+    return allSame
+      ? { value: first, mixed: false }
+      : { value: null, mixed: true };
   }
 
   return { selected, bounds, angle, getSelectedPropertyValue };

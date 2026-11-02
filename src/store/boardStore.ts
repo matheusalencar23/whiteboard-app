@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { BoardElement } from "../lib/elements/types";
 import type { Point } from "../lib/types";
+import { debounce, loadBoard, saveBoard } from "../lib/persistence";
 import { INITIAL_VIEWPORT, panBy, zoomAt, type Viewport } from "../lib/viewport";
 
 export type Tool =
@@ -54,11 +55,16 @@ function pushPast(past: BoardElement[][], snapshot: BoardElement[]) {
   return [...past, snapshot].slice(-HISTORY_LIMIT);
 }
 
+/** Intervalo do salvamento automático, para não serializar o board a cada movimento do mouse. */
+const SAVE_DELAY = 300;
+
+const saved = loadBoard();
+
 export const useBoardStore = create<BoardState>()((set) => ({
-  elements: [],
+  elements: saved?.elements ?? [],
   selectedIds: [],
   tool: "selection",
-  viewport: INITIAL_VIEWPORT,
+  viewport: saved?.viewport ?? INITIAL_VIEWPORT,
   past: [],
   future: [],
 
@@ -134,3 +140,22 @@ export const useBoardStore = create<BoardState>()((set) => ({
   zoomAt: (screenPoint, factor) =>
     set((state) => ({ viewport: zoomAt(state.viewport, screenPoint, factor) })),
 }));
+
+// Salvamento automático: grava `elements` e `viewport` quando um dos dois muda.
+const scheduleSave = debounce(saveBoard, SAVE_DELAY);
+
+const unsubscribe = useBoardStore.subscribe((state, prev) => {
+  if (state.elements === prev.elements && state.viewport === prev.viewport) return;
+  scheduleSave({ elements: state.elements, viewport: state.viewport });
+});
+
+// Grava o que estiver pendente antes de a página fechar ou recarregar.
+const flushSave = () => scheduleSave.flush();
+window.addEventListener("pagehide", flushSave);
+
+// No HMR, este módulo é recriado: grava o pendente e solta os listeners antigos.
+import.meta.hot?.dispose(() => {
+  scheduleSave.flush();
+  unsubscribe();
+  window.removeEventListener("pagehide", flushSave);
+});

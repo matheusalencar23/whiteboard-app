@@ -10,7 +10,7 @@ Marque os itens com `[x]` conforme forem concluídos.
 - Toolbar com as ferramentas mão, seleção, retângulo, losango, elipse, seta, lápis e texto, além de desfazer, refazer e apagar.
 - Seleção por clique, Shift + clique e caixa. Mover, redimensionar pelas 8 alças, apagar, e desfazer/refazer.
 - Câmera com pan (roda do mouse, Shift + roda, botão do meio ou Espaço + arrastar) e zoom (Ctrl/Cmd + roda ou pinça no trackpad, centrado no cursor).
-- Estado em uma store do zustand, sem persistência.
+- Estado em uma store do zustand. `elements` e `viewport` são salvos sozinhos no `localStorage` (`src/lib/persistence.ts`, formato versão 1).
 - Dependência instalada mas ainda não usada: `react-color`.
 
 ### Atalhos
@@ -44,7 +44,8 @@ Esta é a ordem recomendada de trabalho a partir de agora. Ela não segue a nume
 
 ### 2. Salvamento automático no `localStorage` (adiantado da etapa 5)
 
-- [ ] **O quê:** o board é salvo sozinho no navegador e reaparece igual depois de recarregar a página. Só `elements` e `viewport` são salvos. Histórico, seleção e ferramenta ativa começam limpos a cada abertura, como no Excalidraw.
+- [x] **Feito** em `src/lib/persistence.ts`, ligado ao fim de `src/store/boardStore.ts`. Também grava o pendente no `pagehide`, para não perder os últimos 300 ms ao recarregar.
+- **O quê:** o board é salvo sozinho no navegador e reaparece igual depois de recarregar a página. Só `elements` e `viewport` são salvos. Histórico, seleção e ferramenta ativa começam limpos a cada abertura, como no Excalidraw.
 - **Como:**
   - Usar `useBoardStore.subscribe` para observar mudanças em `elements` e `viewport`, e gravar com um *debounce* de uns 300 ms. Sem o debounce, cada movimento do mouse durante um arraste faria um `JSON.stringify` do board inteiro.
   - Ao abrir o board, ler o `localStorage` e usar o valor como estado inicial da store.
@@ -149,7 +150,7 @@ A parte que diferencia o projeto de um Excalidraw. Os itens estão na ordem de i
 
 ## 5. Persistência
 
-- [ ] Salvamento automático no `localStorage` (adiantado: é o passo 2 dos [próximos passos](#próximos-passos-em-ordem)).
+- [x] Salvamento automático no `localStorage` (adiantado: é o passo 2 dos [próximos passos](#próximos-passos-em-ordem)).
 - [ ] Exportar e importar JSON.
 - [ ] Exportar PNG e SVG.
 - [ ] `Home` vira a lista de boards, e a rota passa a ser `/board/:id`.

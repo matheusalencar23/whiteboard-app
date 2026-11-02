@@ -1,7 +1,7 @@
 import type { Point } from "../types";
 import { getCenter } from "../geometry/bounds";
 import { distance, rotatePoint } from "../geometry/distance";
-import { getBorderPoint, isBindable } from "./registry";
+import { getBorderPoint, getConnectionAnchors, isBindable } from "./registry";
 import { getArrowPoints, setArrowPoints } from "./shapes/arrow";
 import type { ArrowBinding, ArrowElement, BoardElement } from "./types";
 
@@ -17,7 +17,7 @@ export const BINDING_GAP = 6;
 export type ArrowEnd = "start" | "end";
 
 /** Ponto da forma correspondente ao `anchor`, em coordenadas de mundo. */
-function anchorPoint(shape: BoardElement, anchor: Point): Point {
+export function anchorPoint(shape: BoardElement, anchor: Point): Point {
   const p = { x: shape.x + anchor.x * shape.width, y: shape.y + anchor.y * shape.height };
   return rotatePoint(p, getCenter(shape), shape.rotation);
 }
@@ -29,17 +29,21 @@ function focusPoint(shape: BoardElement, binding: ArrowBinding): Point {
 
 /** Posição da ponta ligada a `shape`, vindo de `from` (o ponto vizinho da seta). */
 function bindingPoint(shape: BoardElement, binding: ArrowBinding, from: Point): Point {
-  if (binding.anchor) return anchorPoint(shape, binding.anchor);
-
   const center = getCenter(shape);
-  let dir = { x: from.x - center.x, y: from.y - center.y };
-  const length = Math.hypot(dir.x, dir.y);
-  // Vizinho no próprio centro: qualquer direção serve.
-  if (length === 0) dir = { x: 1, y: 0 };
-  const unit = length === 0 ? dir : { x: dir.x / length, y: dir.y / length };
 
-  const border = getBorderPoint(shape, dir);
-  return { x: border.x + unit.x * BINDING_GAP, y: border.y + unit.y * BINDING_GAP };
+  // Com anchor, a ponta fica no ponto fixo, afastada do centro para fora.
+  // Sem anchor, a ponta mira o centro vindo do vizinho e para na borda.
+  const border = binding.anchor
+    ? anchorPoint(shape, binding.anchor)
+    : getBorderPoint(shape, { x: from.x - center.x, y: from.y - center.y });
+
+  const dir = { x: border.x - center.x, y: border.y - center.y };
+  const length = Math.hypot(dir.x, dir.y);
+  if (length === 0) return border;
+  return {
+    x: border.x + (dir.x / length) * BINDING_GAP,
+    y: border.y + (dir.y / length) * BINDING_GAP,
+  };
 }
 
 /**
@@ -125,6 +129,43 @@ export function getBindableAt(
     if (distance(center, point) <= reach + tolerance) return el;
   }
   return null;
+}
+
+/**
+ * Ligação que uma ponta de seta em `point` faria: com a forma sob o ponto e,
+ * se houver um ponto de conexão a até `snapDistance`, com o anchor dele.
+ * Longe dos pontos, mas sobre a forma, a ligação é flutuante.
+ */
+export function findBinding(
+  elements: BoardElement[],
+  point: Point,
+  tolerance: number,
+  snapDistance: number,
+  excludeIds: (string | null | undefined)[] = [],
+): ArrowBinding | null {
+  // Fora da folga da forma, ainda liga se estiver perto de um ponto de conexão.
+  const inside = getBindableAt(elements, point, tolerance, excludeIds);
+  const target = inside ?? getBindableAt(elements, point, snapDistance, excludeIds);
+  if (!target) return null;
+
+  let anchor: Point | null = null;
+  let best = snapDistance;
+  for (const candidate of getConnectionAnchors(target)) {
+    const d = distance(anchorPoint(target, candidate), point);
+    if (d <= best) {
+      best = d;
+      anchor = candidate;
+    }
+  }
+  if (!inside && !anchor) return null;
+  return { elementId: target.id, anchor };
+}
+
+export function sameBinding(a: ArrowBinding | null, b: ArrowBinding | null): boolean {
+  if (a === null || b === null) return a === b;
+  if (a.elementId !== b.elementId) return false;
+  if (a.anchor === null || b.anchor === null) return a.anchor === b.anchor;
+  return a.anchor.x === b.anchor.x && a.anchor.y === b.anchor.y;
 }
 
 export function getBinding(arrow: ArrowElement, end: ArrowEnd): ArrowBinding | null {

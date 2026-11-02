@@ -33,4 +33,12 @@ export const diamondUtil: ShapeUtil<DiamondElement> = {
   getBorderOffset(el, d) {
     return scaleToBorder(d, Math.abs(d.x) / (el.width / 2) + Math.abs(d.y) / (el.height / 2));
   },
+
+  // Os 4 vértices, que caem no meio de cada lado da caixa.
+  getConnectionPoints: () => [
+    { x: 0.5, y: 0 },
+    { x: 1, y: 0.5 },
+    { x: 0.5, y: 1 },
+    { x: 0, y: 0.5 },
+  ],
 };

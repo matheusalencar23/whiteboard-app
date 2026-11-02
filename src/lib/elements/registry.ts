@@ -43,6 +43,11 @@ export function isBindable(element: BoardElement): boolean {
   return getShapeUtil(element).getBorderOffset !== undefined;
 }
 
+/** Pontos de conexão em coordenadas relativas (0 a 1). Vazio se a forma não tiver. */
+export function getConnectionAnchors(element: BoardElement): Point[] {
+  return getShapeUtil(element).getConnectionPoints?.(element) ?? [];
+}
+
 /**
  * Ponto da borda na direção `direction` (de mundo) a partir do centro.
  * Devolve o centro para elementos sem borda definida.

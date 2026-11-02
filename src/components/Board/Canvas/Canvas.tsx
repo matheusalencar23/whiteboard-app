@@ -4,6 +4,7 @@ import type { RoughCanvas } from "roughjs/bin/canvas";
 import styles from "./Canvas.module.scss";
 import type { Point } from "../../../lib/types";
 import type {
+  ArrowBinding,
   ArrowElement,
   BoardElement,
   BoxElementType,
@@ -25,10 +26,11 @@ import {
 } from "../../../lib/elements/registry";
 import { createArrow, getArrowPoints, setArrowPoints } from "../../../lib/elements/shapes/arrow";
 import {
-  getBindableAt,
+  findBinding,
   getBinding,
   refreshArrow,
   releaseBindings,
+  sameBinding,
   setBinding,
   type ArrowEnd,
 } from "../../../lib/elements/bindings";
@@ -62,6 +64,8 @@ const HIT_TOLERANCE = 6;
 const FREEDRAW_MIN_DISTANCE = 1;
 /** Folga em volta da forma para a ponta da seta se ligar, em pixels de tela. */
 const BINDING_TOLERANCE = 8;
+/** Distância para a ponta encaixar num ponto de conexão, em pixels de tela. */
+const CONNECTION_SNAP_DISTANCE = 12;
 
 const BOX_TOOLS: readonly string[] = ["rectangle", "ellipse", "diamond"] satisfies BoxElementType[];
 
@@ -71,8 +75,8 @@ type Interaction =
   | {
       kind: "creating";
       start: Point;
-      /** Seta: forma em que a primeira ponta se ligou. */
-      startTargetId: string | null;
+      /** Seta: ligação da primeira ponta. */
+      startBinding: ArrowBinding | null;
     }
   | { kind: "freedrawing"; points: Point[] }
   | {
@@ -114,10 +118,17 @@ function getSelectedElements(): BoardElement[] {
   return elements.filter((el) => ids.has(el.id));
 }
 
-/** Forma em que uma ponta de seta em `world` se ligaria. */
-function findBindingTarget(world: Point, excludeIds: (string | null | undefined)[] = []) {
+/** Ligação que uma ponta de seta em `world` faria (flutuante ou num ponto de conexão). */
+function findBindingAt(world: Point, excludeIds: (string | null | undefined)[] = []) {
   const { elements, viewport } = useBoardStore.getState();
-  return getBindableAt(elements, world, BINDING_TOLERANCE / viewport.zoom, excludeIds);
+  const { zoom } = viewport;
+  return findBinding(
+    elements,
+    world,
+    BINDING_TOLERANCE / zoom,
+    CONNECTION_SNAP_DISTANCE / zoom,
+    excludeIds,
+  );
 }
 
 /** Desliga das formas as setas movidas ou redimensionadas sem elas. */
@@ -152,10 +163,16 @@ export function Canvas() {
   const [isPanning, setIsPanning] = useState(false);
   const [spacePressed, setSpacePressed] = useState(false);
   const [hoverCursor, setHoverCursor] = useState("default");
-  // Forma destacada como alvo da ligação de uma ponta de seta.
-  const [bindingTargetId, setBindingTargetId] = useState<string | null>(null);
+  // Ligação que a ponta da seta faria agora: a forma fica destacada, com os
+  // pontos de conexão, e o ponto escolhido em evidência.
+  const [bindingHint, setBindingHintState] = useState<ArrowBinding | null>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [fontsLoaded, setFontsLoaded] = useState(0);
+
+  /** Evita re-renderizar a cada movimento do mouse quando a dica não mudou. */
+  function setBindingHint(next: ArrowBinding | null) {
+    setBindingHintState((current) => (sameBinding(current, next) ? current : next));
+  }
 
   function setDraft(element: BoardElement | null) {
     draftRef.current = element;
@@ -251,8 +268,10 @@ export function Canvas() {
   // O destaque só vale com a ferramenta de seta ou arrastando uma ponta.
   const showBindingTarget = tool === "arrow" || isInteracting;
   const bindingTarget = useMemo(
-    () => (showBindingTarget && elements.find((el) => el.id === bindingTargetId)) || null,
-    [elements, bindingTargetId, showBindingTarget],
+    () =>
+      (showBindingTarget && bindingHint && elements.find((el) => el.id === bindingHint.elementId)) ||
+      null,
+    [elements, bindingHint, showBindingTarget],
   );
 
   // Redesenha a cena sempre que algo visível muda.
@@ -273,11 +292,27 @@ export function Canvas() {
       ctx,
       rc,
       scene,
-      { selected, selectionBox, showHandles: !isInteracting, bindingTarget },
+      {
+        selected,
+        selectionBox,
+        showHandles: !isInteracting,
+        bindingTarget,
+        bindingAnchor: bindingHint?.anchor ?? null,
+      },
       viewport,
       dpr,
     );
-  }, [scene, selected, selectionBox, isInteracting, bindingTarget, viewport, size, fontsLoaded]);
+  }, [
+    scene,
+    selected,
+    selectionBox,
+    isInteracting,
+    bindingTarget,
+    bindingHint,
+    viewport,
+    size,
+    fontsLoaded,
+  ]);
 
   function startEditingText(element: TextElement, isNew: boolean) {
     useBoardStore.getState().setSelection([]);
@@ -415,13 +450,12 @@ export function Canvas() {
       interactionRef.current = { kind: "freedrawing", points: [world] };
       setDraft(createFreedraw([world]));
     } else if (store.tool === "arrow") {
-      const target = findBindingTarget(world);
-      interactionRef.current = { kind: "creating", start: world, startTargetId: target?.id ?? null };
-      const arrow = createArrow(world, world);
-      setDraft(target ? { ...arrow, startBinding: { elementId: target.id, anchor: null } } : arrow);
-      setBindingTargetId(target?.id ?? null);
+      const startBinding = findBindingAt(world);
+      interactionRef.current = { kind: "creating", start: world, startBinding };
+      setDraft({ ...createArrow(world, world), startBinding });
+      setBindingHint(startBinding);
     } else if (BOX_TOOLS.includes(store.tool)) {
-      interactionRef.current = { kind: "creating", start: world, startTargetId: null };
+      interactionRef.current = { kind: "creating", start: world, startBinding: null };
       setDraft(createBoxElement(store.tool as BoxElementType, world, world));
     }
   }
@@ -452,7 +486,7 @@ export function Canvas() {
     if (!interaction) {
       if (store.tool === "selection" && !editing) updateHoverCursor(world);
       // Com a seta, destaca a forma em que ela começaria ligada.
-      if (store.tool === "arrow") setBindingTargetId(findBindingTarget(world)?.id ?? null);
+      if (store.tool === "arrow") setBindingHint(findBindingAt(world));
       return;
     }
 
@@ -470,33 +504,25 @@ export function Canvas() {
           break;
         }
         // A ponta final não se liga à mesma forma da inicial.
-        const target = findBindingTarget(world, [interaction.startTargetId]);
-        const arrow = setBinding(
-          setArrowPoints(current, [interaction.start, world]),
-          "end",
-          target ? { elementId: target.id, anchor: null } : null,
-        );
+        const binding = findBindingAt(world, [interaction.startBinding?.elementId]);
+        const arrow = setBinding(setArrowPoints(current, [interaction.start, world]), "end", binding);
         const byId = new Map(store.elements.map((el) => [el.id, el]));
         setDraft(refreshArrow(arrow, byId));
-        setBindingTargetId(target?.id ?? null);
+        setBindingHint(binding);
         break;
       }
 
       case "draggingEndpoint": {
         const { original, end } = interaction;
         const other = getBinding(original, end === "start" ? "end" : "start");
-        const target = findBindingTarget(world, [original.id, other?.elementId]);
+        const binding = findBindingAt(world, [other?.elementId]);
 
         const points = getArrowPoints(original);
         points[end === "start" ? 0 : points.length - 1] = world;
-        const arrow = setBinding(
-          setArrowPoints(original, points),
-          end,
-          target ? { elementId: target.id, anchor: null } : null,
-        );
+        const arrow = setBinding(setArrowPoints(original, points), end, binding);
         // A store recalcula as pontas ligadas.
         store.updateElements([arrow]);
-        setBindingTargetId(target?.id ?? null);
+        setBindingHint(binding);
         break;
       }
 
@@ -549,7 +575,7 @@ export function Canvas() {
     setSelectionBox(null);
     setIsInteracting(false);
     setIsPanning(false);
-    setBindingTargetId(null);
+    setBindingHint(null);
   }
 
   function handlePointerUp() {

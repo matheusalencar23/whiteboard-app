@@ -30,7 +30,20 @@ export interface ShapeUtil<T extends BoardElement> {
    * centro (no espaço sem rotação), devolve o deslocamento do centro até a borda.
    */
   getBorderOffset?(element: T, direction: Point): Point;
+  /**
+   * Pontos fixos em que uma seta pode se ligar, em coordenadas relativas à
+   * caixa (0 a 1 em `x` e `y`). Viram o `anchor` da ligação.
+   */
+  getConnectionPoints?(element: T): Point[];
 }
+
+/** O meio de cada lado da caixa: topo, direita, base e esquerda. */
+export const SIDE_MIDPOINTS: readonly Point[] = [
+  { x: 0.5, y: 0 },
+  { x: 1, y: 0.5 },
+  { x: 0.5, y: 1 },
+  { x: 0, y: 0.5 },
+];
 
 /**
  * Escala `direction` para tocar a borda, dado o "tamanho" `s` da direção na

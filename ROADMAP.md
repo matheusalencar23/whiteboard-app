@@ -11,7 +11,7 @@ Marque os itens com `[x]` conforme forem concluídos.
 - Seleção por clique, Shift + clique e caixa. Mover, redimensionar pelas 8 alças, apagar, e desfazer/refazer.
 - Câmera com pan (roda do mouse, Shift + roda, botão do meio ou Espaço + arrastar) e zoom (Ctrl/Cmd + roda ou pinça no trackpad, centrado no cursor).
 - Estado em uma store do zustand. `elements` e `viewport` são salvos sozinhos no `localStorage` (`src/lib/persistence.ts`, formato versão 2).
-- Setas ligadas às formas: acompanham quando a forma é movida ou redimensionada, e as pontas podem ser arrastadas para ligar, desligar ou trocar de forma.
+- Setas ligadas às formas: acompanham quando a forma é movida ou redimensionada, e as pontas podem ser arrastadas para ligar, desligar ou trocar de forma. As pontas encaixam nos pontos de conexão das formas (meio dos lados ou vértices do losango).
 - Dependência instalada mas ainda não usada: `react-color`.
 
 ### Atalhos
@@ -58,7 +58,7 @@ Esta é a ordem recomendada de trabalho a partir de agora. Ela não segue a nume
 
 ### 3. Etapa 3, na ordem descrita na seção dela
 
-- [ ] O item 3.1 (setas ligadas às formas) está feito. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Cada item depende do anterior.
+- [ ] Os itens 3.1 (setas ligadas) e 3.2 (pontos de conexão) estão feitos. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Cada item depende do anterior.
 
 As outras pendências da etapa 2 (Shift, rotação, duplicar e copiar/colar) ficam para quando fizerem falta no uso. Nenhuma bloqueia a etapa 3.
 
@@ -112,7 +112,11 @@ A parte que diferencia o projeto de um Excalidraw. Os itens estão na ordem de i
 
 ### 3.2 Pontos de conexão
 
-- [ ] **O quê:** ao passar o mouse sobre uma forma com a ferramenta de seta, ou ao arrastar a ponta de uma seta, aparecem pontos fixos na forma. Soltar a seta perto de um ponto liga a seta exatamente nele.
+- [x] **Feito.** Detalhes da implementação:
+  - `findBinding` em `bindings.ts` escolhe o ponto de conexão a até 12 px de tela do cursor. Longe dos pontos, mas sobre a forma, a ligação é flutuante. Um pouco fora da forma (além da folga de 8 px), só liga se estiver perto de um ponto.
+  - A ponta presa a um ponto também fica a `BINDING_GAP` da borda, afastada na direção do centro para o ponto, para combinar com a ligação flutuante.
+  - Os pontos aparecem na forma destacada, e o ponto escolhido fica maior e preenchido.
+- **O quê:** ao passar o mouse sobre uma forma com a ferramenta de seta, ou ao arrastar a ponta de uma seta, aparecem pontos fixos na forma. Soltar a seta perto de um ponto liga a seta exatamente nele.
 - **Como:**
   - Cada `ShapeUtil` ganha `getConnectionPoints(element)`, que devolve os pontos em coordenadas relativas (de 0 a 1). Retângulo e elipse: o meio de cada lado. Losango: os 4 vértices.
   - O ponto escolhido vira o `anchor` da ligação criada no item 3.1. Soltar longe dos pontos, mas sobre a forma, mantém a ligação flutuante.
@@ -148,6 +152,18 @@ A parte que diferencia o projeto de um Excalidraw. Os itens estão na ordem de i
   - **Primeira versão:** a rota é calculada a partir dos pontos de conexão (item 3.2). A seta sai perpendicular ao lado da forma, faz um "L" ou um "Z" até o destino e chega perpendicular. Os pontos da rota são recalculados pelo mesmo `updateBoundArrows` do item 3.1.
   - **Segunda versão (opcional):** contornar outras formas que estejam no caminho, com uma busca de caminho (A*) numa grade.
 - **Por quê:** setas ortogonais são o que dá a cara de diagrama técnico ao draw.io. Ficam por último porque dependem das ligações e dos pontos de conexão, e porque o roteamento é a parte mais complexa da etapa.
+
+### 3.6 Setas curvas que contornam a forma
+
+- [ ] **O quê:** hoje a seta ligada é sempre uma reta. Se a ponta está presa no lado de uma forma que fica de costas para a outra ponta (por exemplo, no lado direito de uma forma, com a outra ponta à esquerda), a reta atravessa a própria forma. A ideia é a seta sair perpendicular ao lado em que está presa e fazer uma curva, dando a volta na forma até o destino.
+- **Como:**
+  - Um terceiro modo de rota: `routing: "straight" | "elbow" | "curved"`, no mesmo campo do item 3.5.
+  - **Direção de saída:** cada ponta ligada tem uma direção para fora da forma. Num ponto de conexão, ela é a normal do lado (dá para tirar do próprio `anchor`: `(anchor.x - 0.5, anchor.y - 0.5)` aponta para fora no meio de cada lado e nos vértices do losango). Na ligação flutuante, é a direção do centro para a ponta. A seta ortogonal do item 3.5 usa essa mesma direção, então as duas compartilham a lógica.
+  - **Curva:** uma Bézier cúbica entre as pontas, com os pontos de controle afastados ao longo da direção de saída de cada ponta, a uma distância proporcional ao comprimento da seta. Isso já faz a seta sair e chegar perpendicular, e na maioria dos casos ela contorna a forma sozinha.
+  - **Contornar de verdade:** quando a direção de saída aponta para longe do destino, só a Bézier pode raspar na forma. Nesse caso, a rota ganha pontos intermediários que dão a volta pela caixa da forma, com uma folga, e uma curva suave passa por eles (Catmull-Rom ou Béziers encadeadas). É a mesma rota do modo ortogonal, só que suavizada.
+  - **Desenho e clique:** o roughjs desenha curvas com `rc.path` (caminho SVG com `C`) ou `rc.curve`. Hit test, caixa (`getBounds`) e direção da ponta da seta passam a usar a curva amostrada como polilinha, e a ponta segue a tangente no fim da curva.
+  - Os pontos da curva são recalculados pelo `updateBoundArrows` (item 3.1), como as outras rotas.
+- **Por quê:** com pontos de conexão em todos os lados, ligar no lado "de trás" de uma forma é comum em fluxogramas (laços, retornos). Uma reta que atravessa a forma fica ilegível. Fica depois do item 3.5 porque reaproveita a direção de saída e a rota que contorna a forma.
 
 ## 4. Visual
 

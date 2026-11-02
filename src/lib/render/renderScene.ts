@@ -1,7 +1,9 @@
 import type { RoughCanvas } from "roughjs/bin/canvas";
 import { expandBounds, getCenter, type Bounds } from "../geometry/bounds";
 import type { ArrowElement, BoardElement } from "../elements/types";
-import { getElementBounds, renderElement } from "../elements/registry";
+import { getConnectionAnchors, getElementBounds, renderElement } from "../elements/registry";
+import { anchorPoint } from "../elements/bindings";
+import type { Point } from "../types";
 import { getDiamondVertices } from "../elements/shapes/diamond";
 import {
   ENDPOINT_RADIUS,
@@ -24,7 +26,12 @@ export interface SceneOverlay {
   selectionBox: Bounds | null;
   /** Forma em que a ponta da seta sendo desenhada ou arrastada vai se ligar. */
   bindingTarget: BoardElement | null;
+  /** Ponto de conexão do alvo em que a ponta vai encaixar (relativo, 0 a 1). */
+  bindingAnchor: Point | null;
 }
+
+/** Raio dos pontos de conexão, em pixels de tela. */
+const CONNECTION_POINT_RADIUS = 4;
 
 /** Folga do destaque da forma alvo da ligação, em pixels de tela. */
 const BINDING_HIGHLIGHT_PADDING = 4;
@@ -64,6 +71,23 @@ function traceOutline(ctx: CanvasRenderingContext2D, el: BoardElement, pad: numb
   ctx.restore();
 }
 
+function renderConnectionPoints(
+  ctx: CanvasRenderingContext2D,
+  shape: BoardElement,
+  active: Point | null,
+  zoom: number,
+) {
+  for (const anchor of getConnectionAnchors(shape)) {
+    const p = anchorPoint(shape, anchor);
+    const isActive = active !== null && active.x === anchor.x && active.y === anchor.y;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, (isActive ? CONNECTION_POINT_RADIUS * 1.5 : CONNECTION_POINT_RADIUS) / zoom, 0, Math.PI * 2);
+    ctx.fillStyle = isActive ? SELECTION_COLOR : "#ffffff";
+    ctx.fill();
+    ctx.stroke();
+  }
+}
+
 function renderEndpointHandles(ctx: CanvasRenderingContext2D, arrow: ArrowElement, zoom: number) {
   const handles = getEndpointHandles(arrow);
   const bound = { start: arrow.startBinding !== null, end: arrow.endBinding !== null };
@@ -95,6 +119,7 @@ function renderOverlay(ctx: CanvasRenderingContext2D, overlay: SceneOverlay, zoo
     traceOutline(ctx, overlay.bindingTarget, BINDING_HIGHLIGHT_PADDING / zoom);
     ctx.stroke();
     ctx.restore();
+    renderConnectionPoints(ctx, overlay.bindingTarget, overlay.bindingAnchor, zoom);
   }
 
   const bounds = getSelectionBounds(overlay.selected);

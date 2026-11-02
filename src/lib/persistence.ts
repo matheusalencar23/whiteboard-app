@@ -3,8 +3,9 @@ import { updateBoundArrows } from "./elements/bindings";
 import { MAX_ZOOM, MIN_ZOOM, type Viewport } from "./viewport";
 
 /**
- * Salvamento do board no `localStorage`. Só `elements` e `viewport` são
- * salvos; histórico, seleção e ferramenta começam limpos a cada abertura.
+ * Salvamento do board no `localStorage`. São salvos `elements`, `viewport` e
+ * se a grade está visível; histórico, seleção e ferramenta começam limpos a
+ * cada abertura.
  */
 
 const STORAGE_KEY = "whiteboard:board";
@@ -15,7 +16,11 @@ export const CURRENT_VERSION = 2;
 export interface SavedBoard {
   elements: BoardElement[];
   viewport: Viewport;
+  showGrid: boolean;
 }
+
+/** Valores das preferências quando o board salvo não as tem (boards antigos). */
+export const DEFAULT_PREFERENCES = { showGrid: true };
 
 interface StoredBoard extends SavedBoard {
   version: number;
@@ -83,8 +88,12 @@ function migrate(data: unknown): SavedBoard | null {
 
   if (!Array.isArray(elements) || !elements.every(isValidElement)) return null;
   if (!isValidViewport(viewport)) return null;
+  // Preferências são campos opcionais: valor inválido ou ausente vira o padrão.
+  const showGrid =
+    typeof data.showGrid === "boolean" ? data.showGrid : DEFAULT_PREFERENCES.showGrid;
+
   // Ligações a elementos que não existem viram `null`.
-  return { elements: updateBoundArrows(elements, []), viewport };
+  return { elements: updateBoundArrows(elements, []), viewport, showGrid };
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

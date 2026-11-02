@@ -10,9 +10,10 @@ Marque os itens com `[x]` conforme forem concluídos.
 - Toolbar com as ferramentas mão, seleção, retângulo, losango, elipse, seta, lápis e texto, além de desfazer, refazer e apagar.
 - Seleção por clique, Shift + clique e caixa. Mover, redimensionar pelas 8 alças, apagar, e desfazer/refazer.
 - Câmera com pan (roda do mouse, Shift + roda, botão do meio ou Espaço + arrastar) e zoom (Ctrl/Cmd + roda ou pinça no trackpad, centrado no cursor).
-- Estado em uma store do zustand. `elements` e `viewport` são salvos sozinhos no `localStorage` (`src/lib/persistence.ts`, formato versão 2).
+- Estado em uma store do zustand. `elements`, `viewport` e as preferências da grade são salvos sozinhos no `localStorage` (`src/lib/persistence.ts`, formato versão 2).
 - Setas ligadas às formas: acompanham quando a forma é movida ou redimensionada, e as pontas podem ser arrastadas para ligar, desligar ou trocar de forma. As pontas encaixam nos pontos de conexão das formas (meio dos lados ou vértices do losango).
 - Texto dentro das formas: duplo clique num retângulo, elipse ou losango edita um rótulo centralizado, que quebra linha na largura da forma.
+- Grade de fundo, ligada por padrão, só visual (sem encaixe).
 - Dependência instalada mas ainda não usada: `react-color`.
 
 ### Atalhos
@@ -24,6 +25,7 @@ Marque os itens com `[x]` conforme forem concluídos.
 | Selecionar tudo | `Ctrl+A` |
 | Apagar seleção | `Delete` ou `Backspace` |
 | Limpar seleção | `Esc` |
+| Mostrar / esconder a grade | `G` |
 | Editar texto | Duplo clique no texto. Duplo clique no vazio cria um texto novo. `Esc` ou `Ctrl+Enter` confirmam. |
 
 ## Decisões tomadas
@@ -59,7 +61,7 @@ Esta é a ordem recomendada de trabalho a partir de agora. Ela não segue a nume
 
 ### 3. Etapa 3, na ordem descrita na seção dela
 
-- [ ] Os itens 3.1 (setas ligadas), 3.2 (pontos de conexão) e 3.3 (texto dentro das formas) estão feitos. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Do 3.1 ao 3.6, cada item depende do anterior. O 3.7 (texto nas setas) e o 3.8 (formato das pontas) não dependem dos outros e podem ser adiantados. Só a interface do 3.8 espera o painel de estilo (4.3).
+- [ ] Os itens 3.1 (setas ligadas), 3.2 (pontos de conexão) e 3.3 (texto dentro das formas) estão feitos. O 3.4 (snap e guias) foi descartado, e só a grade de fundo (4.1) ficou. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Do 3.1 ao 3.6, cada item depende do anterior. O 3.7 (texto nas setas) e o 3.8 (formato das pontas) não dependem dos outros e podem ser adiantados. Só a interface do 3.8 espera o painel de estilo (4.3).
 
 As outras pendências da etapa 2 (Shift, rotação, duplicar e copiar/colar) ficam para quando fizerem falta no uso. Nenhuma bloqueia a etapa 3.
 
@@ -142,16 +144,10 @@ A parte que diferencia o projeto de um Excalidraw. Os itens estão na ordem de i
   - O desenho do rótulo fica num ponto comum do `registry.ts`, não repetido em cada forma.
 - **Por quê:** num fluxograma, quase toda forma tem um texto ("Início", "Validar dados?"). Hoje, um texto solto em cima da forma fica para trás quando a forma é movida. O duplo clique numa forma também está sem função agora, então esse é o uso natural dele.
 
-### 3.4 Grid com snap e guias de alinhamento
+### 3.4 Grid com snap e guias de alinhamento (descartado)
 
-- [ ] **O quê:**
-  - **Snap na grade:** com o snap ativo, criar, mover e redimensionar encaixam as posições na grade de fundo do item [4.1](#41-grid-de-fundo).
-  - **Guias:** ao mover um elemento, aparecem linhas quando a borda ou o centro dele se alinha com outro elemento, e a posição encaixa nesse alinhamento.
-- **Como:**
-  - O snap ligado ou desligado fica na store, com um atalho próprio. O tamanho da grade vem do item 4.1. Se o encaixe usar o espaçamento visível, ele também muda com o zoom.
-  - O encaixe é uma função pura (`snapPoint`, `snapBounds`) aplicada nos casos `creating`, `moving` e `resizing` do Canvas, antes de atualizar a store.
-  - As guias comparam as bordas e o centro da seleção com os dos outros elementos e encaixam abaixo de uma distância fixa na tela.
-- **Por quê:** diagramas desalinhados parecem bagunçados, e alinhar à mão é tedioso. Fica depois dos itens 3.1 a 3.3 porque é um refinamento: o diagrama funciona sem ele, mas não funciona sem ligações e rótulos.
+- **Descartado.** Chegou a ser implementado (encaixe na grade ao criar, mover e redimensionar, e guias de alinhamento ao mover), mas não ficou bom no uso e foi removido antes do commit. Ficou só a grade de fundo do item [4.1](#41-grid-de-fundo), que é visual.
+- **Se voltar a ser considerado:** começar pelas guias de alinhamento, sem o encaixe na grade, e com um jeito claro de ligar e desligar. O encaixe deve ser mais suave, com uma distância menor e sem puxar o elemento quando o usuário só quer ajustar a posição.
 
 ### 3.5 Setas ortogonais
 
@@ -207,7 +203,8 @@ O traço de esboço vem do Excalidraw, mas a interface tem identidade própria (
 
 ### 4.1 Grid de fundo
 
-- [ ] **O quê:** uma grade desenhada no fundo do quadro, que acompanha o pan e o zoom. Ligada por padrão, com um botão e um atalho (`G`) para esconder. Aqui ela é só visual. O encaixe na grade é o item [3.4](#34-grid-com-snap-e-guias-de-alinhamento).
+- [x] **Feito** em `src/lib/render/grid.ts`. A grade é de linhas finas, com uma linha mais forte a cada 5. Quando o espaçamento na tela fica abaixo de 8 px, ela multiplica o espaçamento por 5 em vez de dobrar, para as linhas fortes virarem as normais e o desenho não "pular". O botão fica na toolbar. As cores ainda são constantes no módulo, até os tokens do item 4.2.
+- **O quê:** uma grade desenhada no fundo do quadro, que acompanha o pan e o zoom. Ligada por padrão, com um botão e um atalho (`G`) para esconder. Ela é só visual. O encaixe na grade (item 3.4) foi descartado.
 - **Como:**
   - `showGrid` e `gridSize` (em unidades de mundo, por exemplo 20) ficam na store. `showGrid` entra no formato salvo da persistência, porque é uma preferência do board. Como é um campo novo e opcional, basta um valor padrão na leitura, sem subir a versão.
   - Uma função `drawGrid(ctx, viewport, size)` em `src/lib/render/`, chamada pelo `renderScene` antes dos elementos. Ela calcula a área visível com `screenToWorld` e desenha só as linhas ou pontos dessa área.
@@ -215,7 +212,7 @@ O traço de esboço vem do Excalidraw, mas a interface tem identidade própria (
   - A espessura das linhas é fixa na tela (dividida pelo `zoom`), como as alças. A cor sai dos tokens do item 4.2.
   - A grade não usa o `roughjs`: um traço tremido em centenas de linhas pesaria no desenho e brigaria com as formas. Ela fica discreta, e o esboço continua sendo das formas.
   - Pontos ou linhas é uma decisão de visual do item 4.2.
-- **Por quê:** a grade dá referência de escala e posição ao desenhar diagramas, e é a base do snap do item 3.4. Separar a parte visual do snap permite tê-la logo, sem esperar a etapa 3.
+- **Por quê:** a grade dá referência de escala e posição ao desenhar diagramas.
 
 ### 4.2 Identidade visual própria
 

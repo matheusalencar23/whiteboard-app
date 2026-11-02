@@ -37,6 +37,8 @@ export function useShortcuts() {
         store.deleteElements(store.selectedIds);
       } else if (key === "escape") {
         store.setSelection([]);
+      } else if (key === "g") {
+        store.toggleGrid();
       } else {
         const definition = TOOLS.find((t) => t.keys.includes(key));
         if (!definition) return;

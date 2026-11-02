@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { BoardElement } from "../lib/elements/types";
 import { updateBoundArrows } from "../lib/elements/bindings";
 import type { Point } from "../lib/types";
-import { debounce, loadBoard, saveBoard } from "../lib/persistence";
+import { DEFAULT_PREFERENCES, debounce, loadBoard, saveBoard } from "../lib/persistence";
 import { INITIAL_VIEWPORT, panBy, zoomAt, type Viewport } from "../lib/viewport";
 
 export type Tool =
@@ -23,6 +23,8 @@ interface BoardState {
   selectedIds: string[];
   tool: Tool;
   viewport: Viewport;
+  /** Grade de fundo visível. */
+  showGrid: boolean;
   /** Snapshots anteriores de `elements`. O último é o mais recente. */
   past: BoardElement[][];
   future: BoardElement[][];
@@ -43,6 +45,7 @@ interface BoardState {
 
   setSelection: (ids: string[]) => void;
   setTool: (tool: Tool) => void;
+  toggleGrid: () => void;
   panBy: (dx: number, dy: number) => void;
   zoomAt: (screenPoint: Point, factor: number) => void;
 }
@@ -67,6 +70,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
   selectedIds: [],
   tool: "selection",
   viewport: saved?.viewport ?? INITIAL_VIEWPORT,
+  showGrid: saved?.showGrid ?? DEFAULT_PREFERENCES.showGrid,
   past: [],
   future: [],
 
@@ -144,17 +148,23 @@ export const useBoardStore = create<BoardState>()((set) => ({
   // Trocar de ferramenta desfaz a seleção, como no Excalidraw.
   setTool: (tool) =>
     set((state) => ({ tool, selectedIds: tool === "selection" ? state.selectedIds : [] })),
+  toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
   panBy: (dx, dy) => set((state) => ({ viewport: panBy(state.viewport, dx, dy) })),
   zoomAt: (screenPoint, factor) =>
     set((state) => ({ viewport: zoomAt(state.viewport, screenPoint, factor) })),
 }));
 
-// Salvamento automático: grava `elements` e `viewport` quando um dos dois muda.
+// Salvamento automático: grava quando muda algo que é salvo.
 const scheduleSave = debounce(saveBoard, SAVE_DELAY);
 
 const unsubscribe = useBoardStore.subscribe((state, prev) => {
-  if (state.elements === prev.elements && state.viewport === prev.viewport) return;
-  scheduleSave({ elements: state.elements, viewport: state.viewport });
+  const changed =
+    state.elements !== prev.elements ||
+    state.viewport !== prev.viewport ||
+    state.showGrid !== prev.showGrid;
+  if (!changed) return;
+  const { elements, viewport, showGrid } = state;
+  scheduleSave({ elements, viewport, showGrid });
 });
 
 // Grava o que estiver pendente antes de a página fechar ou recarregar.

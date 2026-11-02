@@ -52,6 +52,7 @@ import {
   type Handle,
 } from "../../../lib/selection";
 import { renderScene } from "../../../lib/render/renderScene";
+import { GRID_SIZE } from "../../../lib/render/grid";
 import { screenToWorld } from "../../../lib/viewport";
 import { FONT_FAMILY, LABEL_FONT_SIZE, LINE_HEIGHT } from "../../../lib/text";
 import { useBoardStore } from "../../../store/boardStore";
@@ -169,6 +170,7 @@ export function Canvas() {
   const elements = useBoardStore((s) => s.elements);
   const selectedIds = useBoardStore((s) => s.selectedIds);
   const viewport = useBoardStore((s) => s.viewport);
+  const showGrid = useBoardStore((s) => s.showGrid);
   const tool = useBoardStore((s) => s.tool);
 
   const [draft, setDraftState] = useState<BoardElement | null>(null);
@@ -322,11 +324,13 @@ export function Canvas() {
       },
       viewport,
       dpr,
+      showGrid ? GRID_SIZE : null,
     );
   }, [
     scene,
     selected,
     selectionBox,
+    showGrid,
     isInteracting,
     bindingTarget,
     bindingHint,

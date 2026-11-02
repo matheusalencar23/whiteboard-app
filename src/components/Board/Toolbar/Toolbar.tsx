@@ -1,4 +1,4 @@
-import { LuRedo2, LuTrash2, LuUndo2 } from "react-icons/lu";
+import { LuGrid3X3, LuRedo2, LuTrash2, LuUndo2 } from "react-icons/lu";
 import styles from "./Toolbar.module.scss";
 import { TOOLS } from "./tools";
 import { Divider } from "../../../ui/Divider/Divider";
@@ -28,6 +28,8 @@ export function Toolbar() {
   const undo = useBoardStore((s) => s.undo);
   const redo = useBoardStore((s) => s.redo);
   const deleteElements = useBoardStore((s) => s.deleteElements);
+  const showGrid = useBoardStore((s) => s.showGrid);
+  const toggleGrid = useBoardStore((s) => s.toggleGrid);
 
   return (
     <div className={styles.toolbar}>
@@ -81,6 +83,20 @@ export function Toolbar() {
         onClick={blurAfter(() => deleteElements(useBoardStore.getState().selectedIds))}
       >
         <LuTrash2 />
+      </button>
+
+      <Divider />
+
+      <button
+        type="button"
+        className={styles.button}
+        data-active={showGrid}
+        title="Grade (G)"
+        aria-label="Grade"
+        aria-pressed={showGrid}
+        onClick={blurAfter(toggleGrid)}
+      >
+        <LuGrid3X3 />
       </button>
     </div>
   );

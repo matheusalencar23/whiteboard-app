@@ -14,6 +14,7 @@ import {
   getSingleArrow,
 } from "../selection";
 import type { Viewport } from "../viewport";
+import { drawGrid } from "./grid";
 
 const SELECTION_COLOR = "#4f7cff";
 
@@ -168,12 +169,18 @@ export function renderScene(
   overlay: SceneOverlay,
   viewport: Viewport,
   dpr: number,
+  /** Espaçamento da grade de fundo, ou `null` para escondê-la. */
+  gridSize: number | null,
 ) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
   const scale = dpr * viewport.zoom;
   ctx.setTransform(scale, 0, 0, scale, viewport.offsetX * dpr, viewport.offsetY * dpr);
+
+  if (gridSize) {
+    drawGrid(ctx, viewport, gridSize, ctx.canvas.width / dpr, ctx.canvas.height / dpr);
+  }
 
   for (const element of elements) {
     renderElement(element, rc, ctx);

@@ -7,14 +7,29 @@ Marque os itens com `[x]` conforme forem concluídos.
 ## Estado atual
 
 - Rota `/board` com um canvas em tela cheia (resolução ajustada para telas HiDPI).
-- Ferramenta única: desenhar retângulos arrastando o mouse, com traço de esboço do `roughjs`.
+- Toolbar com as ferramentas mão, seleção, retângulo, losango, elipse, seta, lápis e texto, além de desfazer, refazer e apagar.
+- Seleção por clique, Shift + clique e caixa. Mover, redimensionar pelas 8 alças, apagar, e desfazer/refazer.
 - Câmera com pan (roda do mouse, Shift + roda, botão do meio ou Espaço + arrastar) e zoom (Ctrl/Cmd + roda ou pinça no trackpad, centrado no cursor).
 - Estado em uma store do zustand, sem persistência.
-- Dependências instaladas mas ainda não usadas: `react-color`, `react-icons`.
+- Dependência instalada mas ainda não usada: `react-color`.
+
+### Atalhos
+
+| Ação | Atalho |
+|---|---|
+| Ferramentas | `H` mão, `V`/`1` seleção, `R`/`2` retângulo, `D`/`3` losango, `O`/`4` elipse, `A`/`5` seta, `P`/`6` lápis, `T`/`7` texto |
+| Desfazer / refazer | `Ctrl+Z` / `Ctrl+Shift+Z` ou `Ctrl+Y` |
+| Selecionar tudo | `Ctrl+A` |
+| Apagar seleção | `Delete` ou `Backspace` |
+| Limpar seleção | `Esc` |
+| Editar texto | Duplo clique no texto. Duplo clique no vazio cria um texto novo. `Esc` ou `Ctrl+Enter` confirmam. |
 
 ## Decisões tomadas
 
 - Visual de esboço com `roughjs` é o padrão desde a etapa 1. Cada elemento guarda um `seed` para o traço não mudar a cada redesenho. O traço limpo é `roughness: 0` no estilo do elemento.
+- O lápis (desenho livre) não usa o `roughjs`. Ele desenha uma curva suave direto no canvas, porque o roughjs duplicaria e tremeria o traço da mão.
+- Formas sem preenchimento só são clicáveis pela borda, como no Excalidraw. Para mover uma forma vazia já selecionada, dá para arrastar pelo meio da caixa de seleção.
+- Depois de criar uma forma, uma seta ou um texto, a ferramenta volta para a seleção com o elemento novo selecionado. O lápis continua ativo.
 
 ## 1. Fundação
 
@@ -27,12 +42,19 @@ Fazer antes de qualquer ferramenta nova, porque o resto depende disso.
 
 ## 2. Ferramentas e edição básica
 
-- [ ] Toolbar com `react-icons` e o `Divider` (`src/ui/Divider`).
-- [ ] Ferramentas: seleção, retângulo, elipse, losango, seta, lápis (desenho livre) e texto.
-- [ ] Detecção de clique sobre as formas (hit testing).
-- [ ] Seleção por clique e por caixa.
-- [ ] Mover, redimensionar pelas alças e apagar.
-- [ ] Desfazer/refazer (undo/redo). Começar com uma pilha de snapshots do estado.
+- [x] Toolbar com `react-icons` e o `Divider` (`src/components/Board/Toolbar/`).
+- [x] Ferramentas: seleção, retângulo, elipse, losango, seta, lápis (desenho livre) e texto.
+- [x] Detecção de clique sobre as formas (hit testing).
+- [x] Seleção por clique e por caixa.
+- [x] Mover, redimensionar pelas alças e apagar.
+- [x] Desfazer/refazer (undo/redo) com pilha de snapshots (limite de 100 passos).
+
+### Pendências da etapa 2
+
+- [ ] A caixa de seleção da seta não inclui a ponta (usa só os pontos da haste).
+- [ ] Shift ao redimensionar não mantém a proporção, e Shift ao desenhar não força quadrado, círculo ou ângulos de 45°.
+- [ ] Não há como girar elementos. O campo `rotation` já é respeitado no desenho e no clique, mas a caixa de seleção ainda o ignora.
+- [ ] Mover elementos com as setas do teclado, duplicar (`Ctrl+D`) e copiar/colar.
 
 ## 3. Diagramas (a parte draw.io)
 
@@ -45,7 +67,7 @@ Fazer antes de qualquer ferramenta nova, porque o resto depende disso.
 ## 4. Visual (a parte Excalidraw)
 
 - [x] Traço com cara de esboço usando `roughjs` (adiantado para a etapa 1).
-- [ ] Usar a fonte Caveat (já carregada no `index.html`) no texto.
+- [x] Usar a fonte Caveat (já carregada no `index.html`) no texto (adiantado para a etapa 2).
 - [ ] Painel de estilo (contorno, preenchimento, espessura) com o `react-color`.
 
 ## 5. Persistência

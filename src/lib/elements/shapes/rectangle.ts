@@ -1,38 +1,21 @@
-import { nanoid } from "nanoid";
-import rough from "roughjs";
-import type { RoughCanvas } from "roughjs/bin/canvas";
-import type { Point } from "../../types";
-import { getBounds } from "../../geometry/bounds";
-import { DEFAULT_STYLE, type RectangleElement } from "../types";
+import { containsPoint, expandBounds } from "../../geometry/bounds";
+import { isFilled, resizeBox, roughOptions, type ShapeUtil } from "../shapeUtil";
+import type { RectangleElement } from "../types";
 
-/** Cria um retângulo a partir de dois cantos opostos, em qualquer direção. */
-export function createRectangle(start: Point, end: Point): RectangleElement {
-  return {
-    id: nanoid(),
-    type: "rectangle",
-    ...getBounds([start, end]),
-    rotation: 0,
-    style: { ...DEFAULT_STYLE },
-    seed: rough.newSeed(),
-  };
-}
+export const rectangleUtil: ShapeUtil<RectangleElement> = {
+  draw(el, rc) {
+    rc.rectangle(el.x, el.y, el.width, el.height, roughOptions(el.style, el.seed));
+  },
 
-/** Atualiza a geometria mantendo id, estilo e seed. */
-export function resizeRectangle(
-  rectangle: RectangleElement,
-  start: Point,
-  end: Point,
-): RectangleElement {
-  return { ...rectangle, ...getBounds([start, end]) };
-}
+  hitTest(el, p, tolerance) {
+    const t = tolerance + el.style.strokeWidth / 2;
+    if (!containsPoint(expandBounds(el, t), p)) return false;
+    if (isFilled(el.style)) return true;
 
-export function drawRectangle(rectangle: RectangleElement, rc: RoughCanvas) {
-  const { x, y, width, height, style, seed } = rectangle;
-  rc.rectangle(x, y, width, height, {
-    seed,
-    stroke: style.strokeColor,
-    strokeWidth: style.strokeWidth,
-    roughness: style.roughness,
-    fill: style.fillColor === "transparent" ? undefined : style.fillColor,
-  });
-}
+    // Sem preenchimento, só a borda é clicável (como no Excalidraw).
+    const inner = expandBounds(el, -t);
+    return inner.width <= 0 || inner.height <= 0 || !containsPoint(inner, p);
+  },
+
+  resize: resizeBox,
+};

@@ -1,5 +1,5 @@
 import { containsPoint, expandBounds } from "../../geometry/bounds";
-import { isFilled, resizeBox, roughOptions, scaleToBorder, SIDE_MIDPOINTS, type ShapeUtil } from "../shapeUtil";
+import { centeredArea, isFilled, resizeBox, roughOptions, scaleToBorder, SIDE_MIDPOINTS, type ShapeUtil } from "../shapeUtil";
 import type { RectangleElement } from "../types";
 
 export const rectangleUtil: ShapeUtil<RectangleElement> = {
@@ -24,4 +24,6 @@ export const rectangleUtil: ShapeUtil<RectangleElement> = {
   },
 
   getConnectionPoints: () => [...SIDE_MIDPOINTS],
+
+  getLabelArea: (el) => centeredArea(el, 1, 1),
 };

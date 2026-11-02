@@ -35,6 +35,23 @@ export interface ShapeUtil<T extends BoardElement> {
    * caixa (0 a 1 em `x` e `y`). Viram o `anchor` da ligação.
    */
   getConnectionPoints?(element: T): Point[];
+  /**
+   * Só nas formas que aceitam rótulo: a área (sem rotação) em que o texto
+   * quebra linha e é centralizado.
+   */
+  getLabelArea?(element: T): Bounds;
+}
+
+/** Área centralizada na caixa do elemento, com uma fração da largura e da altura. */
+export function centeredArea(el: Bounds, fx: number, fy: number): Bounds {
+  const width = el.width * fx;
+  const height = el.height * fy;
+  return {
+    x: el.x + (el.width - width) / 2,
+    y: el.y + (el.height - height) / 2,
+    width,
+    height,
+  };
 }
 
 /** O meio de cada lado da caixa: topo, direita, base e esquerda. */

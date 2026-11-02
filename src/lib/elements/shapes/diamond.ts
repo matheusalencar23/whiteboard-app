@@ -1,6 +1,6 @@
 import type { Point } from "../../types";
 import { distanceToPolygonEdge, isPointInPolygon } from "../../geometry/distance";
-import { isFilled, resizeBox, roughOptions, scaleToBorder, type ShapeUtil } from "../shapeUtil";
+import { centeredArea, isFilled, resizeBox, roughOptions, scaleToBorder, type ShapeUtil } from "../shapeUtil";
 import type { DiamondElement } from "../types";
 
 /** Vértices em sentido horário: topo, direita, base, esquerda. */
@@ -41,4 +41,7 @@ export const diamondUtil: ShapeUtil<DiamondElement> = {
     { x: 0.5, y: 1 },
     { x: 0, y: 0.5 },
   ],
+
+  // Retângulo inscrito no losango, com metade da largura e da altura.
+  getLabelArea: (el) => centeredArea(el, 0.5, 0.5),
 };

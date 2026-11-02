@@ -1,5 +1,5 @@
 import type { Point } from "../../types";
-import { isFilled, resizeBox, roughOptions, scaleToBorder, SIDE_MIDPOINTS, type ShapeUtil } from "../shapeUtil";
+import { centeredArea, isFilled, resizeBox, roughOptions, scaleToBorder, SIDE_MIDPOINTS, type ShapeUtil } from "../shapeUtil";
 import type { EllipseElement } from "../types";
 
 function isInsideEllipse(p: Point, center: Point, rx: number, ry: number) {
@@ -37,4 +37,7 @@ export const ellipseUtil: ShapeUtil<EllipseElement> = {
   },
 
   getConnectionPoints: () => [...SIDE_MIDPOINTS],
+
+  // Retângulo inscrito na elipse.
+  getLabelArea: (el) => centeredArea(el, Math.SQRT1_2, Math.SQRT1_2),
 };

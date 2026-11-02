@@ -30,15 +30,26 @@ interface BaseElement {
   seed: number;
 }
 
-export interface RectangleElement extends BaseElement {
+/** Texto centralizado dentro de uma forma de caixa, que quebra linha na largura dela. */
+export interface ShapeLabel {
+  text: string;
+  fontSize: number;
+}
+
+/** Formas de caixa podem ter um rótulo, que se move e redimensiona junto. */
+interface BoxBaseElement extends BaseElement {
+  label?: ShapeLabel;
+}
+
+export interface RectangleElement extends BoxBaseElement {
   type: "rectangle";
 }
 
-export interface EllipseElement extends BaseElement {
+export interface EllipseElement extends BoxBaseElement {
   type: "ellipse";
 }
 
-export interface DiamondElement extends BaseElement {
+export interface DiamondElement extends BoxBaseElement {
   type: "diamond";
 }
 
@@ -92,6 +103,12 @@ export type ElementOfType<T extends ElementType> = Extract<BoardElement, { type:
 
 /** Formas definidas só pela caixa delimitadora, criadas arrastando de um canto ao outro. */
 export type BoxElementType = "rectangle" | "ellipse" | "diamond";
+
+export type BoxElement = ElementOfType<BoxElementType>;
+
+export function isBoxElement(element: BoardElement): element is BoxElement {
+  return element.type === "rectangle" || element.type === "ellipse" || element.type === "diamond";
+}
 
 export const DEFAULT_STYLE: ElementStyle = {
   strokeColor: "#1e1e1e",

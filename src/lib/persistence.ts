@@ -149,9 +149,17 @@ function isValidElement(value: unknown): value is BoardElement {
       return isValidPoints(value.points);
     case "text":
       return typeof value.text === "string" && isNumber(value.fontSize);
-    default:
-      return true;
+    case "rectangle":
+    case "ellipse":
+    case "diamond":
+      return isValidLabel(value.label);
   }
+}
+
+/** Rótulo das formas de caixa: opcional, então campos ausentes são válidos. */
+function isValidLabel(value: unknown): boolean {
+  if (value === undefined) return true;
+  return isObject(value) && typeof value.text === "string" && isNumber(value.fontSize);
 }
 
 /**

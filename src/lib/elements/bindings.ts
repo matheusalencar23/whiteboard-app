@@ -1,7 +1,7 @@
 import type { Point } from "../types";
 import { getCenter } from "../geometry/bounds";
 import { distance, rotatePoint } from "../geometry/distance";
-import { getBorderPoint, getConnectionAnchors, isBindable } from "./registry";
+import { getBorderPoint, getConnectionAnchors, isBindable, isInsideShape } from "./registry";
 import { getArrowPoints, setArrowPoints } from "./shapes/arrow";
 import type { ArrowBinding, ArrowElement, BoardElement } from "./types";
 
@@ -122,11 +122,7 @@ export function getBindableAt(
   for (let i = elements.length - 1; i >= 0; i--) {
     const el = elements[i];
     if (!isBindable(el) || excludeIds.includes(el.id)) continue;
-
-    const center = getCenter(el);
-    const dir = { x: point.x - center.x, y: point.y - center.y };
-    const reach = distance(center, getBorderPoint(el, dir));
-    if (distance(center, point) <= reach + tolerance) return el;
+    if (isInsideShape(el, point, tolerance)) return el;
   }
   return null;
 }

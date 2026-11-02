@@ -1,11 +1,26 @@
 import { useEffect, useRef, useState } from "react";
 import styles from "./TextEditor.module.scss";
-import type { TextElement } from "../../../lib/elements/types";
-import { FONT_FAMILY, LINE_HEIGHT, measureText } from "../../../lib/text";
+import type { Point } from "../../../lib/types";
+import type { Bounds } from "../../../lib/geometry/bounds";
+import { FONT_FAMILY, LINE_HEIGHT, layoutText, measureText } from "../../../lib/text";
 import { worldToScreen, type Viewport } from "../../../lib/viewport";
 
+/**
+ * Onde o texto fica, em coordenadas de mundo:
+ * - `free`: texto solto, alinhado à esquerda a partir de `position` (canto
+ *   superior esquerdo), crescendo com o conteúdo, sem quebra automática;
+ * - `label`: rótulo de forma, centralizado em `area` e quebrando linha na
+ *   largura dela, igual ao `wrapText` do canvas.
+ */
+export type TextEditorLayout =
+  | { kind: "free"; position: Point }
+  | { kind: "label"; area: Bounds };
+
 interface TextEditorProps {
-  element: TextElement;
+  initialText: string;
+  fontSize: number;
+  color: string;
+  layout: TextEditorLayout;
   viewport: Viewport;
   /** Chamado uma única vez, ao sair do editor, com o texto final. */
   onSubmit: (text: string) => void;
@@ -15,10 +30,17 @@ interface TextEditorProps {
  * <textarea> posicionado exatamente sobre o texto no canvas, para editar com
  * cursor, seleção e atalhos nativos do navegador.
  */
-export function TextEditor({ element, viewport, onSubmit }: TextEditorProps) {
+export function TextEditor({
+  initialText,
+  fontSize,
+  color,
+  layout,
+  viewport,
+  onSubmit,
+}: TextEditorProps) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const submittedRef = useRef(false);
-  const [text, setText] = useState(element.text);
+  const [text, setText] = useState(initialText);
 
   useEffect(() => {
     const textarea = ref.current;
@@ -42,15 +64,27 @@ export function TextEditor({ element, viewport, onSubmit }: TextEditorProps) {
   }
 
   const { zoom } = viewport;
-  const position = worldToScreen(element, viewport);
-  const size = measureText(text, element.fontSize);
+  let box: Bounds;
+  if (layout.kind === "free") {
+    const size = measureText(text, fontSize);
+    // Folga de meia letra para o cursor não ficar cortado no fim da linha.
+    box = { ...layout.position, width: size.width + fontSize / 2, height: size.height };
+  } else {
+    // Mesma largura de quebra do canvas; a altura acompanha as linhas,
+    // centralizada na área como o rótulo desenhado.
+    const { area } = layout;
+    const { height } = layoutText(text, fontSize, area.width);
+    box = { x: area.x, y: area.y + (area.height - height) / 2, width: area.width, height };
+  }
+  const position = worldToScreen(box, viewport);
 
   return (
     <textarea
       ref={ref}
       className={styles.editor}
+      data-layout={layout.kind}
       value={text}
-      wrap="off"
+      wrap={layout.kind === "free" ? "off" : "soft"}
       spellCheck={false}
       onChange={(e) => setText(e.target.value)}
       onKeyDown={handleKeyDown}
@@ -58,13 +92,12 @@ export function TextEditor({ element, viewport, onSubmit }: TextEditorProps) {
       style={{
         left: position.x,
         top: position.y,
-        // Folga de meia letra para o cursor não ficar cortado no fim da linha.
-        width: (size.width + element.fontSize / 2) * zoom,
-        height: size.height * zoom,
-        fontSize: element.fontSize * zoom,
+        width: box.width * zoom,
+        height: box.height * zoom,
+        fontSize: fontSize * zoom,
         fontFamily: FONT_FAMILY,
         lineHeight: LINE_HEIGHT,
-        color: element.style.strokeColor,
+        color,
       }}
     />
   );

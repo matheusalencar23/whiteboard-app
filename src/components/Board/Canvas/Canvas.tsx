@@ -7,9 +7,11 @@ import type {
   ArrowBinding,
   ArrowElement,
   BoardElement,
+  BoxElement,
   BoxElementType,
   TextElement,
 } from "../../../lib/elements/types";
+import { isBoxElement } from "../../../lib/elements/types";
 import {
   containsBounds,
   containsPoint,
@@ -20,6 +22,8 @@ import { distance } from "../../../lib/geometry/distance";
 import {
   createBoxElement,
   getElementAtPoint,
+  getLabelArea,
+  getLabelTargetAt,
   getElementBounds,
   resizeElement,
   translateElement,
@@ -49,9 +53,9 @@ import {
 } from "../../../lib/selection";
 import { renderScene } from "../../../lib/render/renderScene";
 import { screenToWorld } from "../../../lib/viewport";
-import { FONT_FAMILY, LINE_HEIGHT } from "../../../lib/text";
+import { FONT_FAMILY, LABEL_FONT_SIZE, LINE_HEIGHT } from "../../../lib/text";
 import { useBoardStore } from "../../../store/boardStore";
-import { TextEditor } from "../TextEditor/TextEditor";
+import { TextEditor, type TextEditorLayout } from "../TextEditor/TextEditor";
 import { isTypingTarget } from "../useShortcuts";
 
 /** Sensibilidade do zoom por roda/pinça (maior = mais rápido). */
@@ -102,11 +106,15 @@ type Interaction =
     }
   | { kind: "boxSelecting"; start: Point; initialSelection: string[] };
 
-interface EditingText {
-  element: TextElement;
-  /** Ainda não está na store (acabou de ser criado com a ferramenta de texto). */
-  isNew: boolean;
-}
+/** Texto em edição: um texto solto ou o rótulo de uma forma. */
+type Editing =
+  | {
+      kind: "text";
+      element: TextElement;
+      /** Ainda não está na store (acabou de ser criado com a ferramenta de texto). */
+      isNew: boolean;
+    }
+  | { kind: "label"; element: BoxElement };
 
 function getScreenPoint(e: { nativeEvent: MouseEvent }): Point {
   return { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY };
@@ -136,6 +144,13 @@ function detachFromStaying(moved: BoardElement[]): BoardElement[] {
   return releaseBindings(moved, new Set(moved.map((el) => el.id)));
 }
 
+/** Onde o `<textarea>` abre: no texto solto ou centralizado na forma. */
+function editorLayout(editing: Editing): TextEditorLayout {
+  if (editing.kind === "text") return { kind: "free", position: editing.element };
+  const area = getLabelArea(editing.element) ?? editing.element;
+  return { kind: "label", area };
+}
+
 /** Um elemento recém-arrastado tem tamanho suficiente para ser mantido? */
 function hasSize(element: BoardElement): boolean {
   if (element.type === "arrow") return element.width > 0 || element.height > 0;
@@ -158,7 +173,7 @@ export function Canvas() {
 
   const [draft, setDraftState] = useState<BoardElement | null>(null);
   const [selectionBox, setSelectionBox] = useState<Bounds | null>(null);
-  const [editing, setEditing] = useState<EditingText | null>(null);
+  const [editing, setEditing] = useState<Editing | null>(null);
   const [isInteracting, setIsInteracting] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const [spacePressed, setSpacePressed] = useState(false);
@@ -254,9 +269,15 @@ export function Canvas() {
     };
   }, []);
 
-  // O texto em edição é mostrado pelo <textarea>, não pelo canvas.
+  // O texto em edição é mostrado pelo <textarea>, não pelo canvas. No
+  // rótulo, só o texto some: a forma continua desenhada.
   const scene = useMemo(() => {
-    const visible = editing ? elements.filter((el) => el.id !== editing.element.id) : elements;
+    let visible = elements;
+    if (editing?.kind === "text") {
+      visible = elements.filter((el) => el.id !== editing.element.id);
+    } else if (editing?.kind === "label") {
+      visible = elements.map((el) => (el.id === editing.element.id ? { ...el, label: undefined } : el));
+    }
     return draft ? [...visible, draft] : visible;
   }, [elements, draft, editing]);
 
@@ -316,14 +337,40 @@ export function Canvas() {
 
   function startEditingText(element: TextElement, isNew: boolean) {
     useBoardStore.getState().setSelection([]);
-    setEditing({ element, isNew });
+    setEditing({ kind: "text", element, isNew });
   }
 
-  function finishEditingText(text: string) {
+  function startEditingLabel(element: BoxElement) {
+    useBoardStore.getState().setSelection([]);
+    setEditing({ kind: "label", element });
+  }
+
+  function finishEditing(text: string) {
     const current = editing;
     setEditing(null);
     if (!current) return;
+    if (current.kind === "label") finishEditingLabel(current.element.id, text);
+    else finishEditingText(current, text);
+  }
 
+  /** Texto vazio remove o rótulo. A forma fica selecionada no fim. */
+  function finishEditingLabel(id: string, text: string) {
+    const store = useBoardStore.getState();
+    const shape = store.elements.find((el) => el.id === id);
+    if (shape && isBoxElement(shape)) {
+      const isEmpty = text.trim() === "";
+      if (isEmpty && shape.label) {
+        store.replaceElement({ ...shape, label: undefined });
+      } else if (!isEmpty && text !== shape.label?.text) {
+        const fontSize = shape.label?.fontSize ?? LABEL_FONT_SIZE;
+        store.replaceElement({ ...shape, label: { text, fontSize } });
+      }
+      store.setSelection([id]);
+    }
+    store.setTool("selection");
+  }
+
+  function finishEditingText(current: Extract<Editing, { kind: "text" }>, text: string) {
     const store = useBoardStore.getState();
     const isEmpty = text.trim() === "";
     const updated = setText(current.element, text);
@@ -618,16 +665,24 @@ export function Canvas() {
     endInteraction();
   }
 
-  /** Duplo clique: edita um texto existente ou cria um texto novo ali. */
+  /**
+   * Duplo clique: edita um texto existente, edita o rótulo da forma clicada
+   * (pela borda ou pelo interior, mesmo sem preenchimento) ou cria um texto
+   * novo ali.
+   */
   function handleDoubleClick(e: React.MouseEvent) {
     const store = useBoardStore.getState();
     if (store.tool !== "selection" || editing) return;
 
     const world = screenToWorld(getScreenPoint(e), store.viewport);
-    const hit = getElementAtPoint(store.elements, world, HIT_TOLERANCE / store.viewport.zoom);
+    const tolerance = HIT_TOLERANCE / store.viewport.zoom;
+    const hit = getElementAtPoint(store.elements, world, tolerance);
+    const shape = hit ? hit : getLabelTargetAt(store.elements, world, 0);
 
     if (hit?.type === "text") {
       startEditingText(hit, false);
+    } else if (shape && isBoxElement(shape)) {
+      startEditingLabel(shape);
     } else if (!hit) {
       // Centraliza a primeira linha no ponto clicado.
       const text = createText(world);
@@ -657,9 +712,16 @@ export function Canvas() {
       {editing && (
         <TextEditor
           key={editing.element.id}
-          element={editing.element}
+          initialText={editing.kind === "text" ? editing.element.text : (editing.element.label?.text ?? "")}
+          fontSize={
+            editing.kind === "text"
+              ? editing.element.fontSize
+              : (editing.element.label?.fontSize ?? LABEL_FONT_SIZE)
+          }
+          color={editing.element.style.strokeColor}
+          layout={editorLayout(editing)}
           viewport={viewport}
-          onSubmit={finishEditingText}
+          onSubmit={finishEditing}
         />
       )}
     </>

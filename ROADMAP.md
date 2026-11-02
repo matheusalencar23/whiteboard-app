@@ -12,6 +12,7 @@ Marque os itens com `[x]` conforme forem concluídos.
 - Câmera com pan (roda do mouse, Shift + roda, botão do meio ou Espaço + arrastar) e zoom (Ctrl/Cmd + roda ou pinça no trackpad, centrado no cursor).
 - Estado em uma store do zustand. `elements` e `viewport` são salvos sozinhos no `localStorage` (`src/lib/persistence.ts`, formato versão 2).
 - Setas ligadas às formas: acompanham quando a forma é movida ou redimensionada, e as pontas podem ser arrastadas para ligar, desligar ou trocar de forma. As pontas encaixam nos pontos de conexão das formas (meio dos lados ou vértices do losango).
+- Texto dentro das formas: duplo clique num retângulo, elipse ou losango edita um rótulo centralizado, que quebra linha na largura da forma.
 - Dependência instalada mas ainda não usada: `react-color`.
 
 ### Atalhos
@@ -58,7 +59,7 @@ Esta é a ordem recomendada de trabalho a partir de agora. Ela não segue a nume
 
 ### 3. Etapa 3, na ordem descrita na seção dela
 
-- [ ] Os itens 3.1 (setas ligadas) e 3.2 (pontos de conexão) estão feitos. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Cada item depende do anterior.
+- [ ] Os itens 3.1 (setas ligadas), 3.2 (pontos de conexão) e 3.3 (texto dentro das formas) estão feitos. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Do 3.1 ao 3.6, cada item depende do anterior. O 3.7 (texto nas setas) e o 3.8 (formato das pontas) não dependem dos outros e podem ser adiantados. Só a interface do 3.8 espera o painel de estilo (4.3).
 
 As outras pendências da etapa 2 (Shift, rotação, duplicar e copiar/colar) ficam para quando fizerem falta no uso. Nenhuma bloqueia a etapa 3.
 
@@ -125,7 +126,15 @@ A parte que diferencia o projeto de um Excalidraw. Os itens estão na ordem de i
 
 ### 3.3 Texto dentro das formas
 
-- [ ] **O quê:** duplo clique numa forma abre a edição de um texto centralizado dentro dela. O texto quebra linha na largura da forma e se move e redimensiona junto com ela.
+- [x] **Feito.** Detalhes da implementação:
+  - A área do rótulo vem de `getLabelArea` no `ShapeUtil`: a caixa inteira no retângulo, o retângulo inscrito na elipse (`1/√2` da caixa) e no losango (metade da caixa), menos uma folga de 8 unidades. O desenho, o clique no texto e o layout ficam em `registry.ts` (`getLabelLayout`).
+  - `wrapText` em `text.ts` imita o `<textarea>` com `white-space: pre-wrap` e `overflow-wrap: break-word`: quebra nos espaços e, numa palavra maior que a linha, entre letras.
+  - O duplo clique acha a forma pela borda, pelo texto do rótulo ou pelo interior (mesmo sem preenchimento). Apagar todo o texto remove o rótulo.
+  - Clicar no texto do rótulo seleciona a forma, mesmo sem preenchimento.
+  - O rótulo tem fonte fixa (`LABEL_FONT_SIZE`, 20) e não escala ao redimensionar a forma: só quebra as linhas de novo. Texto que não cabe na altura transborda, centralizado.
+  - O campo `label` é opcional, então o formato salvo continua na versão 2.
+  - Ainda falta abrir a edição do rótulo com `Enter` numa forma selecionada, como no Excalidraw.
+- **O quê:** duplo clique numa forma abre a edição de um texto centralizado dentro dela. O texto quebra linha na largura da forma e se move e redimensiona junto com ela.
 - **Como:**
   - As formas de caixa (retângulo, elipse e losango) ganham um campo opcional `label: { text, fontSize }`. A alternativa do Excalidraw, um elemento de texto separado ligado à forma, exigiria sincronizar dois elementos em cada mover, redimensionar, apagar e desfazer.
   - A quebra de linha automática vai para `src/lib/text.ts`, ao lado do `measureText`, para o canvas e o `<textarea>` quebrarem as linhas no mesmo lugar.
@@ -165,6 +174,30 @@ A parte que diferencia o projeto de um Excalidraw. Os itens estão na ordem de i
   - Os pontos da curva são recalculados pelo `updateBoundArrows` (item 3.1), como as outras rotas.
 - **Por quê:** com pontos de conexão em todos os lados, ligar no lado "de trás" de uma forma é comum em fluxogramas (laços, retornos). Uma reta que atravessa a forma fica ilegível. Fica depois do item 3.5 porque reaproveita a direção de saída e a rota que contorna a forma.
 
+### 3.7 Texto nas setas
+
+- [ ] **O quê:** duplo clique numa seta abre a edição de um texto que fica no meio dela, como os rótulos de fluxograma ("sim", "não", "envia pedido"). O texto acompanha a seta quando ela muda, inclusive quando é recalculada por estar ligada a formas.
+- **Como:**
+  - `ArrowElement` ganha o mesmo campo opcional `label: { text, fontSize }` das formas (item 3.3), reaproveitando `ShapeLabel`, `wrapText` e o `TextEditor` no modo rótulo.
+  - **Posição:** o centro do texto fica no ponto do meio do comprimento da seta, medido ao longo do caminho, não no centro da caixa. Assim continua certo com setas de vários pontos, ortogonais (3.5) e curvas (3.6). Uma função `getPointAtLength` em `src/lib/geometry/` serve às três rotas.
+  - **Largura:** a seta não tem área própria, então o texto quebra numa largura máxima fixa (por exemplo, 200 unidades de mundo) e fica sem quebra se for curto.
+  - **Traço interrompido:** a linha da seta não passa por cima do texto. O jeito mais simples é desenhar um retângulo com a cor de fundo atrás do texto, que muda junto quando o tema e a grade (4.1 e 4.2) existirem. A alternativa mais limpa é recortar a linha com `ctx.clip` na área do texto, sem depender da cor de fundo.
+  - **Desenho e clique:** o `getLabelLayout` do `registry.ts` passa a aceitar a seta, com a posição vinda do caminho em vez da `getLabelArea`. O texto entra no hit test e no `getBounds` da seta, para a seleção e a seleção por caixa o incluírem.
+  - **Depois, opcional:** arrastar o texto ao longo da seta, guardando a posição como uma fração do comprimento (0 a 1), como no draw.io.
+- **Por quê:** em fluxogramas, as setas que saem de uma decisão quase sempre têm texto. Um texto solto ao lado da seta fica para trás quando as formas se movem, que é o mesmo problema que o item 3.3 resolveu nas formas.
+
+### 3.8 Formato das pontas das setas
+
+- [ ] **O quê:** escolher o formato de cada ponta da seta, no início e no fim, de forma independente. Os formatos são nenhum, seta aberta (o atual), triângulo cheio, círculo, losango e barra. Isso permite setas de mão dupla, linhas sem ponta e as notações de diagramas como UML e ER.
+- **Como:**
+  - `ArrowElement` ganha `startArrowhead` e `endArrowhead`, cada um `"none" | "arrow" | "triangle" | "circle" | "diamond" | "bar"`. O padrão é `"none"` no início e `"arrow"` no fim, como hoje.
+  - **Desenho:** cada formato é uma função que recebe a ponta, a direção do último segmento (ou a tangente, nas curvas do 3.6) e o tamanho, e desenha com o roughjs. Os formatos cheios usam `fillStyle: "solid"` na cor do traço. A `getArrowHead` atual vira o caso `"arrow"`.
+  - **Recuo da linha:** nos formatos cheios ou fechados (triângulo, círculo e losango), a haste para na base da ponta, para não aparecer dentro dela.
+  - **Caixa:** o `getBounds` da seta passa a incluir as duas pontas, de qualquer formato.
+  - **Interface:** os seletores das duas pontas ficam no painel de estilo (4.3). Até lá, dá para testar com um atalho temporário que troca o formato da seta selecionada.
+  - **Persistência:** a versão do formato salvo sobe para 3, com uma migração que coloca `startArrowhead: "none"` e `endArrowhead: "arrow"` nas setas antigas.
+- **Por quê:** com uma ponta só, as setas cobrem os fluxogramas simples, mas não as relações de mão dupla, as ligações sem direção nem a notação de diagramas técnicos, que são parte do lado draw.io do projeto. O modelo e o desenho não dependem de nada pendente. Só a interface depende do painel de estilo.
+
 ## 4. Visual
 
 O traço de esboço vem do Excalidraw, mas a interface tem identidade própria (veja as [decisões tomadas](#decisões-tomadas)).
@@ -198,6 +231,24 @@ O traço de esboço vem do Excalidraw, mas a interface tem identidade própria (
 ### 4.3 Painel de estilo
 
 - [ ] Painel de estilo (contorno, preenchimento, espessura) com o `react-color`, já no visual do item 4.2.
+
+### 4.4 Estilo do texto
+
+- [ ] **O quê:** alterar o tamanho, a fonte, a cor e outras características do texto. Vale para os três lugares onde há texto: o texto solto, o rótulo dentro das formas (3.3) e o texto nas setas (3.7). As características são:
+  - **Fonte:** uma lista curta de famílias, por exemplo manuscrita (a Caveat atual), sem serifa e monoespaçada, para código e diagramas técnicos.
+  - **Tamanho:** tamanhos prontos (P, M, G, GG) e um campo para valor livre.
+  - **Cor:** a do texto, separada da cor do contorno da forma.
+  - **Negrito e itálico.**
+  - **Alinhamento horizontal:** esquerda, centro ou direita.
+  - **Alinhamento vertical nos rótulos de forma:** topo, meio ou base.
+- **Como:**
+  - **Modelo:** um tipo único `TextStyle` (`fontFamily`, `fontSize`, `color`, `bold`, `italic`, `align`, `verticalAlign`), usado pelo `TextElement` e pelo `label` de formas e setas. Hoje o texto usa `fontSize` solto e pega a cor do `strokeColor`. Isso tudo passa para o `TextStyle`.
+  - **Cor herdada:** `color: null` significa usar a cor do contorno do elemento. Assim, trocar a cor de uma forma continua mudando o rótulo, a não ser que o rótulo tenha cor própria.
+  - **Fontes:** o elemento guarda uma chave (`"hand" | "sans" | "mono"`), não o nome CSS. Um mapa em `src/lib/text.ts` traduz a chave para a família, e as fontes são carregadas no `index.html` como a Caveat. O redesenho quando a fonte chega (o `fontsLoaded` do Canvas) passa a esperar todas.
+  - **Medição única:** `fontString` passa a receber o `TextStyle` inteiro (peso, itálico, família e tamanho). `measureText`, `wrapText`, o desenho no canvas e o `TextEditor` usam todos a mesma função, para continuarem alinhados.
+  - **Interface:** uma seção "Texto" no painel de estilo (4.3). Ela aparece quando a seleção tem texto solto, uma forma ou uma seta com texto, e altera todos os selecionados de uma vez. Atalhos para o mais comum: `Ctrl+B`, `Ctrl+I` e `Ctrl+Shift+<`/`>` para diminuir e aumentar o tamanho. Mudar o tamanho de um texto solto recalcula a caixa dele.
+  - **Persistência:** a versão do formato salvo sobe, com uma migração que monta o `TextStyle` a partir do `fontSize` atual, com a fonte manuscrita, a cor herdada e o alinhamento de hoje (esquerda no texto solto, centro nos rótulos).
+- **Por quê:** a fonte manuscrita combina com o esboço, mas diagramas técnicos pedem uma fonte mais sóbria, e destacar títulos ou palavras-chave pede tamanho, peso e cor. Fazer um `TextStyle` único evita três implementações diferentes para texto solto, rótulo de forma e texto de seta. Fica depois do painel de estilo (4.3), que é onde a interface mora. O modelo pode ser adiantado se o item 3.7 for feito antes, para o texto das setas já nascer com o `TextStyle`.
 
 ## 5. Persistência
 

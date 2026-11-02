@@ -49,6 +49,21 @@ export interface DiamondElement extends BaseElement {
 export interface ArrowElement extends BaseElement {
   type: "arrow";
   points: Point[];
+  /** Forma a que a primeira ponta está ligada, se houver. */
+  startBinding: ArrowBinding | null;
+  /** Forma a que a última ponta está ligada, se houver. */
+  endBinding: ArrowBinding | null;
+}
+
+/** Ligação de uma ponta de seta a uma forma. */
+export interface ArrowBinding {
+  elementId: string;
+  /**
+   * Posição relativa na caixa da forma (0 a 1 em `x` e `y`), para continuar
+   * certa quando a forma muda de tamanho. `null` = ligação flutuante: a seta
+   * mira o centro da forma e para na borda.
+   */
+  anchor: Point | null;
 }
 
 export interface FreedrawElement extends BaseElement {

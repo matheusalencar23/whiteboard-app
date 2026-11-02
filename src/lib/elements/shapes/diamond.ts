@@ -1,6 +1,6 @@
 import type { Point } from "../../types";
 import { distanceToPolygonEdge, isPointInPolygon } from "../../geometry/distance";
-import { isFilled, resizeBox, roughOptions, type ShapeUtil } from "../shapeUtil";
+import { isFilled, resizeBox, roughOptions, scaleToBorder, type ShapeUtil } from "../shapeUtil";
 import type { DiamondElement } from "../types";
 
 /** Vértices em sentido horário: topo, direita, base, esquerda. */
@@ -29,4 +29,8 @@ export const diamondUtil: ShapeUtil<DiamondElement> = {
   },
 
   resize: resizeBox,
+
+  getBorderOffset(el, d) {
+    return scaleToBorder(d, Math.abs(d.x) / (el.width / 2) + Math.abs(d.y) / (el.height / 2));
+  },
 };

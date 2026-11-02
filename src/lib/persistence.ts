@@ -1,4 +1,5 @@
 import type { BoardElement, ElementType } from "./elements/types";
+import { updateBoundArrows } from "./elements/bindings";
 import { MAX_ZOOM, MIN_ZOOM, type Viewport } from "./viewport";
 
 /**
@@ -9,7 +10,7 @@ import { MAX_ZOOM, MIN_ZOOM, type Viewport } from "./viewport";
 const STORAGE_KEY = "whiteboard:board";
 
 /** Sobe quando o formato muda. Dados antigos passam por `migrate`. */
-export const CURRENT_VERSION = 1;
+export const CURRENT_VERSION = 2;
 
 export interface SavedBoard {
   elements: BoardElement[];
@@ -66,13 +67,24 @@ export function loadBoard(): SavedBoard | null {
  */
 function migrate(data: unknown): SavedBoard | null {
   if (!isObject(data) || typeof data.version !== "number") return null;
-  if (data.version !== CURRENT_VERSION) return null;
-  // Migrações futuras entram aqui, uma versão por vez (ex.: 1 -> 2).
+  if (data.version < 1 || data.version > CURRENT_VERSION) return null;
 
-  const { elements, viewport } = data;
+  let { elements } = data;
+  const { viewport } = data;
+  if (!Array.isArray(elements)) return null;
+
+  // Uma versão por vez.
+  if (data.version < 2) {
+    // v2: setas ganharam ligações a formas.
+    elements = elements.map((el) =>
+      isObject(el) && el.type === "arrow" ? { ...el, startBinding: null, endBinding: null } : el,
+    );
+  }
+
   if (!Array.isArray(elements) || !elements.every(isValidElement)) return null;
   if (!isValidViewport(viewport)) return null;
-  return { elements, viewport };
+  // Ligações a elementos que não existem viram `null`.
+  return { elements: updateBoundArrows(elements, []), viewport };
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -98,6 +110,13 @@ function isValidPoints(value: unknown): boolean {
   return Array.isArray(value) && value.every((p) => isObject(p) && isNumber(p.x) && isNumber(p.y));
 }
 
+function isValidBinding(value: unknown): boolean {
+  if (value === null) return true;
+  if (!isObject(value) || typeof value.elementId !== "string") return false;
+  const { anchor } = value;
+  return anchor === null || (isObject(anchor) && isNumber(anchor.x) && isNumber(anchor.y));
+}
+
 function isValidElement(value: unknown): value is BoardElement {
   if (!isObject(value)) return false;
   if (typeof value.type !== "string" || !Object.hasOwn(ELEMENT_TYPES, value.type)) return false;
@@ -120,6 +139,12 @@ function isValidElement(value: unknown): value is BoardElement {
 
   switch (value.type as ElementType) {
     case "arrow":
+      return (
+        isValidPoints(value.points) &&
+        (value.points as unknown[]).length >= 2 &&
+        isValidBinding(value.startBinding) &&
+        isValidBinding(value.endBinding)
+      );
     case "freedraw":
       return isValidPoints(value.points);
     case "text":

@@ -1,5 +1,5 @@
 import { containsPoint, expandBounds } from "../../geometry/bounds";
-import { isFilled, resizeBox, roughOptions, type ShapeUtil } from "../shapeUtil";
+import { isFilled, resizeBox, roughOptions, scaleToBorder, type ShapeUtil } from "../shapeUtil";
 import type { RectangleElement } from "../types";
 
 export const rectangleUtil: ShapeUtil<RectangleElement> = {
@@ -18,4 +18,8 @@ export const rectangleUtil: ShapeUtil<RectangleElement> = {
   },
 
   resize: resizeBox,
+
+  getBorderOffset(el, d) {
+    return scaleToBorder(d, Math.max(Math.abs(d.x) / (el.width / 2), Math.abs(d.y) / (el.height / 2)));
+  },
 };

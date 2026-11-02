@@ -1,5 +1,5 @@
 import type { Point } from "../../types";
-import { isFilled, resizeBox, roughOptions, type ShapeUtil } from "../shapeUtil";
+import { isFilled, resizeBox, roughOptions, scaleToBorder, type ShapeUtil } from "../shapeUtil";
 import type { EllipseElement } from "../types";
 
 function isInsideEllipse(p: Point, center: Point, rx: number, ry: number) {
@@ -31,4 +31,8 @@ export const ellipseUtil: ShapeUtil<EllipseElement> = {
   },
 
   resize: resizeBox,
+
+  getBorderOffset(el, d) {
+    return scaleToBorder(d, Math.hypot(d.x / (el.width / 2), d.y / (el.height / 2)));
+  },
 };

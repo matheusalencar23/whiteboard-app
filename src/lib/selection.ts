@@ -1,7 +1,10 @@
 import type { Point } from "./types";
 import { containsPoint, expandBounds, unionBounds, type Bounds } from "./geometry/bounds";
-import type { BoardElement } from "./elements/types";
+import type { ArrowElement, BoardElement } from "./elements/types";
 import { getElementBounds, resizeElement } from "./elements/registry";
+import { getArrowPoints } from "./elements/shapes/arrow";
+import type { ArrowEnd } from "./elements/bindings";
+import { distance } from "./geometry/distance";
 
 /** Alças de redimensionamento, pelos pontos cardeais. */
 export type Handle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
@@ -11,6 +14,8 @@ const HANDLES: Handle[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
 /** Tamanho da alça e folga da caixa de seleção, em pixels de tela. */
 export const HANDLE_SIZE = 8;
 export const SELECTION_PADDING = 4;
+/** Raio da alça de cada ponta da seta, em pixels de tela. */
+export const ENDPOINT_RADIUS = 5;
 
 export const HANDLE_CURSORS: Record<Handle, string> = {
   nw: "nwse-resize",
@@ -113,4 +118,27 @@ export function resizeElementsToBounds(
       height: el.height * sy,
     }),
   );
+}
+
+/**
+ * Seleção de uma seta só: em vez das 8 alças de caixa, ela mostra alças nas
+ * pontas, que podem ser arrastadas para ligar, desligar ou trocar de forma.
+ */
+export function getSingleArrow(selected: BoardElement[]): ArrowElement | null {
+  return selected.length === 1 && selected[0].type === "arrow" ? selected[0] : null;
+}
+
+/** Centros das alças das pontas, em coordenadas de mundo. */
+export function getEndpointHandles(arrow: ArrowElement): Record<ArrowEnd, Point> {
+  const points = getArrowPoints(arrow);
+  return { start: points[0], end: points[points.length - 1] };
+}
+
+export function getEndpointAt(arrow: ArrowElement, point: Point, zoom: number): ArrowEnd | null {
+  const handles = getEndpointHandles(arrow);
+  // Folga extra, como nas alças de caixa. A ponta final ganha no empate.
+  const reach = (ENDPOINT_RADIUS + 3) / zoom;
+  if (distance(handles.end, point) <= reach) return "end";
+  if (distance(handles.start, point) <= reach) return "start";
+  return null;
 }

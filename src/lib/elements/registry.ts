@@ -30,10 +30,29 @@ export function createBoxElement(type: BoxElementType, start: Point, end: Point)
   return { ...baseFields(getBounds([start, end])), type };
 }
 
-/** Caixa delimitadora (ignora a rotação por enquanto). */
+/** Caixa ocupada pelo desenho (ignora a rotação por enquanto). */
 export function getElementBounds(element: BoardElement): Bounds {
+  const custom = getShapeUtil(element).getBounds?.(element);
+  if (custom) return custom;
   const { x, y, width, height } = element;
   return { x, y, width, height };
+}
+
+/** Setas podem se ligar a este elemento? */
+export function isBindable(element: BoardElement): boolean {
+  return getShapeUtil(element).getBorderOffset !== undefined;
+}
+
+/**
+ * Ponto da borda na direção `direction` (de mundo) a partir do centro.
+ * Devolve o centro para elementos sem borda definida.
+ */
+export function getBorderPoint(element: BoardElement, direction: Point): Point {
+  const center = getCenter(element);
+  const local = rotatePoint(direction, { x: 0, y: 0 }, -element.rotation);
+  const offset = getShapeUtil(element).getBorderOffset?.(element, local) ?? { x: 0, y: 0 };
+  const rotated = rotatePoint(offset, { x: 0, y: 0 }, element.rotation);
+  return { x: center.x + rotated.x, y: center.y + rotated.y };
 }
 
 export function renderElement(

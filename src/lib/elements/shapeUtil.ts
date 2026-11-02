@@ -20,6 +20,25 @@ export interface ShapeUtil<T extends BoardElement> {
   hitTest(element: T, point: Point, tolerance: number): boolean;
   /** Ajusta o elemento para ocupar a nova caixa delimitadora. */
   resize(element: T, bounds: Bounds): T;
+  /**
+   * Caixa ocupada pelo desenho, quando é maior que `x, y, width, height`
+   * (ex.: a ponta da seta). Sem ela, vale a caixa do elemento.
+   */
+  getBounds?(element: T): Bounds;
+  /**
+   * Só nas formas em que setas podem se ligar. Dada uma direção a partir do
+   * centro (no espaço sem rotação), devolve o deslocamento do centro até a borda.
+   */
+  getBorderOffset?(element: T, direction: Point): Point;
+}
+
+/**
+ * Escala `direction` para tocar a borda, dado o "tamanho" `s` da direção na
+ * métrica da forma (s = 1 exatamente na borda).
+ */
+export function scaleToBorder(direction: Point, s: number): Point {
+  if (!Number.isFinite(s) || s === 0) return { x: 0, y: 0 };
+  return { x: direction.x / s, y: direction.y / s };
 }
 
 /** Campos comuns para um elemento novo. */

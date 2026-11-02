@@ -4,6 +4,7 @@ import type { RoughCanvas } from "roughjs/bin/canvas";
 import styles from "./Canvas.module.scss";
 import type { Point } from "../../../lib/types";
 import type {
+  ArrowElement,
   BoardElement,
   BoxElementType,
   TextElement,
@@ -22,12 +23,22 @@ import {
   resizeElement,
   translateElement,
 } from "../../../lib/elements/registry";
-import { createArrow, setArrowPoints } from "../../../lib/elements/shapes/arrow";
+import { createArrow, getArrowPoints, setArrowPoints } from "../../../lib/elements/shapes/arrow";
+import {
+  getBindableAt,
+  getBinding,
+  refreshArrow,
+  releaseBindings,
+  setBinding,
+  type ArrowEnd,
+} from "../../../lib/elements/bindings";
 import { createFreedraw, setFreedrawPoints } from "../../../lib/elements/shapes/freedraw";
 import { createText, setText } from "../../../lib/elements/shapes/text";
 import {
   HANDLE_CURSORS,
+  getEndpointAt,
   getHandleAt,
+  getSingleArrow,
   getSelectionBounds,
   getSelectionFrame,
   resizeBounds,
@@ -49,13 +60,20 @@ const MAX_WHEEL_DELTA = 50;
 const HIT_TOLERANCE = 6;
 /** Distância mínima entre pontos do lápis, em pixels de tela. */
 const FREEDRAW_MIN_DISTANCE = 1;
+/** Folga em volta da forma para a ponta da seta se ligar, em pixels de tela. */
+const BINDING_TOLERANCE = 8;
 
 const BOX_TOOLS: readonly string[] = ["rectangle", "ellipse", "diamond"] satisfies BoxElementType[];
 
 /** Interação em andamento, enquanto o botão do ponteiro está pressionado. */
 type Interaction =
   | { kind: "panning"; last: Point }
-  | { kind: "creating"; start: Point }
+  | {
+      kind: "creating";
+      start: Point;
+      /** Seta: forma em que a primeira ponta se ligou. */
+      startTargetId: string | null;
+    }
   | { kind: "freedrawing"; points: Point[] }
   | {
       kind: "moving";
@@ -70,6 +88,12 @@ type Interaction =
       start: Point;
       bounds: Bounds;
       originals: BoardElement[];
+      before: BoardElement[];
+    }
+  | {
+      kind: "draggingEndpoint";
+      end: ArrowEnd;
+      original: ArrowElement;
       before: BoardElement[];
     }
   | { kind: "boxSelecting"; start: Point; initialSelection: string[] };
@@ -88,6 +112,17 @@ function getSelectedElements(): BoardElement[] {
   const { elements, selectedIds } = useBoardStore.getState();
   const ids = new Set(selectedIds);
   return elements.filter((el) => ids.has(el.id));
+}
+
+/** Forma em que uma ponta de seta em `world` se ligaria. */
+function findBindingTarget(world: Point, excludeIds: (string | null | undefined)[] = []) {
+  const { elements, viewport } = useBoardStore.getState();
+  return getBindableAt(elements, world, BINDING_TOLERANCE / viewport.zoom, excludeIds);
+}
+
+/** Desliga das formas as setas movidas ou redimensionadas sem elas. */
+function detachFromStaying(moved: BoardElement[]): BoardElement[] {
+  return releaseBindings(moved, new Set(moved.map((el) => el.id)));
 }
 
 /** Um elemento recém-arrastado tem tamanho suficiente para ser mantido? */
@@ -117,6 +152,8 @@ export function Canvas() {
   const [isPanning, setIsPanning] = useState(false);
   const [spacePressed, setSpacePressed] = useState(false);
   const [hoverCursor, setHoverCursor] = useState("default");
+  // Forma destacada como alvo da ligação de uma ponta de seta.
+  const [bindingTargetId, setBindingTargetId] = useState<string | null>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [fontsLoaded, setFontsLoaded] = useState(0);
 
@@ -211,6 +248,13 @@ export function Canvas() {
     return elements.filter((el) => ids.has(el.id));
   }, [elements, selectedIds]);
 
+  // O destaque só vale com a ferramenta de seta ou arrastando uma ponta.
+  const showBindingTarget = tool === "arrow" || isInteracting;
+  const bindingTarget = useMemo(
+    () => (showBindingTarget && elements.find((el) => el.id === bindingTargetId)) || null,
+    [elements, bindingTargetId, showBindingTarget],
+  );
+
   // Redesenha a cena sempre que algo visível muda.
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -229,11 +273,11 @@ export function Canvas() {
       ctx,
       rc,
       scene,
-      { selected, selectionBox, showHandles: !isInteracting },
+      { selected, selectionBox, showHandles: !isInteracting, bindingTarget },
       viewport,
       dpr,
     );
-  }, [scene, selected, selectionBox, isInteracting, viewport, size, fontsLoaded]);
+  }, [scene, selected, selectionBox, isInteracting, bindingTarget, viewport, size, fontsLoaded]);
 
   function startEditingText(element: TextElement, isNew: boolean) {
     useBoardStore.getState().setSelection([]);
@@ -267,9 +311,22 @@ export function Canvas() {
     const tolerance = HIT_TOLERANCE / zoom;
     const selectedNow = getSelectedElements();
     const bounds = getSelectionBounds(selectedNow);
+    const singleArrow = getSingleArrow(selectedNow);
 
-    // 1. Alça de redimensionamento da seleção atual.
-    const handle = bounds && getHandleAt(world, bounds, zoom);
+    // 1a. Ponta de uma seta selecionada sozinha.
+    const end = singleArrow && getEndpointAt(singleArrow, world, zoom);
+    if (singleArrow && end) {
+      interactionRef.current = {
+        kind: "draggingEndpoint",
+        end,
+        original: singleArrow,
+        before: store.elements,
+      };
+      return;
+    }
+
+    // 1b. Alça de redimensionamento da seleção atual (a seta sozinha não tem).
+    const handle = !singleArrow && bounds && getHandleAt(world, bounds, zoom);
     if (bounds && handle) {
       interactionRef.current = {
         kind: "resizing",
@@ -358,10 +415,13 @@ export function Canvas() {
       interactionRef.current = { kind: "freedrawing", points: [world] };
       setDraft(createFreedraw([world]));
     } else if (store.tool === "arrow") {
-      interactionRef.current = { kind: "creating", start: world };
-      setDraft(createArrow(world, world));
+      const target = findBindingTarget(world);
+      interactionRef.current = { kind: "creating", start: world, startTargetId: target?.id ?? null };
+      const arrow = createArrow(world, world);
+      setDraft(target ? { ...arrow, startBinding: { elementId: target.id, anchor: null } } : arrow);
+      setBindingTargetId(target?.id ?? null);
     } else if (BOX_TOOLS.includes(store.tool)) {
-      interactionRef.current = { kind: "creating", start: world };
+      interactionRef.current = { kind: "creating", start: world, startTargetId: null };
       setDraft(createBoxElement(store.tool as BoxElementType, world, world));
     }
   }
@@ -370,9 +430,12 @@ export function Canvas() {
   function updateHoverCursor(world: Point) {
     const store = useBoardStore.getState();
     const { zoom } = store.viewport;
-    const bounds = getSelectionBounds(getSelectedElements());
+    const selectedNow = getSelectedElements();
+    const bounds = getSelectionBounds(selectedNow);
+    const singleArrow = getSingleArrow(selectedNow);
 
-    const handle = bounds && getHandleAt(world, bounds, zoom);
+    if (singleArrow && getEndpointAt(singleArrow, world, zoom)) return setHoverCursor("pointer");
+    const handle = !singleArrow && bounds && getHandleAt(world, bounds, zoom);
     if (handle) return setHoverCursor(HANDLE_CURSORS[handle]);
 
     const overSelection = bounds && containsPoint(getSelectionFrame(bounds, zoom), world);
@@ -388,6 +451,8 @@ export function Canvas() {
 
     if (!interaction) {
       if (store.tool === "selection" && !editing) updateHoverCursor(world);
+      // Com a seta, destaca a forma em que ela começaria ligada.
+      if (store.tool === "arrow") setBindingTargetId(findBindingTarget(world)?.id ?? null);
       return;
     }
 
@@ -400,11 +465,38 @@ export function Canvas() {
       case "creating": {
         const current = draftRef.current;
         if (!current) break;
-        setDraft(
-          current.type === "arrow"
-            ? setArrowPoints(current, [interaction.start, world])
-            : resizeElement(current, getBounds([interaction.start, world])),
+        if (current.type !== "arrow") {
+          setDraft(resizeElement(current, getBounds([interaction.start, world])));
+          break;
+        }
+        // A ponta final não se liga à mesma forma da inicial.
+        const target = findBindingTarget(world, [interaction.startTargetId]);
+        const arrow = setBinding(
+          setArrowPoints(current, [interaction.start, world]),
+          "end",
+          target ? { elementId: target.id, anchor: null } : null,
         );
+        const byId = new Map(store.elements.map((el) => [el.id, el]));
+        setDraft(refreshArrow(arrow, byId));
+        setBindingTargetId(target?.id ?? null);
+        break;
+      }
+
+      case "draggingEndpoint": {
+        const { original, end } = interaction;
+        const other = getBinding(original, end === "start" ? "end" : "start");
+        const target = findBindingTarget(world, [original.id, other?.elementId]);
+
+        const points = getArrowPoints(original);
+        points[end === "start" ? 0 : points.length - 1] = world;
+        const arrow = setBinding(
+          setArrowPoints(original, points),
+          end,
+          target ? { elementId: target.id, anchor: null } : null,
+        );
+        // A store recalcula as pontas ligadas.
+        store.updateElements([arrow]);
+        setBindingTargetId(target?.id ?? null);
         break;
       }
 
@@ -421,7 +513,9 @@ export function Canvas() {
       case "moving": {
         const dx = world.x - interaction.start.x;
         const dy = world.y - interaction.start.y;
-        store.updateElements(interaction.originals.map((el) => translateElement(el, dx, dy)));
+        if (dx === 0 && dy === 0) break;
+        const moved = interaction.originals.map((el) => translateElement(el, dx, dy));
+        store.updateElements(detachFromStaying(moved));
         break;
       }
 
@@ -432,7 +526,8 @@ export function Canvas() {
           world.x - interaction.start.x,
           world.y - interaction.start.y,
         );
-        store.updateElements(resizeElementsToBounds(interaction.originals, interaction.bounds, next));
+        const resized = resizeElementsToBounds(interaction.originals, interaction.bounds, next);
+        store.updateElements(detachFromStaying(resized));
         break;
       }
 
@@ -454,6 +549,7 @@ export function Canvas() {
     setSelectionBox(null);
     setIsInteracting(false);
     setIsPanning(false);
+    setBindingTargetId(null);
   }
 
   function handlePointerUp() {
@@ -479,6 +575,7 @@ export function Canvas() {
 
       case "moving":
       case "resizing":
+      case "draggingEndpoint":
         store.commitHistory(interaction.before);
         break;
     }
@@ -489,6 +586,8 @@ export function Canvas() {
     // Desfaz o que estava sendo arrastado, sem criar passo no histórico.
     if (interaction?.kind === "moving" || interaction?.kind === "resizing") {
       useBoardStore.getState().updateElements(interaction.originals);
+    } else if (interaction?.kind === "draggingEndpoint") {
+      useBoardStore.getState().updateElements([interaction.original]);
     }
     endInteraction();
   }

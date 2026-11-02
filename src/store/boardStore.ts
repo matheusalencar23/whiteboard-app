@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { BoardElement } from "../lib/elements/types";
+import { updateBoundArrows } from "../lib/elements/bindings";
 import type { Point } from "../lib/types";
 import { debounce, loadBoard, saveBoard } from "../lib/persistence";
 import { INITIAL_VIEWPORT, panBy, zoomAt, type Viewport } from "../lib/viewport";
@@ -26,7 +27,8 @@ interface BoardState {
   past: BoardElement[][];
   future: BoardElement[][];
 
-  // Ações discretas: já registram no histórico.
+  // Ações discretas: já registram no histórico. As que alteram elementos
+  // também recalculam as setas ligadas a eles (`updateBoundArrows`).
   addElement: (element: BoardElement, options?: { select?: boolean }) => void;
   replaceElement: (element: BoardElement) => void;
   deleteElements: (ids: string[]) => void;
@@ -78,7 +80,10 @@ export const useBoardStore = create<BoardState>()((set) => ({
 
   replaceElement: (element) =>
     set((state) => ({
-      elements: state.elements.map((el) => (el.id === element.id ? element : el)),
+      elements: updateBoundArrows(
+        state.elements.map((el) => (el.id === element.id ? element : el)),
+        [element.id],
+      ),
       past: pushPast(state.past, state.elements),
       future: [],
     })),
@@ -86,8 +91,10 @@ export const useBoardStore = create<BoardState>()((set) => ({
   deleteElements: (ids) =>
     set((state) => {
       const toDelete = new Set(ids);
-      const elements = state.elements.filter((el) => !toDelete.has(el.id));
-      if (elements.length === state.elements.length) return {};
+      const remaining = state.elements.filter((el) => !toDelete.has(el.id));
+      if (remaining.length === state.elements.length) return {};
+      // Setas ligadas aos apagados ficam, mas desligadas.
+      const elements = updateBoundArrows(remaining, []);
       return {
         elements,
         selectedIds: keepExisting(state.selectedIds, elements),
@@ -99,7 +106,8 @@ export const useBoardStore = create<BoardState>()((set) => ({
   updateElements: (updated) =>
     set((state) => {
       const byId = new Map(updated.map((el) => [el.id, el]));
-      return { elements: state.elements.map((el) => byId.get(el.id) ?? el) };
+      const elements = state.elements.map((el) => byId.get(el.id) ?? el);
+      return { elements: updateBoundArrows(elements, byId.keys()) };
     }),
 
   commitHistory: (before) =>

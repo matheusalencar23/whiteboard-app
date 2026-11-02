@@ -10,7 +10,8 @@ Marque os itens com `[x]` conforme forem concluídos.
 - Toolbar com as ferramentas mão, seleção, retângulo, losango, elipse, seta, lápis e texto, além de desfazer, refazer e apagar.
 - Seleção por clique, Shift + clique e caixa. Mover, redimensionar pelas 8 alças, apagar, e desfazer/refazer.
 - Câmera com pan (roda do mouse, Shift + roda, botão do meio ou Espaço + arrastar) e zoom (Ctrl/Cmd + roda ou pinça no trackpad, centrado no cursor).
-- Estado em uma store do zustand. `elements` e `viewport` são salvos sozinhos no `localStorage` (`src/lib/persistence.ts`, formato versão 1).
+- Estado em uma store do zustand. `elements` e `viewport` são salvos sozinhos no `localStorage` (`src/lib/persistence.ts`, formato versão 2).
+- Setas ligadas às formas: acompanham quando a forma é movida ou redimensionada, e as pontas podem ser arrastadas para ligar, desligar ou trocar de forma.
 - Dependência instalada mas ainda não usada: `react-color`.
 
 ### Atalhos
@@ -29,6 +30,7 @@ Marque os itens com `[x]` conforme forem concluídos.
 - Visual de esboço com `roughjs` é o padrão desde a etapa 1. Cada elemento guarda um `seed` para o traço não mudar a cada redesenho. O traço limpo é `roughness: 0` no estilo do elemento.
 - O lápis (desenho livre) não usa o `roughjs`. Ele desenha uma curva suave direto no canvas, porque o roughjs duplicaria e tremeria o traço da mão.
 - Formas sem preenchimento só são clicáveis pela borda, como no Excalidraw. Para mover uma forma vazia já selecionada, dá para arrastar pelo meio da caixa de seleção.
+- As funcionalidades seguem o Excalidraw e o draw.io, mas o visual da interface é próprio: toolbar, painéis, cores, seleção e alças não devem copiar o Excalidraw. O `roughjs` continua sendo o traço das formas. Veja o item [4.2](#42-identidade-visual-própria).
 - Depois de criar uma forma, uma seta ou um texto, a ferramenta volta para a seleção com o elemento novo selecionado. O lápis continua ativo.
 
 ## Próximos passos (em ordem)
@@ -56,7 +58,7 @@ Esta é a ordem recomendada de trabalho a partir de agora. Ela não segue a nume
 
 ### 3. Etapa 3, na ordem descrita na seção dela
 
-- [ ] Começar pelas setas ligadas às formas e seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Cada item depende do anterior.
+- [ ] O item 3.1 (setas ligadas às formas) está feito. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Cada item depende do anterior.
 
 As outras pendências da etapa 2 (Shift, rotação, duplicar e copiar/colar) ficam para quando fizerem falta no uso. Nenhuma bloqueia a etapa 3.
 
@@ -80,7 +82,7 @@ Fazer antes de qualquer ferramenta nova, porque o resto depende disso.
 
 ### Pendências da etapa 2
 
-- [ ] **A caixa de seleção da seta não inclui a ponta.** É um defeito: a caixa vem dos pontos da haste, e a ponta é desenhada além do último ponto. Será corrigido junto com o primeiro item da etapa 3, que já vai mudar o modelo da seta.
+- [x] **A caixa de seleção da seta não inclui a ponta.** Corrigido na etapa 3.1 com o `getBounds` da seta. É um defeito: a caixa vem dos pontos da haste, e a ponta é desenhada além do último ponto. Será corrigido junto com o primeiro item da etapa 3, que já vai mudar o modelo da seta.
 - [ ] **Shift não mantém a proporção.** Ao redimensionar, Shift deveria manter a proporção. Ao desenhar, deveria forçar quadrado, círculo ou ângulos de 45° na seta. Ficou fora para a etapa não crescer demais. Mexe só em `resizeBounds` ([src/lib/selection.ts](src/lib/selection.ts)) e no caso `creating` do Canvas.
 - [ ] **Não há como girar elementos.** O campo `rotation` existe, e o desenho e o clique já o respeitam. Falta a alça de rotação, a caixa de seleção girando junto e a matemática de redimensionar um elemento girado, que é bem mais trabalhosa. Nunca esteve no plano da etapa 2.
 - [ ] **Faltam duplicar (`Ctrl+D`), copiar/colar e mover pelas setas do teclado.** Nunca estiveram no plano. São atalhos novos em [useShortcuts.ts](src/components/Board/useShortcuts.ts) que usam ações que a store já tem. Ao copiar setas ligadas (etapa 3), as ligações precisam apontar para as cópias das formas, não para as originais.
@@ -91,7 +93,13 @@ A parte que diferencia o projeto de um Excalidraw. Os itens estão na ordem de i
 
 ### 3.1 Setas ligadas às formas
 
-- [ ] **O quê:** ao soltar a ponta de uma seta sobre uma forma, a seta fica ligada a ela. Quando a forma é movida ou redimensionada, a seta acompanha. Inclui poder arrastar as pontas de uma seta já existente, para ligar, desligar ou trocar de forma.
+- [x] **Feito.** A lógica está em `src/lib/elements/bindings.ts`. Detalhes da implementação:
+  - Só retângulo, elipse e losango aceitam ligação: são os que têm `getBorderOffset`. A ponta flutuante fica a `BINDING_GAP` (6 unidades de mundo) da borda.
+  - A forma alvo é a mais acima cujo interior, com uma folga de 8 px na tela, contém a ponta. Formas sem preenchimento também contam pelo interior. A ponta final não se liga à mesma forma da inicial.
+  - Mover ou redimensionar uma seta sem as formas a que ela está ligada desliga as pontas (`releaseBindings`), como no Excalidraw.
+  - Nesta etapa, toda ligação é flutuante (`anchor: null`). O `anchor` já é respeitado no recálculo e passa a ser preenchido no item 3.2.
+  - As alças das pontas ficam preenchidas quando a ponta está ligada.
+- **O quê:** ao soltar a ponta de uma seta sobre uma forma, a seta fica ligada a ela. Quando a forma é movida ou redimensionada, a seta acompanha. Inclui poder arrastar as pontas de uma seta já existente, para ligar, desligar ou trocar de forma.
 - **Como:**
   - **Modelo:** `ArrowElement` ganha `startBinding` e `endBinding`, cada um `{ elementId, anchor } | null`. O `anchor` é a posição relativa na forma (de 0 a 1 em `x` e `y`), para continuar certa quando a forma muda de tamanho. Com `anchor` vazio, a ligação é "flutuante": a seta mira o centro da forma e para na borda, como no Excalidraw.
   - **Recalcular:** uma função pura `updateBoundArrows(elements, changedIds)` em `src/lib/` acha as setas ligadas às formas que mudaram e recalcula as pontas. Ela é chamada dentro da store, em `updateElements`, `replaceElement` e `deleteElements`. Assim, mover, redimensionar, desfazer e qualquer mudança futura atualizam as setas sem cada interação lembrar disso.
@@ -124,11 +132,10 @@ A parte que diferencia o projeto de um Excalidraw. Os itens estão na ordem de i
 ### 3.4 Grid com snap e guias de alinhamento
 
 - [ ] **O quê:**
-  - **Grid:** uma grade de pontos opcional no fundo. Com o snap ativo, criar, mover e redimensionar encaixam as posições na grade.
+  - **Snap na grade:** com o snap ativo, criar, mover e redimensionar encaixam as posições na grade de fundo do item [4.1](#41-grid-de-fundo).
   - **Guias:** ao mover um elemento, aparecem linhas quando a borda ou o centro dele se alinha com outro elemento, e a posição encaixa nesse alinhamento.
 - **Como:**
-  - O tamanho da grade e se ela está ligada ficam na store, com um atalho para ligar e desligar.
-  - O `renderScene` desenha só os pontos da área visível e espaça mais a grade quando o zoom diminui, para não virar um borrão nem pesar.
+  - O snap ligado ou desligado fica na store, com um atalho próprio. O tamanho da grade vem do item 4.1. Se o encaixe usar o espaçamento visível, ele também muda com o zoom.
   - O encaixe é uma função pura (`snapPoint`, `snapBounds`) aplicada nos casos `creating`, `moving` e `resizing` do Canvas, antes de atualizar a store.
   - As guias comparam as bordas e o centro da seleção com os dos outros elementos e encaixam abaixo de uma distância fixa na tela.
 - **Por quê:** diagramas desalinhados parecem bagunçados, e alinhar à mão é tedioso. Fica depois dos itens 3.1 a 3.3 porque é um refinamento: o diagrama funciona sem ele, mas não funciona sem ligações e rótulos.
@@ -142,11 +149,39 @@ A parte que diferencia o projeto de um Excalidraw. Os itens estão na ordem de i
   - **Segunda versão (opcional):** contornar outras formas que estejam no caminho, com uma busca de caminho (A*) numa grade.
 - **Por quê:** setas ortogonais são o que dá a cara de diagrama técnico ao draw.io. Ficam por último porque dependem das ligações e dos pontos de conexão, e porque o roteamento é a parte mais complexa da etapa.
 
-## 4. Visual (a parte Excalidraw)
+## 4. Visual
+
+O traço de esboço vem do Excalidraw, mas a interface tem identidade própria (veja as [decisões tomadas](#decisões-tomadas)).
 
 - [x] Traço com cara de esboço usando `roughjs` (adiantado para a etapa 1).
 - [x] Usar a fonte Caveat (já carregada no `index.html`) no texto (adiantado para a etapa 2).
-- [ ] Painel de estilo (contorno, preenchimento, espessura) com o `react-color`.
+
+### 4.1 Grid de fundo
+
+- [ ] **O quê:** uma grade desenhada no fundo do quadro, que acompanha o pan e o zoom. Ligada por padrão, com um botão e um atalho (`G`) para esconder. Aqui ela é só visual. O encaixe na grade é o item [3.4](#34-grid-com-snap-e-guias-de-alinhamento).
+- **Como:**
+  - `showGrid` e `gridSize` (em unidades de mundo, por exemplo 20) ficam na store. `showGrid` entra no formato salvo da persistência, porque é uma preferência do board. Como é um campo novo e opcional, basta um valor padrão na leitura, sem subir a versão.
+  - Uma função `drawGrid(ctx, viewport, size)` em `src/lib/render/`, chamada pelo `renderScene` antes dos elementos. Ela calcula a área visível com `screenToWorld` e desenha só as linhas ou pontos dessa área.
+  - Quando o zoom diminui e o espaçamento na tela fica pequeno demais (abaixo de uns 8 px), a grade dobra de tamanho até voltar a ficar legível. Assim ela não vira um borrão nem desenha milhares de linhas.
+  - A espessura das linhas é fixa na tela (dividida pelo `zoom`), como as alças. A cor sai dos tokens do item 4.2.
+  - A grade não usa o `roughjs`: um traço tremido em centenas de linhas pesaria no desenho e brigaria com as formas. Ela fica discreta, e o esboço continua sendo das formas.
+  - Pontos ou linhas é uma decisão de visual do item 4.2.
+- **Por quê:** a grade dá referência de escala e posição ao desenhar diagramas, e é a base do snap do item 3.4. Separar a parte visual do snap permite tê-la logo, sem esperar a etapa 3.
+
+### 4.2 Identidade visual própria
+
+- [ ] **O quê:** um visual de interface que não seja uma cópia do Excalidraw. As funcionalidades continuam parecidas (ferramentas, atalhos, comportamento), mas a toolbar, os painéis, as cores, a seleção e as alças ganham um design próprio. O `roughjs` continua sendo o traço das formas.
+- **Como:**
+  - **Primeiro passo, definir a direção:** escolher a paleta, a tipografia da interface, o formato e a posição da toolbar (hoje é uma barra branca e flutuante no topo central, como a do Excalidraw), o estilo dos botões e o tratamento do estado ativo. Vale fazer um protótipo antes de mexer no código.
+  - **Tokens de design:** criar variáveis CSS em `src/index.css` (cores de fundo, superfície, texto, destaque, borda, raio, sombra) e um `src/lib/theme.ts` com as cores que o canvas usa (seleção, alças, caixa de seleção, grade, fundo). Hoje essas cores estão soltas no código, por exemplo `SELECTION_COLOR` e o `rgba(79, 124, 255, 0.08)` em `renderScene.ts` e os hexadecimais em `Toolbar.module.scss`. Com tokens, um tema escuro no futuro vira só outro conjunto de valores.
+  - **Toolbar e primitivos de UI:** refazer `Toolbar.module.scss` e o `Divider` com os tokens. Componentes novos que se repetem (botão de ícone, tooltip com atalho, painel) vão para `src/ui/`, para o painel de estilo (item 4.3) já nascer com o visual novo.
+  - **Camada de seleção no canvas:** cor, formato das alças (hoje quadradas e brancas, como no Excalidraw) e caixa de seleção seguindo a nova identidade.
+  - **Ícones:** os do Lucide podem continuar, mas vale avaliar outro peso de traço ou ícones próprios em pontos de destaque.
+- **Por quê:** o projeto mistura Excalidraw e draw.io e precisa de uma cara própria, não de uma imitação de nenhum dos dois. Fazer isso antes do painel de estilo evita desenhar o painel duas vezes. Os tokens também tiram as cores espalhadas pelo código.
+
+### 4.3 Painel de estilo
+
+- [ ] Painel de estilo (contorno, preenchimento, espessura) com o `react-color`, já no visual do item 4.2.
 
 ## 5. Persistência
 

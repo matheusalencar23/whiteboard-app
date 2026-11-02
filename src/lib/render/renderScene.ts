@@ -1,8 +1,16 @@
 import type { RoughCanvas } from "roughjs/bin/canvas";
-import type { Bounds } from "../geometry/bounds";
-import type { BoardElement } from "../elements/types";
+import { expandBounds, getCenter, type Bounds } from "../geometry/bounds";
+import type { ArrowElement, BoardElement } from "../elements/types";
 import { getElementBounds, renderElement } from "../elements/registry";
-import { getHandleRects, getSelectionBounds, getSelectionFrame } from "../selection";
+import { getDiamondVertices } from "../elements/shapes/diamond";
+import {
+  ENDPOINT_RADIUS,
+  getEndpointHandles,
+  getHandleRects,
+  getSelectionBounds,
+  getSelectionFrame,
+  getSingleArrow,
+} from "../selection";
 import type { Viewport } from "../viewport";
 
 const SELECTION_COLOR = "#4f7cff";
@@ -14,6 +22,60 @@ export interface SceneOverlay {
   showHandles: boolean;
   /** Retângulo da seleção por caixa, em coordenadas de mundo. */
   selectionBox: Bounds | null;
+  /** Forma em que a ponta da seta sendo desenhada ou arrastada vai se ligar. */
+  bindingTarget: BoardElement | null;
+}
+
+/** Folga do destaque da forma alvo da ligação, em pixels de tela. */
+const BINDING_HIGHLIGHT_PADDING = 4;
+
+/** Contorno da forma, afastado `pad` da borda, como caminho do canvas. */
+function traceOutline(ctx: CanvasRenderingContext2D, el: BoardElement, pad: number) {
+  const center = getCenter(el);
+  ctx.save();
+  ctx.translate(center.x, center.y);
+  ctx.rotate(el.rotation);
+  ctx.translate(-center.x, -center.y);
+
+  ctx.beginPath();
+  const box = expandBounds(el, pad);
+  if (el.type === "ellipse") {
+    ctx.ellipse(center.x, center.y, box.width / 2, box.height / 2, 0, 0, Math.PI * 2);
+  } else if (el.type === "diamond") {
+    // Afasta cada lado `pad` para fora: as semidiagonais a e b crescem
+    // pad·√(a²+b²)/b e pad·√(a²+b²)/a, respectivamente.
+    const a = el.width / 2;
+    const b = el.height / 2;
+    const k = Math.hypot(a, b);
+    const ga = b > 0 ? (pad * k) / b : pad;
+    const gb = a > 0 ? (pad * k) / a : pad;
+    const vertices = getDiamondVertices({
+      ...el,
+      x: el.x - ga,
+      y: el.y - gb,
+      width: el.width + ga * 2,
+      height: el.height + gb * 2,
+    });
+    vertices.forEach((v, i) => (i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y)));
+    ctx.closePath();
+  } else {
+    ctx.rect(box.x, box.y, box.width, box.height);
+  }
+  ctx.restore();
+}
+
+function renderEndpointHandles(ctx: CanvasRenderingContext2D, arrow: ArrowElement, zoom: number) {
+  const handles = getEndpointHandles(arrow);
+  const bound = { start: arrow.startBinding !== null, end: arrow.endBinding !== null };
+  for (const end of ["start", "end"] as const) {
+    const p = handles[end];
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, ENDPOINT_RADIUS / zoom, 0, Math.PI * 2);
+    // Ponta ligada a uma forma: alça preenchida.
+    ctx.fillStyle = bound[end] ? SELECTION_COLOR : "#ffffff";
+    ctx.fill();
+    ctx.stroke();
+  }
 }
 
 function strokeFrame(ctx: CanvasRenderingContext2D, b: Bounds) {
@@ -26,8 +88,20 @@ function renderOverlay(ctx: CanvasRenderingContext2D, overlay: SceneOverlay, zoo
   ctx.lineWidth = 1 / zoom;
   ctx.strokeStyle = SELECTION_COLOR;
 
+  if (overlay.bindingTarget) {
+    ctx.save();
+    ctx.lineWidth = 4 / zoom;
+    ctx.globalAlpha = 0.35;
+    traceOutline(ctx, overlay.bindingTarget, BINDING_HIGHLIGHT_PADDING / zoom);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   const bounds = getSelectionBounds(overlay.selected);
-  if (bounds) {
+  const singleArrow = getSingleArrow(overlay.selected);
+  if (singleArrow) {
+    renderEndpointHandles(ctx, singleArrow, zoom);
+  } else if (bounds) {
     // Na seleção múltipla, cada elemento ganha um contorno tracejado.
     if (overlay.selected.length > 1) {
       ctx.setLineDash([4 / zoom, 4 / zoom]);

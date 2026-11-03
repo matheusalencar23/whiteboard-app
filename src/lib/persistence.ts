@@ -1,6 +1,7 @@
 import type { BoardElement, ElementType } from "./elements/types";
 import { updateBoundArrows } from "./elements/bindings";
 import { MAX_ZOOM, MIN_ZOOM, type Viewport } from "./viewport";
+import { GRID_STYLES, type GridStyle } from "./render/grid";
 
 const STORAGE_KEY = "whiteboard:board";
 
@@ -10,9 +11,13 @@ export interface SavedBoard {
   elements: BoardElement[];
   viewport: Viewport;
   showGrid: boolean;
+  gridStyle: GridStyle;
 }
 
-export const DEFAULT_PREFERENCES = { showGrid: true };
+export const DEFAULT_PREFERENCES: Pick<SavedBoard, "showGrid" | "gridStyle"> = {
+  showGrid: true,
+  gridStyle: "dots",
+};
 
 interface StoredBoard extends SavedBoard {
   version: number;
@@ -83,7 +88,9 @@ function migrate(data: unknown): SavedBoard | null {
   const showGrid =
     typeof data.showGrid === "boolean" ? data.showGrid : DEFAULT_PREFERENCES.showGrid;
 
-  return { elements: updateBoundArrows(elements, []), viewport, showGrid };
+  const gridStyle = GRID_STYLES.find((style) => style === data.gridStyle) ?? DEFAULT_PREFERENCES.gridStyle;
+
+  return { elements: updateBoundArrows(elements, []), viewport, showGrid, gridStyle };
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

@@ -1,0 +1,22 @@
+.tooltip {
+    position: fixed;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: var(--radius-sm);
+    background: var(--color-text);
+    color: var(--color-surface);
+    box-shadow: var(--shadow-tooltip);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.shortcut {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-text-disabled);
+}

@@ -189,6 +189,7 @@ export function Canvas() {
   const selectedIds = useBoardStore((s) => s.selectedIds);
   const viewport = useBoardStore((s) => s.viewport);
   const showGrid = useBoardStore((s) => s.showGrid);
+  const gridStyle = useBoardStore((s) => s.gridStyle);
   const tool = useBoardStore((s) => s.tool);
 
   const [draft, setDraftState] = useState<BoardElement | null>(null);
@@ -337,7 +338,7 @@ export function Canvas() {
       },
       viewport,
       dpr,
-      showGrid ? GRID_SIZE : null,
+      showGrid ? { size: GRID_SIZE, style: gridStyle } : null,
     );
   }, [
     scene,
@@ -345,6 +346,7 @@ export function Canvas() {
     selectionBox,
     frameOverride,
     showGrid,
+    gridStyle,
     isInteracting,
     bindingTarget,
     bindingHint,

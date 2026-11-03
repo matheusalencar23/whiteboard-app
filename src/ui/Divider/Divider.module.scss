@@ -1,0 +1,17 @@
+.divider {
+    display: block;
+    flex-shrink: 0;
+    background: var(--color-border);
+
+    &[data-orientation="horizontal"] {
+        width: 100%;
+        height: 1px;
+        margin: 4px 0;
+    }
+
+    &[data-orientation="vertical"] {
+        width: 1px;
+        height: 24px;
+        margin: 0 4px;
+    }
+}

@@ -18,9 +18,8 @@ import {
   type SelectionFrame,
 } from "../selection";
 import type { Viewport } from "../viewport";
-import { drawGrid } from "./grid";
-
-const SELECTION_COLOR = "#4f7cff";
+import { drawGrid, type GridStyle } from "./grid";
+import { theme } from "../theme";
 
 export interface SceneOverlay {
   selected: BoardElement[];
@@ -32,6 +31,8 @@ export interface SceneOverlay {
 }
 
 const CONNECTION_POINT_RADIUS = 4;
+
+const SELECTION_LINE_WIDTH = 1.5;
 
 const BINDING_HIGHLIGHT_PADDING = 4;
 
@@ -78,7 +79,7 @@ function renderConnectionPoints(
     const isActive = active !== null && active.x === anchor.x && active.y === anchor.y;
     ctx.beginPath();
     ctx.arc(p.x, p.y, (isActive ? CONNECTION_POINT_RADIUS * 1.5 : CONNECTION_POINT_RADIUS) / zoom, 0, Math.PI * 2);
-    ctx.fillStyle = isActive ? SELECTION_COLOR : "#ffffff";
+    ctx.fillStyle = isActive ? theme.canvas.selection : theme.canvas.handleFill;
     ctx.fill();
     ctx.stroke();
   }
@@ -93,7 +94,7 @@ function renderArrowHandles(ctx: CanvasRenderingContext2D, arrow: ArrowElement, 
       ctx.save();
       ctx.globalAlpha =
         handle.kind === "segment" && isSegmentFixed(arrow, handle.index) ? 0.9 : 0.45;
-      ctx.fillStyle = SELECTION_COLOR;
+      ctx.fillStyle = theme.canvas.selection;
       ctx.fill();
       ctx.restore();
       continue;
@@ -102,7 +103,7 @@ function renderArrowHandles(ctx: CanvasRenderingContext2D, arrow: ArrowElement, 
     const bound =
       handle.kind === "end" &&
       (handle.end === "start" ? arrow.startBinding : arrow.endBinding) !== null;
-    ctx.fillStyle = bound ? SELECTION_COLOR : "#ffffff";
+    ctx.fillStyle = bound ? theme.canvas.selection : theme.canvas.handleFill;
     ctx.fill();
     ctx.stroke();
   }
@@ -123,10 +124,13 @@ function withFrame(ctx: CanvasRenderingContext2D, frame: SelectionFrame, draw: (
 }
 
 function renderFrameHandles(ctx: CanvasRenderingContext2D, box: Bounds, zoom: number) {
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = theme.canvas.handleFill;
   for (const rect of Object.values(getHandleRects(box, zoom))) {
-    ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
-    strokeFrame(ctx, rect);
+    const center = getCenter(rect);
+    ctx.beginPath();
+    ctx.arc(center.x, center.y, rect.width / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
   }
 
   const { stem, knob } = getRotationHandleLocal(box, zoom);
@@ -136,14 +140,14 @@ function renderFrameHandles(ctx: CanvasRenderingContext2D, box: Bounds, zoom: nu
   ctx.stroke();
   ctx.beginPath();
   ctx.arc(knob.x, knob.y, ROTATION_HANDLE_RADIUS / zoom, 0, Math.PI * 2);
-  ctx.fillStyle = SELECTION_COLOR;
+  ctx.fillStyle = theme.canvas.selection;
   ctx.fill();
 }
 
 function renderOverlay(ctx: CanvasRenderingContext2D, overlay: SceneOverlay, zoom: number) {
   ctx.save();
-  ctx.lineWidth = 1 / zoom;
-  ctx.strokeStyle = SELECTION_COLOR;
+  ctx.lineWidth = SELECTION_LINE_WIDTH / zoom;
+  ctx.strokeStyle = theme.canvas.selection;
 
   if (overlay.bindingTarget) {
     ctx.save();
@@ -177,8 +181,10 @@ function renderOverlay(ctx: CanvasRenderingContext2D, overlay: SceneOverlay, zoo
 
   if (overlay.selectionBox) {
     const b = overlay.selectionBox;
-    ctx.fillStyle = "rgba(79, 124, 255, 0.08)";
+    ctx.fillStyle = theme.canvas.selectionFill;
     ctx.fillRect(b.x, b.y, b.width, b.height);
+    ctx.lineWidth = 1 / zoom;
+    ctx.setLineDash([5 / zoom, 3 / zoom]);
     strokeFrame(ctx, b);
   }
 
@@ -192,7 +198,7 @@ export function renderScene(
   overlay: SceneOverlay,
   viewport: Viewport,
   dpr: number,
-  gridSize: number | null,
+  grid: { size: number; style: GridStyle } | null,
 ) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -200,8 +206,8 @@ export function renderScene(
   const scale = dpr * viewport.zoom;
   ctx.setTransform(scale, 0, 0, scale, viewport.offsetX * dpr, viewport.offsetY * dpr);
 
-  if (gridSize) {
-    drawGrid(ctx, viewport, gridSize, ctx.canvas.width / dpr, ctx.canvas.height / dpr);
+  if (grid) {
+    drawGrid(ctx, viewport, grid.size, grid.style, ctx.canvas.width / dpr, ctx.canvas.height / dpr);
   }
 
   for (const element of elements) {

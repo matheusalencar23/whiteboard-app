@@ -37,7 +37,8 @@ export function useShortcuts() {
       } else if (key === "escape") {
         store.setSelection([]);
       } else if (key === "g") {
-        store.toggleGrid();
+        if (e.shiftKey) store.cycleGridStyle();
+        else store.toggleGrid();
       } else {
         const definition = TOOLS.find((t) => t.keys.includes(key));
         if (!definition) return;

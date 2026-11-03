@@ -1,0 +1,93 @@
+export interface Theme {
+  color: {
+    background: string;
+    surface: string;
+    surfaceHover: string;
+    surfaceSunken: string;
+    border: string;
+    borderStrong: string;
+    text: string;
+    textMuted: string;
+    textDisabled: string;
+    accent: string;
+    accentSoft: string;
+    accentContrast: string;
+  };
+  canvas: {
+    selection: string;
+    selectionFill: string;
+    handleFill: string;
+    gridDotMinor: string;
+    gridDotMajor: string;
+    gridLineMinor: string;
+    gridLineMajor: string;
+  };
+  font: {
+    ui: string;
+    mono: string;
+  };
+  radius: {
+    sm: string;
+    md: string;
+    lg: string;
+  };
+  shadow: {
+    panel: string;
+    tooltip: string;
+  };
+}
+
+const accent = "#5a82d6";
+
+export const notebookTheme: Theme = {
+  color: {
+    background: "#f8f9fb",
+    surface: "#ffffff",
+    surfaceHover: "#f1f3f6",
+    surfaceSunken: "#eef0f4",
+    border: "#e3e6eb",
+    borderStrong: "#cdd2da",
+    text: "#2a2d33",
+    textMuted: "#7a808a",
+    textDisabled: "#c3c8cf",
+    accent,
+    accentSoft: "#e8eefa",
+    accentContrast: "#ffffff",
+  },
+  canvas: {
+    selection: accent,
+    selectionFill: "rgba(90, 130, 214, 0.07)",
+    handleFill: "#ffffff",
+    gridDotMinor: "rgba(60, 70, 90, 0.18)",
+    gridDotMajor: "rgba(60, 70, 90, 0.36)",
+    gridLineMinor: "rgba(60, 70, 90, 0.06)",
+    gridLineMajor: "rgba(60, 70, 90, 0.12)",
+  },
+  font: {
+    ui: '"IBM Plex Sans", system-ui, sans-serif',
+    mono: '"IBM Plex Mono", ui-monospace, monospace',
+  },
+  radius: {
+    sm: "4px",
+    md: "6px",
+    lg: "10px",
+  },
+  shadow: {
+    panel: "0 1px 0 rgba(30, 35, 45, 0.04), 0 8px 20px -12px rgba(30, 35, 45, 0.25)",
+    tooltip: "0 4px 12px -4px rgba(30, 35, 45, 0.35)",
+  },
+};
+
+export const theme: Theme = notebookTheme;
+
+function toKebab(name: string) {
+  return name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
+}
+
+export function applyTheme(target: Theme, root: HTMLElement = document.documentElement) {
+  for (const [group, tokens] of Object.entries(target)) {
+    for (const [name, value] of Object.entries(tokens as Record<string, string>)) {
+      root.style.setProperty(`--${group}-${toKebab(name)}`, value);
+    }
+  }
+}

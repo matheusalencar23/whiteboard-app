@@ -7,7 +7,7 @@ Marque os itens com `[x]` conforme forem concluídos.
 ## Estado atual
 
 - Rota `/board` com um canvas em tela cheia (resolução ajustada para telas HiDPI).
-- Toolbar com as ferramentas mão, seleção, retângulo, losango, elipse, seta, lápis e texto, além de desfazer, refazer e apagar.
+- Toolbar vertical na lateral esquerda com as ferramentas mão, seleção, retângulo, losango, elipse, seta, lápis e texto, além de desfazer, refazer, apagar e a grade. Cada botão tem um tooltip com o nome e o atalho.
 - Seleção por clique, Shift + clique e caixa. Mover, redimensionar pelas 8 alças, apagar, e desfazer/refazer.
 - Rotação pela alça acima da seleção, de um elemento ou de vários juntos (Shift prende em 15°).
 - Shift mantém a proporção ao redimensionar e, ao desenhar, força quadrado, círculo ou seta em ângulos de 45°.
@@ -16,8 +16,9 @@ Marque os itens com `[x]` conforme forem concluídos.
 - Setas ligadas às formas: acompanham quando a forma é movida ou redimensionada, e as pontas podem ser arrastadas para ligar, desligar ou trocar de forma. As pontas encaixam nos pontos de conexão das formas (meio dos lados ou vértices do losango).
 - Texto dentro das formas: duplo clique num retângulo, elipse ou losango edita um rótulo centralizado, que quebra linha na largura da forma.
 - Três tipos de seta, escolhidos no painel lateral: reta, curva e ortogonal. Na reta e na curva, a alça no meio de cada trecho cria um ponto que pode ser arrastado, como no Excalidraw. A ortogonal tem rota automática, que sai perpendicular ao lado da forma e contorna as formas das pontas.
-- Painel lateral de estilo, que aparece com a ferramenta de seta ou com setas selecionadas. Por enquanto, só tem o tipo da seta.
-- Grade de fundo, ligada por padrão, só visual (sem encaixe).
+- Painel de estilo ao lado da toolbar, que aparece com a ferramenta de seta ou com setas selecionadas. Por enquanto, só tem o tipo da seta.
+- Grade de fundo em pontos ou linhas, à escolha do usuário. Fica ligada por padrão e é só visual (sem encaixe).
+- Identidade visual própria ("caderno técnico"): branco, cinzas e destaque azul suave, com todos os valores em `src/lib/theme.ts`.
 - Dependência instalada mas ainda não usada: `react-color`.
 
 ### Atalhos
@@ -30,6 +31,7 @@ Marque os itens com `[x]` conforme forem concluídos.
 | Apagar seleção | `Delete` ou `Backspace` |
 | Limpar seleção | `Esc` |
 | Mostrar / esconder a grade | `G` |
+| Alternar a grade entre pontos e linhas | `Shift+G` |
 | Manter proporção / quadrado / seta em 45° | Segurar `Shift` ao redimensionar ou desenhar |
 | Girar em passos de 15° | Segurar `Shift` ao girar |
 | Editar texto | Duplo clique no texto. Duplo clique no vazio cria um texto novo. `Esc` ou `Ctrl+Enter` confirmam. |
@@ -67,7 +69,7 @@ Esta é a ordem recomendada de trabalho a partir de agora. Ela não segue a nume
 
 ### 3. Etapa 3, na ordem descrita na seção dela
 
-- [ ] Os itens 3.1 (setas ligadas), 3.2 (pontos de conexão) 3.3 (texto dentro das formas), 3.5 (setas ortogonais) e 3.6 (setas curvas, com pontos ajustáveis) estão feitos. O 3.4 (snap e guias) foi descartado, e só a grade de fundo (4.1) ficou. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Do 3.1 ao 3.6, cada item depende do anterior. O 3.7 (texto nas setas) e o 3.8 (formato das pontas) não dependem dos outros e podem ser adiantados. Só a interface do 3.8 espera o painel de estilo (4.3).
+- [ ] Os itens 3.1 (setas ligadas), 3.2 (pontos de conexão) 3.3 (texto dentro das formas), 3.5 (setas ortogonais) e 3.6 (setas curvas, com pontos ajustáveis) estão feitos. O 3.4 (snap e guias) foi descartado, e só a grade de fundo (4.1) ficou. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Do 3.1 ao 3.6, cada item depende do anterior. O 3.7 (texto nas setas) e o 3.8 (formato das pontas) não dependem dos outros e podem ser adiantados. Só a interface do 3.8 espera o painel de estilo (4.3). O 3.9 (lado de saída da seta e laços) corrige problemas das setas ligadas e pode entrar antes do 3.7 e do 3.8.
 
 As outras pendências da etapa 2 (duplicar e copiar/colar) ficam para quando fizerem falta no uso. Nenhuma bloqueia a etapa 3.
 
@@ -215,6 +217,31 @@ A parte que diferencia o projeto de um Excalidraw. Os itens estão na ordem de i
   - **Persistência:** a versão do formato salvo sobe para 4, com uma migração que coloca `startArrowhead: "none"` e `endArrowhead: "arrow"` nas setas antigas.
 - **Por quê:** com uma ponta só, as setas cobrem os fluxogramas simples, mas não as relações de mão dupla, as ligações sem direção nem a notação de diagramas técnicos, que são parte do lado draw.io do projeto. O modelo e o desenho não dependem de nada pendente. Só a interface depende do painel de estilo.
 
+### 3.9 Revisar a ligação das setas (pendente)
+
+Dois pontos, que podem ser feitos separados. Os dois mexem em `bindings.ts` e na rota ortogonal.
+
+#### 3.9.1 A seta sai pelo lado errado depois de mover a forma
+
+- [ ] **Problema relatado:** ao mover uma forma ligada, a seta continua saindo pelo mesmo lado, mesmo quando a outra forma passou a ficar em outra direção. Ela dá a volta na forma em vez de sair pelo lado virado para o destino.
+- **Causa provável:** quando a ponta encaixa num ponto de conexão, o ponto vira o `anchor` da ligação e nunca mais muda. O ímã de 12 px faz quase toda ligação cair num ponto, mesmo sem o usuário querer escolher o lado. Só a ligação flutuante (`anchor: null`) escolhe o lado sozinha. Na ortogonal, há uma segunda suspeita: com trechos fixos, a ligação flutuante sai pelo lado virado para o trecho fixo mais próximo, e não para a outra forma. Reproduzir os dois casos para confirmar.
+- **Proposta:**
+  - Separar "o usuário escolheu este ponto" de "a seta só encaixou no ponto mais próximo". A ligação ganha um campo, por exemplo `fixed: boolean`. Sem ele, o recálculo (`refreshArrow`) escolhe de novo o ponto de conexão virado para a outra ponta (ou para o próximo ponto da seta) sempre que as formas mudam. Com ele, o ponto fica preso, como hoje.
+  - Quando o ponto fica preso: segurar uma tecla (por exemplo `Alt`) ao soltar a ponta, ou soltar exatamente sobre o ponto, num raio bem menor que o ímã atual. Decidir na hora qual dos dois funciona melhor.
+  - O ponto escolhido continua aparecendo destacado ao arrastar, para o usuário ver de onde a seta vai sair.
+  - **Persistência:** sobe a versão do formato, e a migração marca as ligações antigas com ponto como não presas (`fixed: false`), para elas já se beneficiarem da correção.
+
+#### 3.9.2 Laços: seta ligada duas vezes à mesma forma
+
+- [ ] **O quê:** permitir que as duas pontas de uma seta se liguem à mesma forma, para fazer laços (por exemplo, "repetir" num fluxograma).
+- **Como:**
+  - Tirar a regra que exclui a forma da ponta inicial ao procurar a ligação da ponta final (os `excludeIds` passados para `findBinding` e `getBindableAt` pelo Canvas). As duas pontas não podem cair no mesmo ponto de conexão: nesse caso, a ligação fica flutuante ou a ponta fica solta.
+  - **Ortogonal:** a rota já contorna as formas das pontas. Com as duas pontas na mesma forma, ela sai por um lado, contorna pela margem (`ELBOW_MARGIN`) e entra pelo outro. Verificar se o Dijkstra encontra esse caminho quando as duas formas são a mesma.
+  - **Reta e curva:** uma reta entre dois pontos da mesma forma atravessaria a forma. Ao criar o laço, a seta ganha automaticamente um ponto do meio fora da forma, no lado das pontas, e vira uma curva que dá a volta. Depois o usuário ajusta esse ponto como qualquer outro.
+  - **Ligação flutuante nas duas pontas:** as duas mirariam o centro e cairiam no mesmo lugar. Num laço, cada ponta flutuante mira o ponto vizinho da seta (já é o comportamento quando a seta tem pontos do meio), então o ponto do meio criado automaticamente resolve isso.
+  - Mover a forma move o laço inteiro junto. Isso já sai do `updateBoundArrows`, mas a seta precisa mover os pontos do meio também, e não só as pontas. Conferir.
+- **Por quê:** laços são comuns em fluxogramas (repetições, estados que voltam para si mesmos), e hoje não há como fazer um sem deixar uma ponta solta.
+
 ## 4. Visual
 
 O traço de esboço vem do Excalidraw, mas a interface tem identidade própria (veja as [decisões tomadas](#decisões-tomadas)).
@@ -224,7 +251,7 @@ O traço de esboço vem do Excalidraw, mas a interface tem identidade própria (
 
 ### 4.1 Grid de fundo
 
-- [x] **Feito** em `src/lib/render/grid.ts`. A grade é de linhas finas, com uma linha mais forte a cada 5. Quando o espaçamento na tela fica abaixo de 8 px, ela multiplica o espaçamento por 5 em vez de dobrar, para as linhas fortes virarem as normais e o desenho não "pular". O botão fica na toolbar. As cores ainda são constantes no módulo, até os tokens do item 4.2.
+- [x] **Feito** em `src/lib/render/grid.ts`. A grade pode ser de pontos (o padrão desde o item 4.2) ou de linhas, com um ponto maior ou uma linha mais forte a cada 5. Quando o espaçamento na tela fica abaixo de 10 px, ela multiplica o espaçamento por 5 em vez de dobrar, para as linhas fortes virarem as normais e o desenho não "pular". A toolbar tem dois botões, "Grade em pontos" e "Grade em linhas": clicar no inativo liga a grade naquele estilo, e clicar no ativo esconde a grade. `G` mostra ou esconde sem esquecer o estilo, e `Shift+G` alterna o estilo. O `gridStyle` fica na store e é salvo junto do `showGrid`, com `"dots"` como valor padrão na leitura, sem subir a versão do formato. As cores vêm do tema (item 4.2), com tokens separados para pontos e linhas, porque as linhas precisam de bem menos opacidade.
 - **O quê:** uma grade desenhada no fundo do quadro, que acompanha o pan e o zoom. Ligada por padrão, com um botão e um atalho (`G`) para esconder. Ela é só visual. O encaixe na grade (item 3.4) foi descartado.
 - **Como:**
   - `showGrid` e `gridSize` (em unidades de mundo, por exemplo 20) ficam na store. `showGrid` entra no formato salvo da persistência, porque é uma preferência do board. Como é um campo novo e opcional, basta um valor padrão na leitura, sem subir a versão.
@@ -232,12 +259,20 @@ O traço de esboço vem do Excalidraw, mas a interface tem identidade própria (
   - Quando o zoom diminui e o espaçamento na tela fica pequeno demais (abaixo de uns 8 px), a grade dobra de tamanho até voltar a ficar legível. Assim ela não vira um borrão nem desenha milhares de linhas.
   - A espessura das linhas é fixa na tela (dividida pelo `zoom`), como as alças. A cor sai dos tokens do item 4.2.
   - A grade não usa o `roughjs`: um traço tremido em centenas de linhas pesaria no desenho e brigaria com as formas. Ela fica discreta, e o esboço continua sendo das formas.
-  - Pontos ou linhas é uma decisão de visual do item 4.2.
+  - Pontos ou linhas era uma decisão de visual do item 4.2. Os dois ficaram disponíveis, e pontos é o padrão.
 - **Por quê:** a grade dá referência de escala e posição ao desenhar diagramas.
 
 ### 4.2 Identidade visual própria
 
-- [ ] **O quê:** um visual de interface que não seja uma cópia do Excalidraw. As funcionalidades continuam parecidas (ferramentas, atalhos, comportamento), mas a toolbar, os painéis, as cores, a seleção e as alças ganham um design próprio. O `roughjs` continua sendo o traço das formas.
+- [x] **Feito.** Direção "caderno técnico":
+  - **Tema:** `src/lib/theme.ts` é a fonte única dos valores visuais (cores da interface, cores do canvas, fontes, raios e sombras), no objeto `notebookTheme`, que segue a interface `Theme`. O `applyTheme`, chamado em `main.tsx` antes do render, escreve cada valor como variável CSS (`--color-accent`, `--canvas-selection`, `--font-ui`, `--radius-md`, `--shadow-panel`...), e os SCSS só usam essas variáveis. O canvas lê o mesmo objeto direto. Para mudar a identidade, basta editar os valores. Um tema escuro é outro objeto `Theme` passado ao `applyTheme` (e o canvas redesenhado).
+  - **Paleta:** fundo quase branco `#f8f9fb`, superfícies brancas, cinzas neutros nas bordas e no texto (`#2a2d33`) e destaque azul suave `#5a82d6`. Bordas finas e sombra suave, em vez da sombra forte de antes. A primeira versão usava creme e terracota, que foram trocados por serem quentes demais.
+  - **Tipografia:** IBM Plex Sans na interface e IBM Plex Mono nos atalhos, carregadas no `index.html` junto da Caveat. A Caveat continua sendo a fonte do texto no quadro.
+  - **Toolbar:** vertical, na lateral esquerda e centralizada. O estado ativo é um fundo azul claro e uma barra de 3 px na borda (`activeMarker`). O painel de estilo fica ao lado da toolbar, alinhado pelo topo dela: os dois ficam num contêiner flexível (`.dock` em `Board.module.scss`), que cuida da posição, então nenhum dos dois tem posição própria. O painel também foi testado na parte inferior, centralizado, mas não ficou bom. O `Panel` aceita `direction="row"` para seções lado a lado.
+  - **Primitivos em `src/ui/`:** `IconButton` (tamanhos `md`/`sm`, estado ativo, número do atalho no canto e tooltip), `Tooltip` (em portal com `position: fixed`, para não ser cortado pelo `overflow` dos painéis), `Panel`/`PanelSection` (superfície e título de seção em caixa alta) e `Divider` (horizontal ou vertical). O `title` nativo saiu, porque duplicaria o tooltip.
+  - **Canvas:** seleção em azul com 1,5 px, alças redondas (o clique continua usando o quadrado de `getHandleRects`), caixa de seleção tracejada e grade em pontos.
+  - **Ícones:** continuam os do Lucide.
+- **O quê:** um visual de interface que não seja uma cópia do Excalidraw. As funcionalidades continuam parecidas (ferramentas, atalhos, comportamento), mas a toolbar, os painéis, as cores, a seleção e as alças ganham um design próprio. O `roughjs` continua sendo o traço das formas.
 - **Como:**
   - **Primeiro passo, definir a direção:** escolher a paleta, a tipografia da interface, o formato e a posição da toolbar (hoje é uma barra branca e flutuante no topo central, como a do Excalidraw), o estilo dos botões e o tratamento do estado ativo. Vale fazer um protótipo antes de mexer no código.
   - **Tokens de design:** criar variáveis CSS em `src/index.css` (cores de fundo, superfície, texto, destaque, borda, raio, sombra) e um `src/lib/theme.ts` com as cores que o canvas usa (seleção, alças, caixa de seleção, grade, fundo). Hoje essas cores estão soltas no código, por exemplo `SELECTION_COLOR` e o `rgba(79, 124, 255, 0.08)` em `renderScene.ts` e os hexadecimais em `Toolbar.module.scss`. Com tokens, um tema escuro no futuro vira só outro conjunto de valores.
@@ -273,7 +308,7 @@ O traço de esboço vem do Excalidraw, mas a interface tem identidade própria (
 
 - [ ] **O quê:** um indicador sempre visível com o zoom atual em porcentagem (por exemplo, "125%"), que acompanha o zoom pela roda, pela pinça e por qualquer mudança futura.
 - **Como:**
-  - Um componente `ZoomIndicator` em `src/components/Board/`, renderizado pelo `Board` por cima do canvas, num canto que não disputa espaço com a toolbar (topo central) nem com o painel de estilo (lateral esquerda). O canto inferior esquerdo é o candidato natural.
+  - Um componente `ZoomIndicator` em `src/components/Board/`, renderizado pelo `Board` por cima do canvas, num canto que não disputa espaço com a toolbar (lateral esquerda, centralizada na vertical) nem com o painel de estilo (ao lado da toolbar). O canto inferior direito é o candidato natural.
   - Ele lê só `viewport.zoom` da store, com um seletor que devolve o número, para não re-renderizar a cada pan. Mostra `Math.round(zoom * 100)`.
   - **Sugestão de extensão** (decidir na hora): botões de diminuir e aumentar ao lado do número, e clique no número para voltar a 100%. Os três usam o `zoomAt` da store centrado no meio da tela, respeitando `MIN_ZOOM` e `MAX_ZOOM`. Atalhos naturais: `Ctrl+-`, `Ctrl+=` e `Ctrl+0`, registrados no `useShortcuts`.
   - O visual segue os tokens do item 4.2. Se for feito antes dele, usa o mesmo estilo de superfície da toolbar, para ser trocado junto.

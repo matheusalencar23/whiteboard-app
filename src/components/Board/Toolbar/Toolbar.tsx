@@ -1,18 +1,19 @@
-import { LuGrid3X3, LuRedo2, LuTrash2, LuUndo2 } from "react-icons/lu";
+import type { IconType } from "react-icons";
+import { LuGrid3X3, LuGrip, LuRedo2, LuTrash2, LuUndo2 } from "react-icons/lu";
 import styles from "./Toolbar.module.scss";
 import { TOOLS } from "./tools";
 import { Divider } from "../../../ui/Divider/Divider";
+import { IconButton } from "../../../ui/IconButton/IconButton";
 import { useBoardStore } from "../../../store/boardStore";
+import type { GridStyle } from "../../../lib/render/grid";
+
+const GRID_OPTIONS: { style: GridStyle; label: string; icon: IconType }[] = [
+  { style: "dots", label: "Grade em pontos", icon: LuGrip },
+  { style: "lines", label: "Grade em linhas", icon: LuGrid3X3 },
+];
 
 function shortcutLabel(keys: string[]) {
-  return keys.map((k) => k.toUpperCase()).join(" ou ");
-}
-
-function blurAfter(action: () => void) {
-  return (e: React.MouseEvent<HTMLButtonElement>) => {
-    action();
-    e.currentTarget.blur();
-  };
+  return keys.map((k) => k.toUpperCase()).join(" / ");
 }
 
 export function Toolbar() {
@@ -25,74 +26,53 @@ export function Toolbar() {
   const redo = useBoardStore((s) => s.redo);
   const deleteElements = useBoardStore((s) => s.deleteElements);
   const showGrid = useBoardStore((s) => s.showGrid);
+  const gridStyle = useBoardStore((s) => s.gridStyle);
   const toggleGrid = useBoardStore((s) => s.toggleGrid);
+  const setGridStyle = useBoardStore((s) => s.setGridStyle);
 
   return (
-    <div className={styles.toolbar}>
-      {TOOLS.map(({ tool: t, label, icon: Icon, keys }) => (
-        <button
+    <nav className={styles.toolbar} aria-label="Ferramentas">
+      {TOOLS.map(({ tool: t, label, icon, keys }) => (
+        <IconButton
           key={t}
-          type="button"
-          className={styles.button}
-          data-active={tool === t}
-          title={`${label} (${shortcutLabel(keys)})`}
-          aria-label={label}
-          aria-pressed={tool === t}
-          onClick={blurAfter(() => setTool(t))}
-        >
-          <Icon />
-          {keys.find((k) => /\d/.test(k)) && (
-            <span className={styles.shortcut}>{keys.find((k) => /\d/.test(k))}</span>
-          )}
-        </button>
+          icon={icon}
+          label={label}
+          shortcut={shortcutLabel(keys)}
+          badge={keys.find((k) => /\d/.test(k))}
+          active={tool === t}
+          activeMarker
+          onClick={() => setTool(t)}
+        />
       ))}
 
       <Divider />
 
-      <button
-        type="button"
-        className={styles.button}
-        title="Desfazer (Ctrl+Z)"
-        aria-label="Desfazer"
-        disabled={!canUndo}
-        onClick={blurAfter(undo)}
-      >
-        <LuUndo2 />
-      </button>
-      <button
-        type="button"
-        className={styles.button}
-        title="Refazer (Ctrl+Shift+Z)"
-        aria-label="Refazer"
-        disabled={!canRedo}
-        onClick={blurAfter(redo)}
-      >
-        <LuRedo2 />
-      </button>
-      <button
-        type="button"
-        className={styles.button}
-        title="Apagar seleção (Delete)"
-        aria-label="Apagar seleção"
+      <IconButton icon={LuUndo2} label="Desfazer" shortcut="Ctrl+Z" disabled={!canUndo} onClick={undo} />
+      <IconButton icon={LuRedo2} label="Refazer" shortcut="Ctrl+Shift+Z" disabled={!canRedo} onClick={redo} />
+      <IconButton
+        icon={LuTrash2}
+        label="Apagar seleção"
+        shortcut="Delete"
         disabled={!hasSelection}
-        onClick={blurAfter(() => deleteElements(useBoardStore.getState().selectedIds))}
-      >
-        <LuTrash2 />
-      </button>
+        onClick={() => deleteElements(useBoardStore.getState().selectedIds)}
+      />
 
       <Divider />
 
-      <button
-        type="button"
-        className={styles.button}
-        data-active={showGrid}
-        title="Grade (G)"
-        aria-label="Grade"
-        aria-pressed={showGrid}
-        onClick={blurAfter(toggleGrid)}
-      >
-        <LuGrid3X3 />
-      </button>
-    </div>
+      {GRID_OPTIONS.map(({ style, label, icon }) => {
+        const active = showGrid && gridStyle === style;
+        return (
+          <IconButton
+            key={style}
+            icon={icon}
+            label={label}
+            shortcut={gridStyle === style ? "G" : "Shift+G"}
+            active={active}
+            activeMarker
+            onClick={() => (active ? toggleGrid() : setGridStyle(style))}
+          />
+        );
+      })}
+    </nav>
   );
 }

@@ -3,6 +3,7 @@ import type { ArrowRouting, BoardElement } from "../lib/elements/types";
 import { setArrowRouting, updateBoundArrows } from "../lib/elements/bindings";
 import type { Point } from "../lib/types";
 import { DEFAULT_PREFERENCES, debounce, loadBoard, saveBoard } from "../lib/persistence";
+import { GRID_STYLES, type GridStyle } from "../lib/render/grid";
 import { INITIAL_VIEWPORT, panBy, zoomAt, type Viewport } from "../lib/viewport";
 
 export type Tool =
@@ -24,6 +25,7 @@ export interface BoardState {
   viewport: Viewport;
   arrowRouting: ArrowRouting;
   showGrid: boolean;
+  gridStyle: GridStyle;
   past: BoardElement[][];
   future: BoardElement[][];
 
@@ -41,6 +43,8 @@ export interface BoardState {
   setTool: (tool: Tool) => void;
   setArrowRouting: (routing: ArrowRouting) => void;
   toggleGrid: () => void;
+  setGridStyle: (style: GridStyle) => void;
+  cycleGridStyle: () => void;
   panBy: (dx: number, dy: number) => void;
   zoomAt: (screenPoint: Point, factor: number) => void;
 }
@@ -65,6 +69,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
   viewport: saved?.viewport ?? INITIAL_VIEWPORT,
   arrowRouting: "straight",
   showGrid: saved?.showGrid ?? DEFAULT_PREFERENCES.showGrid,
+  gridStyle: saved?.gridStyle ?? DEFAULT_PREFERENCES.gridStyle,
   past: [],
   future: [],
 
@@ -153,6 +158,12 @@ export const useBoardStore = create<BoardState>()((set) => ({
       return { arrowRouting, elements, past: pushPast(state.past, state.elements), future: [] };
     }),
   toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
+  setGridStyle: (gridStyle) => set({ gridStyle, showGrid: true }),
+  cycleGridStyle: () =>
+    set((state) => {
+      const index = GRID_STYLES.indexOf(state.gridStyle);
+      return { gridStyle: GRID_STYLES[(index + 1) % GRID_STYLES.length], showGrid: true };
+    }),
   panBy: (dx, dy) => set((state) => ({ viewport: panBy(state.viewport, dx, dy) })),
   zoomAt: (screenPoint, factor) =>
     set((state) => ({ viewport: zoomAt(state.viewport, screenPoint, factor) })),
@@ -164,10 +175,11 @@ const unsubscribe = useBoardStore.subscribe((state, prev) => {
   const changed =
     state.elements !== prev.elements ||
     state.viewport !== prev.viewport ||
-    state.showGrid !== prev.showGrid;
+    state.showGrid !== prev.showGrid ||
+    state.gridStyle !== prev.gridStyle;
   if (!changed) return;
-  const { elements, viewport, showGrid } = state;
-  scheduleSave({ elements, viewport, showGrid });
+  const { elements, viewport, showGrid, gridStyle } = state;
+  scheduleSave({ elements, viewport, showGrid, gridStyle });
 });
 
 const flushSave = () => scheduleSave.flush();

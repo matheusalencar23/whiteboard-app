@@ -9,8 +9,10 @@ export function Board() {
 
   return (
     <div className={styles.board}>
-      <Toolbar />
-      <StylePanel />
+      <div className={styles.dock}>
+        <Toolbar />
+        <StylePanel />
+      </div>
       <Canvas />
     </div>
   );

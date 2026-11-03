@@ -1,5 +1,9 @@
-import "./style.css";
+import styles from "./Divider.module.scss";
 
-export function Divider() {
-  return <span className="divider"></span>;
+interface DividerProps {
+  orientation?: "horizontal" | "vertical";
+}
+
+export function Divider({ orientation = "horizontal" }: DividerProps) {
+  return <span className={styles.divider} data-orientation={orientation} role="separator" />;
 }

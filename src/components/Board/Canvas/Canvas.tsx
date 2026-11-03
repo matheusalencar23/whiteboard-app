@@ -19,6 +19,7 @@ import {
   type Bounds,
 } from "../../../lib/geometry/bounds";
 import { distance } from "../../../lib/geometry/distance";
+import { constrainToSquare, snapToAngle } from "../../../lib/geometry/constrain";
 import {
   createBoxElement,
   getElementAtPoint,
@@ -188,6 +189,9 @@ export function Canvas() {
     setBindingHintState((current) => (sameBinding(current, next) ? current : next));
   }
 
+  const lastPointerRef = useRef<Point | null>(null);
+  const updateInteractionRef = useRef<(world: Point, shiftKey: boolean) => void>(() => {});
+
   function setDraft(element: BoardElement | null) {
     draftRef.current = element;
     setDraftState(element);
@@ -241,13 +245,19 @@ export function Canvas() {
   }, []);
 
   useEffect(() => {
+    function reapplyShift(e: KeyboardEvent) {
+      if (e.key !== "Shift" || e.repeat || !lastPointerRef.current) return;
+      updateInteractionRef.current(lastPointerRef.current, e.type === "keydown");
+    }
     function handleKeyDown(e: KeyboardEvent) {
+      reapplyShift(e);
       if (e.code !== "Space" || e.repeat || isTypingTarget(e.target)) return;
       e.preventDefault();
       spacePressedRef.current = true;
       setSpacePressed(true);
     }
     function handleKeyUp(e: KeyboardEvent) {
+      reapplyShift(e);
       if (e.code !== "Space") return;
       spacePressedRef.current = false;
       setSpacePressed(false);
@@ -545,21 +555,33 @@ export function Canvas() {
       return;
     }
 
-    switch (interaction.kind) {
-      case "panning":
-        store.panBy(screen.x - interaction.last.x, screen.y - interaction.last.y);
-        interaction.last = screen;
-        break;
+    if (interaction.kind === "panning") {
+      store.panBy(screen.x - interaction.last.x, screen.y - interaction.last.y);
+      interaction.last = screen;
+      return;
+    }
 
+    lastPointerRef.current = world;
+    updateInteraction(world, e.shiftKey);
+  }
+
+  function updateInteraction(world: Point, shiftKey: boolean) {
+    const store = useBoardStore.getState();
+    const interaction = interactionRef.current;
+    if (!interaction) return;
+
+    switch (interaction.kind) {
       case "creating": {
         const current = draftRef.current;
         if (!current) break;
         if (current.type !== "arrow") {
-          setDraft(resizeElement(current, getBounds([interaction.start, world])));
+          const corner = shiftKey ? constrainToSquare(interaction.start, world) : world;
+          setDraft(resizeElement(current, getBounds([interaction.start, corner])));
           break;
         }
-        const binding = findBindingAt(world, [interaction.startBinding?.elementId]);
-        const arrow = setBinding(setArrowPoints(current, [interaction.start, world]), "end", binding);
+        const target = shiftKey ? snapToAngle(interaction.start, world) : world;
+        const binding = findBindingAt(target, [interaction.startBinding?.elementId]);
+        const arrow = setBinding(setArrowPoints(current, [interaction.start, target]), "end", binding);
         const byId = new Map(store.elements.map((el) => [el.id, el]));
         setDraft(refreshArrow(arrow, byId));
         setBindingHint(binding);
@@ -615,6 +637,7 @@ export function Canvas() {
           interaction.handle,
           world.x - interaction.start.x,
           world.y - interaction.start.y,
+          shiftKey,
         );
         const resized = resizeElementsToBounds(interaction.originals, interaction.bounds, next);
         store.updateElements(detachFromStaying(resized));
@@ -633,8 +656,13 @@ export function Canvas() {
     }
   }
 
+  useEffect(() => {
+    updateInteractionRef.current = updateInteraction;
+  });
+
   function endInteraction() {
     interactionRef.current = null;
+    lastPointerRef.current = null;
     setDraft(null);
     setSelectionBox(null);
     setIsInteracting(false);

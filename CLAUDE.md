@@ -42,7 +42,7 @@ Sobre o TypeScript: `verbatimModuleSyntax` está ativo, então imports só de ti
 - **Texto** ([TextEditor.tsx](src/components/Board/TextEditor/TextEditor.tsx), [src/lib/text.ts](src/lib/text.ts)): a edição usa um `<textarea>` posicionado sobre o canvas, e o elemento em edição é escondido do canvas. A fonte, o `LINE_HEIGHT` e o `measureText` são compartilhados entre o canvas e o textarea para os dois ficarem alinhados.
 - **Painel lateral** ([StylePanel.tsx](src/components/Board/StylePanel/StylePanel.tsx)): opções do que está selecionado ou da ferramenta ativa (por enquanto, o tipo da seta). Os seletores do zustand devolvem valores simples (string, booleano), não arrays novos, para não re-renderizar à toa.
 - **Toolbar e atalhos**: [tools.ts](src/components/Board/Toolbar/tools.ts) é a fonte única das ferramentas (ícone, nome e teclas), usada pela toolbar e por [useShortcuts.ts](src/components/Board/useShortcuts.ts). Os atalhos ignoram teclas digitadas em campos de texto (`isTypingTarget`).
-- Tipos primitivos compartilhados (`Point`) ficam em `src/lib/types.ts`, e a geometria pura em `src/lib/geometry/` (`bounds.ts`, `distance.ts`).
+- Tipos primitivos compartilhados (`Point`) ficam em `src/lib/types.ts`, e a geometria pura em `src/lib/geometry/` (`bounds.ts`, `distance.ts`, `constrain.ts`).
 - **Primitivos de UI** (`src/ui/`): componentes visuais pequenos e reutilizáveis (por exemplo, `Divider`).
 
 Estilos: os componentes usam arquivos `*.module.scss` na mesma pasta. Os estilos globais ficam em `src/index.css` e `src/App.css`.

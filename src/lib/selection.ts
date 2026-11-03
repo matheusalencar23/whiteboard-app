@@ -69,16 +69,50 @@ export function getHandleAt(point: Point, bounds: Bounds, zoom: number): Handle 
   return HANDLES.find((h) => containsPoint(expandBounds(rects[h], slack), point)) ?? null;
 }
 
-export function resizeBounds(bounds: Bounds, handle: Handle, dx: number, dy: number): Bounds {
+export function resizeBounds(
+  bounds: Bounds,
+  handle: Handle,
+  dx: number,
+  dy: number,
+  keepAspect = false,
+): Bounds {
   let left = bounds.x;
   let right = bounds.x + bounds.width;
   let top = bounds.y;
   let bottom = bounds.y + bounds.height;
 
+  const horizontal = handle.includes("w") || handle.includes("e");
+  const vertical = handle.includes("n") || handle.includes("s");
+
   if (handle.includes("w")) left += dx;
   if (handle.includes("e")) right += dx;
   if (handle.includes("n")) top += dy;
   if (handle.includes("s")) bottom += dy;
+
+  if (keepAspect && bounds.width > 0 && bounds.height > 0) {
+    const scaleX = (right - left) / bounds.width;
+    const scaleY = (bottom - top) / bounds.height;
+
+    if (horizontal && vertical) {
+      const scale = Math.max(Math.abs(scaleX), Math.abs(scaleY));
+      const width = bounds.width * scale * (scaleX < 0 ? -1 : 1);
+      const height = bounds.height * scale * (scaleY < 0 ? -1 : 1);
+      if (handle.includes("w")) left = right - width;
+      else right = left + width;
+      if (handle.includes("n")) top = bottom - height;
+      else bottom = top + height;
+    } else if (horizontal) {
+      const height = bounds.height * Math.abs(scaleX);
+      const centerY = bounds.y + bounds.height / 2;
+      top = centerY - height / 2;
+      bottom = centerY + height / 2;
+    } else {
+      const width = bounds.width * Math.abs(scaleY);
+      const centerX = bounds.x + bounds.width / 2;
+      left = centerX - width / 2;
+      right = centerX + width / 2;
+    }
+  }
 
   return {
     x: Math.min(left, right),

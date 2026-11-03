@@ -9,6 +9,7 @@ Marque os itens com `[x]` conforme forem concluídos.
 - Rota `/board` com um canvas em tela cheia (resolução ajustada para telas HiDPI).
 - Toolbar com as ferramentas mão, seleção, retângulo, losango, elipse, seta, lápis e texto, além de desfazer, refazer e apagar.
 - Seleção por clique, Shift + clique e caixa. Mover, redimensionar pelas 8 alças, apagar, e desfazer/refazer.
+- Shift mantém a proporção ao redimensionar e, ao desenhar, força quadrado, círculo ou seta em ângulos de 45°.
 - Câmera com pan (roda do mouse, Shift + roda, botão do meio ou Espaço + arrastar) e zoom (Ctrl/Cmd + roda ou pinça no trackpad, centrado no cursor).
 - Estado em uma store do zustand. `elements`, `viewport` e as preferências da grade são salvos sozinhos no `localStorage` (`src/lib/persistence.ts`, formato versão 3).
 - Setas ligadas às formas: acompanham quando a forma é movida ou redimensionada, e as pontas podem ser arrastadas para ligar, desligar ou trocar de forma. As pontas encaixam nos pontos de conexão das formas (meio dos lados ou vértices do losango).
@@ -28,6 +29,7 @@ Marque os itens com `[x]` conforme forem concluídos.
 | Apagar seleção | `Delete` ou `Backspace` |
 | Limpar seleção | `Esc` |
 | Mostrar / esconder a grade | `G` |
+| Manter proporção / quadrado / seta em 45° | Segurar `Shift` ao redimensionar ou desenhar |
 | Editar texto | Duplo clique no texto. Duplo clique no vazio cria um texto novo. `Esc` ou `Ctrl+Enter` confirmam. |
 
 ## Decisões tomadas
@@ -65,7 +67,7 @@ Esta é a ordem recomendada de trabalho a partir de agora. Ela não segue a nume
 
 - [ ] Os itens 3.1 (setas ligadas), 3.2 (pontos de conexão) 3.3 (texto dentro das formas), 3.5 (setas ortogonais) e 3.6 (setas curvas, com pontos ajustáveis) estão feitos. O 3.4 (snap e guias) foi descartado, e só a grade de fundo (4.1) ficou. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Do 3.1 ao 3.6, cada item depende do anterior. O 3.7 (texto nas setas) e o 3.8 (formato das pontas) não dependem dos outros e podem ser adiantados. Só a interface do 3.8 espera o painel de estilo (4.3).
 
-As outras pendências da etapa 2 (Shift, rotação, duplicar e copiar/colar) ficam para quando fizerem falta no uso. Nenhuma bloqueia a etapa 3.
+As outras pendências da etapa 2 (rotação, duplicar e copiar/colar) ficam para quando fizerem falta no uso. Nenhuma bloqueia a etapa 3.
 
 ## 1. Fundação
 
@@ -88,7 +90,11 @@ Fazer antes de qualquer ferramenta nova, porque o resto depende disso.
 ### Pendências da etapa 2
 
 - [x] **A caixa de seleção da seta não inclui a ponta.** Corrigido na etapa 3.1 com o `getBounds` da seta. É um defeito: a caixa vem dos pontos da haste, e a ponta é desenhada além do último ponto. Será corrigido junto com o primeiro item da etapa 3, que já vai mudar o modelo da seta.
-- [ ] **Shift não mantém a proporção.** Ao redimensionar, Shift deveria manter a proporção. Ao desenhar, deveria forçar quadrado, círculo ou ângulos de 45° na seta. Ficou fora para a etapa não crescer demais. Mexe só em `resizeBounds` ([src/lib/selection.ts](src/lib/selection.ts)) e no caso `creating` do Canvas.
+- [x] **Shift mantém a proporção.** Ao redimensionar, Shift mantém a proporção. Ao desenhar, força quadrado, círculo ou ângulos de 45° na seta. Detalhes da implementação:
+  - `resizeBounds` ([src/lib/selection.ts](src/lib/selection.ts)) recebe `keepAspect`. Nas alças de canto, vale a maior das duas escalas, e a forma pode passar para o outro lado da alça oposta. Nas alças dos lados, a outra medida cresce na mesma escala, centrada no eixo.
+  - Na criação, `constrainToSquare` e `snapToAngle` ([src/lib/geometry/constrain.ts](src/lib/geometry/constrain.ts)) ajustam o ponto do cursor. Na seta, a ligação é procurada no ponto já ajustado.
+  - Apertar ou soltar o Shift no meio do arraste já atualiza a forma, sem precisar mexer o mouse: o Canvas guarda o último ponto e reaplica a interação (`updateInteraction`) no `keydown`/`keyup` do Shift.
+  - Arrastar as pontas ou os pontos de uma seta existente ainda não encaixa em 45°.
 - [ ] **Não há como girar elementos.** O campo `rotation` existe, e o desenho e o clique já o respeitam. Falta a alça de rotação, a caixa de seleção girando junto e a matemática de redimensionar um elemento girado, que é bem mais trabalhosa. Nunca esteve no plano da etapa 2.
 - [ ] **Faltam duplicar (`Ctrl+D`), copiar/colar e mover pelas setas do teclado.** Nunca estiveram no plano. São atalhos novos em [useShortcuts.ts](src/components/Board/useShortcuts.ts) que usam ações que a store já tem. Ao copiar setas ligadas (etapa 3), as ligações precisam apontar para as cópias das formas, não para as originais.
 

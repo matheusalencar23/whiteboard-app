@@ -12,7 +12,6 @@ function geometryFrom(points: Point[]) {
   };
 }
 
-/** `points` em coordenadas de mundo. */
 export function createFreedraw(points: Point[]): FreedrawElement {
   const geometry = geometryFrom(points);
   return { ...baseFields(geometry), type: "freedraw", points: geometry.points };
@@ -23,8 +22,6 @@ export function setFreedrawPoints(el: FreedrawElement, points: Point[]): Freedra
 }
 
 export const freedrawUtil: ShapeUtil<FreedrawElement> = {
-  // Desenho livre não usa o roughjs: o próprio traço da mão já tem cara de
-  // esboço, e o roughjs duplicaria e tremeria a linha.
   draw(el, _rc, ctx) {
     const points = el.points.map((p) => ({ x: el.x + p.x, y: el.y + p.y }));
     ctx.save();
@@ -39,7 +36,6 @@ export const freedrawUtil: ShapeUtil<FreedrawElement> = {
       ctx.arc(points[0].x, points[0].y, el.style.strokeWidth / 2, 0, Math.PI * 2);
       ctx.fill();
     } else {
-      // Curvas quadráticas passando pelos pontos médios suavizam o traço.
       ctx.beginPath();
       ctx.moveTo(points[0].x, points[0].y);
       for (let i = 1; i < points.length - 1; i++) {

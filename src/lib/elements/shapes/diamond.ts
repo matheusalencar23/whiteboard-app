@@ -3,7 +3,6 @@ import { distanceToPolygonEdge, isPointInPolygon } from "../../geometry/distance
 import { centeredArea, isFilled, resizeBox, roughOptions, scaleToBorder, type ShapeUtil } from "../shapeUtil";
 import type { DiamondElement } from "../types";
 
-/** Vértices em sentido horário: topo, direita, base, esquerda. */
 export function getDiamondVertices(el: DiamondElement): Point[] {
   const cx = el.x + el.width / 2;
   const cy = el.y + el.height / 2;
@@ -34,7 +33,6 @@ export const diamondUtil: ShapeUtil<DiamondElement> = {
     return scaleToBorder(d, Math.abs(d.x) / (el.width / 2) + Math.abs(d.y) / (el.height / 2));
   },
 
-  // Os 4 vértices, que caem no meio de cada lado da caixa.
   getConnectionPoints: () => [
     { x: 0.5, y: 0 },
     { x: 1, y: 0.5 },
@@ -42,6 +40,5 @@ export const diamondUtil: ShapeUtil<DiamondElement> = {
     { x: 0, y: 0.5 },
   ],
 
-  // Retângulo inscrito no losango, com metade da largura e da altura.
   getLabelArea: (el) => centeredArea(el, 0.5, 0.5),
 };

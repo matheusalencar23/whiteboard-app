@@ -12,7 +12,6 @@ export const rectangleUtil: ShapeUtil<RectangleElement> = {
     if (!containsPoint(expandBounds(el, t), p)) return false;
     if (isFilled(el.style)) return true;
 
-    // Sem preenchimento, só a borda é clicável (como no Excalidraw).
     const inner = expandBounds(el, -t);
     return inner.width <= 0 || inner.height <= 0 || !containsPoint(inner, p);
   },

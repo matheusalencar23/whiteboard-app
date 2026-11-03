@@ -15,7 +15,6 @@ export type Tool =
   | "freedraw"
   | "text";
 
-/** Quantos passos de desfazer guardar. */
 const HISTORY_LIMIT = 100;
 
 export interface BoardState {
@@ -23,22 +22,15 @@ export interface BoardState {
   selectedIds: string[];
   tool: Tool;
   viewport: Viewport;
-  /** Tipo das setas novas. Muda junto quando o tipo de setas selecionadas é trocado. */
   arrowRouting: ArrowRouting;
-  /** Grade de fundo visível. */
   showGrid: boolean;
-  /** Snapshots anteriores de `elements`. O último é o mais recente. */
   past: BoardElement[][];
   future: BoardElement[][];
 
-  // Ações discretas: já registram no histórico. As que alteram elementos
-  // também recalculam as setas ligadas a eles (`updateBoundArrows`).
   addElement: (element: BoardElement, options?: { select?: boolean }) => void;
   replaceElement: (element: BoardElement) => void;
   deleteElements: (ids: string[]) => void;
 
-  // Ações contínuas (arrastar, redimensionar): não registram no histórico.
-  // Quem chama guarda os elementos do início e chama `commitHistory` no fim.
   updateElements: (updated: BoardElement[]) => void;
   commitHistory: (before: BoardElement[]) => void;
 
@@ -47,17 +39,12 @@ export interface BoardState {
 
   setSelection: (ids: string[]) => void;
   setTool: (tool: Tool) => void;
-  /**
-   * Define o tipo das setas novas e, com setas selecionadas, troca o tipo
-   * delas (registra um passo no histórico).
-   */
   setArrowRouting: (routing: ArrowRouting) => void;
   toggleGrid: () => void;
   panBy: (dx: number, dy: number) => void;
   zoomAt: (screenPoint: Point, factor: number) => void;
 }
 
-/** Remove da seleção os ids que não existem mais em `elements`. */
 function keepExisting(selectedIds: string[], elements: BoardElement[]) {
   const ids = new Set(elements.map((el) => el.id));
   return selectedIds.filter((id) => ids.has(id));
@@ -67,7 +54,6 @@ function pushPast(past: BoardElement[][], snapshot: BoardElement[]) {
   return [...past, snapshot].slice(-HISTORY_LIMIT);
 }
 
-/** Intervalo do salvamento automático, para não serializar o board a cada movimento do mouse. */
 const SAVE_DELAY = 300;
 
 const saved = loadBoard();
@@ -105,7 +91,6 @@ export const useBoardStore = create<BoardState>()((set) => ({
       const toDelete = new Set(ids);
       const remaining = state.elements.filter((el) => !toDelete.has(el.id));
       if (remaining.length === state.elements.length) return {};
-      // Setas ligadas aos apagados ficam, mas desligadas.
       const elements = updateBoundArrows(remaining, []);
       return {
         elements,
@@ -124,7 +109,6 @@ export const useBoardStore = create<BoardState>()((set) => ({
 
   commitHistory: (before) =>
     set((state) =>
-      // Nada mudou (ex.: clique sem arrastar): não cria um passo vazio.
       before === state.elements ? {} : { past: pushPast(state.past, before), future: [] },
     ),
 
@@ -153,7 +137,6 @@ export const useBoardStore = create<BoardState>()((set) => ({
     }),
 
   setSelection: (selectedIds) => set({ selectedIds }),
-  // Trocar de ferramenta desfaz a seleção, como no Excalidraw.
   setTool: (tool) =>
     set((state) => ({ tool, selectedIds: tool === "selection" ? state.selectedIds : [] })),
   setArrowRouting: (arrowRouting) =>
@@ -175,7 +158,6 @@ export const useBoardStore = create<BoardState>()((set) => ({
     set((state) => ({ viewport: zoomAt(state.viewport, screenPoint, factor) })),
 }));
 
-// Salvamento automático: grava quando muda algo que é salvo.
 const scheduleSave = debounce(saveBoard, SAVE_DELAY);
 
 const unsubscribe = useBoardStore.subscribe((state, prev) => {
@@ -188,11 +170,9 @@ const unsubscribe = useBoardStore.subscribe((state, prev) => {
   scheduleSave({ elements, viewport, showGrid });
 });
 
-// Grava o que estiver pendente antes de a página fechar ou recarregar.
 const flushSave = () => scheduleSave.flush();
 window.addEventListener("pagehide", flushSave);
 
-// No HMR, este módulo é recriado: grava o pendente e solta os listeners antigos.
 import.meta.hot?.dispose(() => {
   scheduleSave.flush();
   unsubscribe();

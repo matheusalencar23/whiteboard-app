@@ -4,7 +4,6 @@ export function distance(a: Point, b: Point): number {
   return Math.hypot(b.x - a.x, b.y - a.y);
 }
 
-/** Distância do ponto `p` ao segmento `a`–`b`. */
 export function distanceToSegment(p: Point, a: Point, b: Point): number {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
@@ -15,7 +14,6 @@ export function distanceToSegment(p: Point, a: Point, b: Point): number {
   return distance(p, { x: a.x + t * dx, y: a.y + t * dy });
 }
 
-/** Distância à linha aberta que passa pelos pontos, em ordem. */
 export function distanceToPolyline(p: Point, points: Point[]): number {
   if (points.length === 1) return distance(p, points[0]);
 
@@ -26,12 +24,10 @@ export function distanceToPolyline(p: Point, points: Point[]): number {
   return min;
 }
 
-/** Distância à borda de um polígono fechado. */
 export function distanceToPolygonEdge(p: Point, polygon: Point[]): number {
   return distanceToPolyline(p, [...polygon, polygon[0]]);
 }
 
-/** Ray casting: o ponto está dentro do polígono fechado? */
 export function isPointInPolygon(p: Point, polygon: Point[]): boolean {
   let inside = false;
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
@@ -45,7 +41,6 @@ export function isPointInPolygon(p: Point, polygon: Point[]): boolean {
   return inside;
 }
 
-/** Gira `p` em torno de `center` por `angle` radianos. */
 export function rotatePoint(p: Point, center: Point, angle: number): Point {
   if (angle === 0) return p;
   const cos = Math.cos(angle);

@@ -1,48 +1,17 @@
 import type { Point } from "../types";
 import type { Bounds } from "./bounds";
 
-/**
- * Rota ortogonal (só linhas horizontais e verticais) entre duas pontas, como
- * as conexões do draw.io.
- *
- * A busca acontece numa grade pequena formada pelas linhas que passam pelas
- * pontas, pelas bordas dos obstáculos e pelos pontos médios entre eles. O
- * menor caminho (Dijkstra) soma o comprimento e um custo fixo por curva, então
- * a rota prefere poucas curvas e contorna os obstáculos por fora.
- */
-
-/** Uma ponta da rota. */
 export interface RouteEnd {
   point: Point;
-  /**
-   * Direção unitária de saída (no início) ou para fora da forma (no fim),
-   * sempre num eixo. A rota sai do início nessa direção e chega ao fim na
-   * direção oposta. Numa ponta solta é só a preferência: vale como desempate.
-   */
   dir: Point;
-  /**
-   * Forma da ponta, já com a margem. A rota não passa por dentro dela e
-   * começa com um trecho reto até a borda dela. `null` numa ponta solta.
-   */
   obstacle: Bounds | null;
-  /**
-   * Ponta num canto de um trecho fixo (sem forma): a rota pode virar ali (com
-   * o custo de uma curva), mas não pode voltar pelo eixo de `dir`.
-   */
   corner?: boolean;
 }
 
-/** Custo de cada curva, em unidades de mundo de comprimento equivalente. */
 const BEND_COST = 50;
-/**
- * Custo extra de andar sobre a margem de um obstáculo. Só desempata: entre
- * duas rotas iguais, prefere o corredor do meio, que deixa os trechos das
- * pontas mais longos.
- */
 const EDGE_COST = 1;
 const EPSILON = 1e-6;
 
-/** As 4 direções. O índice é usado no estado da busca. */
 const DIRS: Point[] = [
   { x: 1, y: 0 },
   { x: -1, y: 0 },
@@ -54,7 +23,6 @@ function dirIndex(d: Point): number {
   return DIRS.findIndex((v) => v.x === d.x && v.y === d.y);
 }
 
-/** O ponto está estritamente dentro da caixa (a borda não conta). */
 function isInside(b: Bounds, p: Point): boolean {
   return (
     p.x > b.x + EPSILON &&
@@ -64,7 +32,6 @@ function isInside(b: Bounds, p: Point): boolean {
   );
 }
 
-/** Onde a rota encosta na borda do obstáculo, saindo de `end.point` em `end.dir`. */
 function stubPoint(end: RouteEnd): Point {
   const { point: p, dir: d, obstacle: o } = end;
   if (!o) return p;
@@ -79,14 +46,12 @@ function uniqueSorted(values: number[]): number[] {
   return sorted.filter((v, i) => i === 0 || v - sorted[i - 1] > EPSILON);
 }
 
-/** Linhas candidatas num eixo: pontas, bordas dos obstáculos e meios entre eles. */
 function candidateLines(a: number, b: number, obstacles: Bounds[], axis: "x" | "y"): number[] {
   const lines = [a, b, (a + b) / 2];
   const ranges = obstacles.map((o) =>
     axis === "x" ? [o.x, o.x + o.width] : [o.y, o.y + o.height],
   );
   for (const [start, end] of ranges) lines.push(start, end);
-  // Corredor entre dois obstáculos separados nesse eixo.
   if (ranges.length === 2) {
     const [[s1, e1], [s2, e2]] = ranges;
     if (e1 < s2) lines.push((e1 + s2) / 2);
@@ -95,7 +60,6 @@ function candidateLines(a: number, b: number, obstacles: Bounds[], axis: "x" | "
   return uniqueSorted(lines);
 }
 
-/** Tira pontos repetidos e os pontos do meio de trechos retos. */
 export function simplifyPath(points: Point[]): Point[] {
   const deduped = points.filter(
     (p, i) => i === 0 || Math.abs(p.x - points[i - 1].x) + Math.abs(p.y - points[i - 1].y) > EPSILON,
@@ -125,22 +89,15 @@ export function routeOrthogonal(start: RouteEnd, end: RouteEnd): Point[] {
   const nodeCount = xs.length * ys.length;
   const pointOf = (n: number): Point => ({ x: xs[Math.floor(n / ys.length)], y: ys[n % ys.length] });
 
-  // As pontas estão sempre entre as linhas (a deduplicação pode ter juntado
-  // valores quase iguais, por isso a tolerância).
   const near = (lines: number[], v: number) => lines.findIndex((l) => Math.abs(l - v) <= EPSILON);
   const startNode = nodeAt(near(xs, from.x), near(ys, from.y));
   const endNode = nodeAt(near(xs, to.x), near(ys, to.y));
 
-  // Estado = nó + direção de chegada. Dijkstra simples (a grade tem poucas
-  // dezenas de nós, então uma busca linear pelo menor custo basta).
   const stateCount = nodeCount * DIRS.length;
   const cost = new Array<number>(stateCount).fill(Infinity);
   const previous = new Array<number>(stateCount).fill(-1);
   const done = new Array<boolean>(stateCount).fill(false);
   const startDir = dirIndex(start.dir);
-  // Ponta ligada sai obrigatoriamente na direção dela. Canto de trecho fixo
-  // pode virar (custa uma curva), mas não voltar. Ponta solta pode sair em
-  // qualquer direção, com uma leve preferência pela dela.
   DIRS.forEach((d, i) => {
     const reverse = d.x === -start.dir.x && d.y === -start.dir.y;
     let initial: number;
@@ -151,10 +108,6 @@ export function routeOrthogonal(start: RouteEnd, end: RouteEnd): Point[] {
     cost[startNode * DIRS.length + i] = initial;
   });
 
-  // Chegar ao fim indo para dentro da forma (oposto ao `dir` do fim) é o
-  // certo; chegar em outra direção custa uma curva; na direção do `dir`
-  // exigiria voltar pelo mesmo caminho. Canto de trecho fixo segue a mesma
-  // regra. Ponta solta aceita qualquer chegada.
   const arrivalDir = dirIndex({ x: -end.dir.x, y: -end.dir.y });
   const finishCost = (d: number) => {
     if (d === arrivalDir) return 0;
@@ -188,15 +141,12 @@ export function routeOrthogonal(start: RouteEnd, end: RouteEnd): Point[] {
     const yi = node % ys.length;
     const p = pointOf(node);
     DIRS.forEach((d, nd) => {
-      // Sem meia-volta.
       if (d.x === -DIRS[dir].x && d.y === -DIRS[dir].y) return;
       const nxi = xi + d.x;
       const nyi = yi + d.y;
       if (nxi < 0 || nxi >= xs.length || nyi < 0 || nyi >= ys.length) return;
       const next = nodeAt(nxi, nyi);
       const q = pointOf(next);
-      // Vizinhos são linhas consecutivas: se o meio do trecho está fora dos
-      // obstáculos, o trecho inteiro está.
       if (blocked(q) || blocked({ x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 })) return;
 
       const nextState = next * DIRS.length + nd;
@@ -215,7 +165,6 @@ export function routeOrthogonal(start: RouteEnd, end: RouteEnd): Point[] {
 
   let middle: Point[];
   if (bestEnd === -1) {
-    // Sem rota pela grade (pontas dentro dos obstáculos, por exemplo): um "L".
     middle = [from, { x: to.x, y: from.y }, to];
   } else {
     middle = [];

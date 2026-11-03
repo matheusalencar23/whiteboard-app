@@ -7,7 +7,6 @@ export interface Bounds {
   height: number;
 }
 
-/** Menor retângulo alinhado aos eixos que contém todos os pontos. */
 export function getBounds(points: Point[]): Bounds {
   const xs = points.map((p) => p.x);
   const ys = points.map((p) => p.y);
@@ -23,7 +22,6 @@ export function getBounds(points: Point[]): Bounds {
   };
 }
 
-/** Menor retângulo que contém todos os retângulos. */
 export function unionBounds(list: Bounds[]): Bounds {
   return getBounds(
     list.flatMap((b) => [
@@ -46,7 +44,6 @@ export function containsPoint(b: Bounds, p: Point): boolean {
   return p.x >= b.x && p.x <= b.x + b.width && p.y >= b.y && p.y <= b.y + b.height;
 }
 
-/** `inner` está inteiramente dentro de `outer`. */
 export function containsBounds(outer: Bounds, inner: Bounds): boolean {
   return (
     inner.x >= outer.x &&

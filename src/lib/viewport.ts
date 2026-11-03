@@ -1,10 +1,5 @@
 import type { Point } from "./types";
 
-/**
- * Câmera do board. Converte entre coordenadas de tela (pixels CSS relativos ao
- * canvas) e de mundo (onde os elementos vivem):
- *   tela = mundo * zoom + offset
- */
 export interface Viewport {
   offsetX: number;
   offsetY: number;
@@ -30,7 +25,6 @@ export function worldToScreen(point: Point, viewport: Viewport): Point {
   };
 }
 
-/** Desloca a câmera em pixels de tela. */
 export function panBy(viewport: Viewport, dx: number, dy: number): Viewport {
   return {
     ...viewport,
@@ -39,7 +33,6 @@ export function panBy(viewport: Viewport, dx: number, dy: number): Viewport {
   };
 }
 
-/** Aplica zoom mantendo fixo o ponto do mundo que está sob `screenPoint`. */
 export function zoomAt(
   viewport: Viewport,
   screenPoint: Point,

@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { useBoardStore } from "../../store/boardStore";
 import { TOOLS } from "./Toolbar/tools";
 
-/** Teclas digitadas num campo de texto não são atalhos. */
 export function isTypingTarget(target: EventTarget | null): boolean {
   return (
     target instanceof HTMLInputElement ||

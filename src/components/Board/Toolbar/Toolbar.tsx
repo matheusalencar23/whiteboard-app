@@ -8,10 +8,6 @@ function shortcutLabel(keys: string[]) {
   return keys.map((k) => k.toUpperCase()).join(" ou ");
 }
 
-/**
- * Tira o foco do botão depois do clique. Sem isso, o Espaço (usado para mover
- * a tela) "clicaria" de novo no último botão.
- */
 function blurAfter(action: () => void) {
   return (e: React.MouseEvent<HTMLButtonElement>) => {
     action();
@@ -45,7 +41,6 @@ export function Toolbar() {
           onClick={blurAfter(() => setTool(t))}
         >
           <Icon />
-          {/* Mostra o atalho numérico, se houver. */}
           {keys.find((k) => /\d/.test(k)) && (
             <span className={styles.shortcut}>{keys.find((k) => /\d/.test(k))}</span>
           )}

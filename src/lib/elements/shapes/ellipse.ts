@@ -26,7 +26,6 @@ export const ellipseUtil: ShapeUtil<EllipseElement> = {
 
     if (!isInsideEllipse(p, center, rx + t, ry + t)) return false;
     if (isFilled(el.style)) return true;
-    // Aproximação da faixa da borda: entre a elipse expandida e a encolhida.
     return !isInsideEllipse(p, center, rx - t, ry - t);
   },
 
@@ -38,6 +37,5 @@ export const ellipseUtil: ShapeUtil<EllipseElement> = {
 
   getConnectionPoints: () => [...SIDE_MIDPOINTS],
 
-  // Retângulo inscrito na elipse.
   getLabelArea: (el) => centeredArea(el, Math.SQRT1_2, Math.SQRT1_2),
 };

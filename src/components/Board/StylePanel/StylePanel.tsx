@@ -10,11 +10,6 @@ const ROUTING_OPTIONS: { routing: ArrowRouting; label: string; icon: IconType }[
   { routing: "elbow", label: "Ortogonal", icon: LuCornerDownRight },
 ];
 
-/**
- * Tipo das setas selecionadas: o tipo comum, `"mixed"` se forem diferentes,
- * ou `null` sem setas na seleção. Devolve um valor simples para o seletor do
- * zustand não re-renderizar à toa.
- */
 function selectedArrowRouting(state: BoardState): ArrowRouting | "mixed" | null {
   const ids = new Set(state.selectedIds);
   let routing: ArrowRouting | null = null;
@@ -26,11 +21,6 @@ function selectedArrowRouting(state: BoardState): ArrowRouting | "mixed" | null 
   return routing;
 }
 
-/**
- * Painel lateral com as opções do que está selecionado ou da ferramenta
- * ativa. Por enquanto, só o tipo da seta. É o começo do painel de estilo
- * (ROADMAP, item 4.3).
- */
 export function StylePanel() {
   const tool = useBoardStore((s) => s.tool);
   const defaultRouting = useBoardStore((s) => s.arrowRouting);
@@ -40,7 +30,6 @@ export function StylePanel() {
   const showArrowOptions = tool === "arrow" || selectedRouting !== null;
   if (!showArrowOptions) return null;
 
-  // Com setas selecionadas, mostra o tipo delas; sem, o das setas novas.
   const active = selectedRouting ?? defaultRouting;
 
   return (
@@ -59,7 +48,6 @@ export function StylePanel() {
               aria-pressed={active === routing}
               onClick={(e) => {
                 setArrowRouting(routing);
-                // Sem foco, o Espaço (mover a tela) não "clica" de novo no botão.
                 e.currentTarget.blur();
               }}
             >

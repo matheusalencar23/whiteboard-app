@@ -18,26 +18,18 @@ import { drawGrid } from "./grid";
 
 const SELECTION_COLOR = "#4f7cff";
 
-/** Tudo que é desenhado por cima dos elementos e não faz parte deles. */
 export interface SceneOverlay {
   selected: BoardElement[];
-  /** Esconde as alças (por exemplo, enquanto a seleção está sendo movida). */
   showHandles: boolean;
-  /** Retângulo da seleção por caixa, em coordenadas de mundo. */
   selectionBox: Bounds | null;
-  /** Forma em que a ponta da seta sendo desenhada ou arrastada vai se ligar. */
   bindingTarget: BoardElement | null;
-  /** Ponto de conexão do alvo em que a ponta vai encaixar (relativo, 0 a 1). */
   bindingAnchor: Point | null;
 }
 
-/** Raio dos pontos de conexão, em pixels de tela. */
 const CONNECTION_POINT_RADIUS = 4;
 
-/** Folga do destaque da forma alvo da ligação, em pixels de tela. */
 const BINDING_HIGHLIGHT_PADDING = 4;
 
-/** Contorno da forma, afastado `pad` da borda, como caminho do canvas. */
 function traceOutline(ctx: CanvasRenderingContext2D, el: BoardElement, pad: number) {
   const center = getCenter(el);
   ctx.save();
@@ -50,8 +42,6 @@ function traceOutline(ctx: CanvasRenderingContext2D, el: BoardElement, pad: numb
   if (el.type === "ellipse") {
     ctx.ellipse(center.x, center.y, box.width / 2, box.height / 2, 0, 0, Math.PI * 2);
   } else if (el.type === "diamond") {
-    // Afasta cada lado `pad` para fora: as semidiagonais a e b crescem
-    // pad·√(a²+b²)/b e pad·√(a²+b²)/a, respectivamente.
     const a = el.width / 2;
     const b = el.height / 2;
     const k = Math.hypot(a, b);
@@ -94,9 +84,6 @@ function renderArrowHandles(ctx: CanvasRenderingContext2D, arrow: ArrowElement, 
     const p = handle.position;
     ctx.beginPath();
     if (handle.kind === "midpoint" || handle.kind === "segment") {
-      // Alça do meio: menor e translúcida, para ler como "dá para puxar daqui".
-      // Trecho fixo da ortogonal (arrastado pelo usuário), mais forte: o
-      // duplo clique solta só ele.
       ctx.arc(p.x, p.y, (ENDPOINT_RADIUS * 0.7) / zoom, 0, Math.PI * 2);
       ctx.save();
       ctx.globalAlpha =
@@ -107,7 +94,6 @@ function renderArrowHandles(ctx: CanvasRenderingContext2D, arrow: ArrowElement, 
       continue;
     }
     ctx.arc(p.x, p.y, ENDPOINT_RADIUS / zoom, 0, Math.PI * 2);
-    // Ponta ligada a uma forma: alça preenchida.
     const bound =
       handle.kind === "end" &&
       (handle.end === "start" ? arrow.startBinding : arrow.endBinding) !== null;
@@ -123,7 +109,6 @@ function strokeFrame(ctx: CanvasRenderingContext2D, b: Bounds) {
 
 function renderOverlay(ctx: CanvasRenderingContext2D, overlay: SceneOverlay, zoom: number) {
   ctx.save();
-  // Espessuras em pixels de tela, não importa o zoom.
   ctx.lineWidth = 1 / zoom;
   ctx.strokeStyle = SELECTION_COLOR;
 
@@ -142,7 +127,6 @@ function renderOverlay(ctx: CanvasRenderingContext2D, overlay: SceneOverlay, zoo
   if (singleArrow) {
     renderArrowHandles(ctx, singleArrow, zoom);
   } else if (bounds) {
-    // Na seleção múltipla, cada elemento ganha um contorno tracejado.
     if (overlay.selected.length > 1) {
       ctx.setLineDash([4 / zoom, 4 / zoom]);
       for (const el of overlay.selected) {
@@ -172,10 +156,6 @@ function renderOverlay(ctx: CanvasRenderingContext2D, overlay: SceneOverlay, zoo
   ctx.restore();
 }
 
-/**
- * Limpa o canvas e desenha os elementos e a camada de seleção em coordenadas
- * de mundo. `dpr` é o devicePixelRatio usado para dimensionar o canvas.
- */
 export function renderScene(
   ctx: CanvasRenderingContext2D,
   rc: RoughCanvas,
@@ -183,7 +163,6 @@ export function renderScene(
   overlay: SceneOverlay,
   viewport: Viewport,
   dpr: number,
-  /** Espaçamento da grade de fundo, ou `null` para escondê-la. */
   gridSize: number | null,
 ) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);

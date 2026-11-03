@@ -49,5 +49,6 @@ Estilos: os componentes usam arquivos `*.module.scss` na mesma pasta. Os estilos
 
 ## Convenções
 
-- Mensagens de commit e alguns identificadores e comentários são escritos em português (pt-BR).
+- **Não escreva comentários no código**, nem de linha, nem de bloco, nem JSDoc, em `.ts`, `.tsx` e `.scss`. O código deve se explicar pelos nomes. O motivo das decisões fica no [ROADMAP.md](ROADMAP.md) (nos detalhes de implementação de cada item) e nas mensagens de commit. Se um bloco só fazia sentido com um comentário (por exemplo, um `catch` vazio), reescreva o código para não precisar dele.
+- Mensagens de commit e alguns identificadores são escritos em português (pt-BR).
 - Componentes usam named exports (`export function Board()`). A exceção é `App`, que é export default.

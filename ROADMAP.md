@@ -168,7 +168,7 @@ A parte que diferencia o projeto de um Excalidraw. Os itens estão na ordem de i
 
 - [x] **Feito**, no modelo do Excalidraw, em vez do plano original de uma curva automática.
   - **Reta e curva** têm pontos livres. Com uma seta selecionada sozinha, aparece uma alça translúcida no meio de cada trecho. Arrastar essa alça cria um ponto ali, e os pontos do meio também podem ser arrastados (`getArrowHandles` em `selection.ts`).
-  - **Na reta**, a linha passa pelos pontos com quinas. **Na curva**, ela passa suave por eles: uma Catmull-Rom convertida em Béziers cúbicas, desenhada com `rc.path` do roughjs. Com só dois pontos, a curva é uma reta, como no Excalidraw.
+  - **Na reta**, a linha passa pelos pontos com quinas. **Na curva**, ela passa suave por eles: uma Catmull-Rom convertida em Béziers cúbicas, desenhada com `rc.path` do roughjs, com `preserveVertices`, pouca aleatoriedade nos pontos de controle (0,5) e pontas redondas, como nos cantos da ortogonal. Sem isso, os trechos não se encontravam nos pontos. Com só dois pontos, a curva é uma reta, como no Excalidraw.
   - Clique, caixa de seleção e direção da ponta usam a curva amostrada (`getArrowPath`). A caixa inclui a curva, que pode passar além dos pontos.
   - Trocar entre reta e curva mantém os pontos. Entrar ou sair da ortogonal deixa a seta só com as pontas.
   - Com pontas ligadas, cada ponta mira o ponto vizinho, não o centro da outra forma.

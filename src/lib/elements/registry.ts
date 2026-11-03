@@ -18,7 +18,6 @@ import { arrowUtil } from "./shapes/arrow";
 import { freedrawUtil } from "./shapes/freedraw";
 import { textUtil } from "./shapes/text";
 
-/** O tipo mapeado obriga a registrar todo tipo da união `BoardElement`. */
 const shapeUtils: { [K in ElementType]: ShapeUtil<ElementOfType<K>> } = {
   rectangle: rectangleUtil,
   ellipse: ellipseUtil,
@@ -32,12 +31,10 @@ export function getShapeUtil<T extends BoardElement>(element: T): ShapeUtil<T> {
   return shapeUtils[element.type] as unknown as ShapeUtil<T>;
 }
 
-/** Retângulo, elipse ou losango a partir de dois cantos opostos. */
 export function createBoxElement(type: BoxElementType, start: Point, end: Point): BoardElement {
   return { ...baseFields(getBounds([start, end])), type };
 }
 
-/** Caixa ocupada pelo desenho (ignora a rotação por enquanto). */
 export function getElementBounds(element: BoardElement): Bounds {
   const custom = getShapeUtil(element).getBounds?.(element);
   if (custom) return custom;
@@ -45,20 +42,14 @@ export function getElementBounds(element: BoardElement): Bounds {
   return { x, y, width, height };
 }
 
-/** Setas podem se ligar a este elemento? */
 export function isBindable(element: BoardElement): boolean {
   return getShapeUtil(element).getBorderOffset !== undefined;
 }
 
-/** Pontos de conexão em coordenadas relativas (0 a 1). Vazio se a forma não tiver. */
 export function getConnectionAnchors(element: BoardElement): Point[] {
   return getShapeUtil(element).getConnectionPoints?.(element) ?? [];
 }
 
-/**
- * Ponto da borda na direção `direction` (de mundo) a partir do centro.
- * Devolve o centro para elementos sem borda definida.
- */
 export function getBorderPoint(element: BoardElement, direction: Point): Point {
   const center = getCenter(element);
   const local = rotatePoint(direction, { x: 0, y: 0 }, -element.rotation);
@@ -67,25 +58,19 @@ export function getBorderPoint(element: BoardElement, direction: Point): Point {
   return { x: center.x + rotated.x, y: center.y + rotated.y };
 }
 
-/** Folga entre o rótulo e a borda da área dele, em unidades de mundo. */
 const LABEL_PADDING = 8;
 
-/** Rótulo de uma forma já quebrado em linhas e posicionado (sem rotação). */
 export interface LabelLayout {
   lines: string[];
   fontSize: number;
-  /** Área em que o texto quebra linha. */
   area: Bounds;
-  /** Caixa ocupada pelas linhas, centralizada na área. */
   box: Bounds;
 }
 
-/** Área de quebra do rótulo, já sem a folga. `null` se a forma não aceita rótulo. */
 export function getLabelArea(element: BoardElement): Bounds | null {
   const area = getShapeUtil(element).getLabelArea?.(element);
   if (!area) return null;
   const inner = expandBounds(area, -LABEL_PADDING);
-  // Forma pequena demais: o texto quebra numa largura mínima e transborda.
   const width = Math.max(inner.width, 1);
   const height = Math.max(inner.height, 0);
   const center = getCenter(area);
@@ -104,7 +89,6 @@ export function getLabelLayout(element: BoardElement): LabelLayout | null {
   return { lines, fontSize, area, box };
 }
 
-/** Desenha o rótulo centralizado, um ponto comum a todas as formas. */
 function drawLabel(element: BoardElement, ctx: CanvasRenderingContext2D) {
   const layout = getLabelLayout(element);
   if (!layout) return;
@@ -141,18 +125,12 @@ export function renderElement(
 }
 
 export function hitTestElement(element: BoardElement, point: Point, tolerance: number) {
-  // Leva o ponto para o espaço do elemento sem rotação.
   const local = rotatePoint(point, getCenter(element), -element.rotation);
   if (getShapeUtil(element).hitTest(element, local, tolerance)) return true;
-  // O texto do rótulo também é clicável, mesmo numa forma sem preenchimento.
   const label = getLabelLayout(element);
   return label !== null && containsPoint(expandBounds(label.box, tolerance), local);
 }
 
-/**
- * O ponto está no interior da forma (com folga `tolerance`), mesmo que ela
- * não tenha preenchimento? Só para formas com borda definida.
- */
 export function isInsideShape(element: BoardElement, point: Point, tolerance: number): boolean {
   if (!getShapeUtil(element).getBorderOffset) return false;
   const center = getCenter(element);
@@ -161,7 +139,6 @@ export function isInsideShape(element: BoardElement, point: Point, tolerance: nu
   return distance(center, point) <= reach + tolerance;
 }
 
-/** Forma mais acima cujo interior contém o ponto e que aceita rótulo. */
 export function getLabelTargetAt(elements: BoardElement[], point: Point, tolerance: number) {
   for (let i = elements.length - 1; i >= 0; i--) {
     const el = elements[i];
@@ -170,7 +147,6 @@ export function getLabelTargetAt(elements: BoardElement[], point: Point, toleran
   return null;
 }
 
-/** Elemento mais acima (o último desenhado) sob o ponto. */
 export function getElementAtPoint(
   elements: BoardElement[],
   point: Point,

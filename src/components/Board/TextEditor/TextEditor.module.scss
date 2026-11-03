@@ -9,7 +9,6 @@
     overflow: hidden;
     white-space: pre;
 
-    // Rótulo de forma: quebra na largura, como o `wrapText` de src/lib/text.ts.
     &[data-layout="label"] {
         white-space: pre-wrap;
         overflow-wrap: break-word;

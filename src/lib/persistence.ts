@@ -2,15 +2,8 @@ import type { BoardElement, ElementType } from "./elements/types";
 import { updateBoundArrows } from "./elements/bindings";
 import { MAX_ZOOM, MIN_ZOOM, type Viewport } from "./viewport";
 
-/**
- * Salvamento do board no `localStorage`. São salvos `elements`, `viewport` e
- * se a grade está visível; histórico, seleção e ferramenta começam limpos a
- * cada abertura.
- */
-
 const STORAGE_KEY = "whiteboard:board";
 
-/** Sobe quando o formato muda. Dados antigos passam por `migrate`. */
 export const CURRENT_VERSION = 3;
 
 export interface SavedBoard {
@@ -19,14 +12,12 @@ export interface SavedBoard {
   showGrid: boolean;
 }
 
-/** Valores das preferências quando o board salvo não as tem (boards antigos). */
 export const DEFAULT_PREFERENCES = { showGrid: true };
 
 interface StoredBoard extends SavedBoard {
   version: number;
 }
 
-/** Os tipos conhecidos. O `Record` faz o TypeScript reclamar se faltar um. */
 const ELEMENT_TYPES: Record<ElementType, true> = {
   rectangle: true,
   ellipse: true,
@@ -41,12 +32,10 @@ export function saveBoard(board: SavedBoard): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
   } catch (error) {
-    // Cota excedida ou storage bloqueado: o board continua funcionando sem salvar.
     console.warn("Não foi possível salvar o board.", error);
   }
 }
 
-/** Lê o board salvo. Devolve `null` se não houver nada ou se os dados forem inválidos. */
 export function loadBoard(): SavedBoard | null {
   let raw: string | null;
   try {
@@ -56,20 +45,20 @@ export function loadBoard(): SavedBoard | null {
   }
   if (raw === null) return null;
 
-  try {
-    const board = migrate(JSON.parse(raw));
-    if (board) return board;
-  } catch {
-    // JSON corrompido: cai no aviso abaixo.
-  }
+  const board = parseBoard(raw);
+  if (board) return board;
   console.warn("Board salvo inválido, abrindo um board vazio.");
   return null;
 }
 
-/**
- * Converte dados de qualquer versão conhecida para o formato atual e valida.
- * Devolve `null` para versões desconhecidas ou dados malformados.
- */
+function parseBoard(raw: string): SavedBoard | null {
+  try {
+    return migrate(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
 function migrate(data: unknown): SavedBoard | null {
   if (!isObject(data) || typeof data.version !== "number") return null;
   if (data.version < 1 || data.version > CURRENT_VERSION) return null;
@@ -78,15 +67,12 @@ function migrate(data: unknown): SavedBoard | null {
   if (!Array.isArray(data.elements)) return null;
   let elements: unknown[] = data.elements;
 
-  // Uma versão por vez.
   if (data.version < 2) {
-    // v2: setas ganharam ligações a formas.
     elements = elements.map((el) =>
       isObject(el) && el.type === "arrow" ? { ...el, startBinding: null, endBinding: null } : el,
     );
   }
   if (data.version < 3) {
-    // v3: setas ganharam o modo de rota (reta, ortogonal ou curva).
     elements = elements.map((el) =>
       isObject(el) && el.type === "arrow" ? { ...el, routing: "straight" } : el,
     );
@@ -94,11 +80,9 @@ function migrate(data: unknown): SavedBoard | null {
 
   if (!Array.isArray(elements) || !elements.every(isValidElement)) return null;
   if (!isValidViewport(viewport)) return null;
-  // Preferências são campos opcionais: valor inválido ou ausente vira o padrão.
   const showGrid =
     typeof data.showGrid === "boolean" ? data.showGrid : DEFAULT_PREFERENCES.showGrid;
 
-  // Ligações a elementos que não existem viram `null`.
   return { elements: updateBoundArrows(elements, []), viewport, showGrid };
 }
 
@@ -125,7 +109,6 @@ function isValidPoints(value: unknown): boolean {
   return Array.isArray(value) && value.every((p) => isObject(p) && isNumber(p.x) && isNumber(p.y));
 }
 
-/** Trechos fixos da seta ortogonal: opcionais. */
 function isValidSegments(value: unknown): boolean {
   if (value === undefined) return true;
   return (
@@ -182,16 +165,11 @@ function isValidElement(value: unknown): value is BoardElement {
   }
 }
 
-/** Rótulo das formas de caixa: opcional, então campos ausentes são válidos. */
 function isValidLabel(value: unknown): boolean {
   if (value === undefined) return true;
   return isObject(value) && typeof value.text === "string" && isNumber(value.fontSize);
 }
 
-/**
- * Agrupa chamadas seguidas: `fn` roda `delay` ms depois da última chamada.
- * `flush` executa na hora o que estiver pendente (ex.: ao fechar a página).
- */
 export function debounce<A extends unknown[]>(fn: (...args: A) => void, delay: number) {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let pending: A | undefined;

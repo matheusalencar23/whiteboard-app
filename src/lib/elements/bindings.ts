@@ -1,8 +1,8 @@
 import type { Point } from "../types";
-import { expandBounds, getCenter, type Bounds } from "../geometry/bounds";
+import { expandBounds, getCenter } from "../geometry/bounds";
 import { distance, rotatePoint } from "../geometry/distance";
 import { routeOrthogonal, simplifyPath, type RouteEnd } from "../geometry/orthogonalRoute";
-import { getBorderPoint, getConnectionAnchors, isBindable, isInsideShape } from "./registry";
+import { getBorderPoint, getConnectionAnchors, getElementBounds, isBindable, isInsideShape } from "./registry";
 import { getArrowPoints, getFixedSegments, setArrowPoints, setFixedSegments } from "./shapes/arrow";
 import type { ArrowBinding, ArrowElement, ArrowRouting, ArrowSegment, BoardElement } from "./types";
 
@@ -65,27 +65,28 @@ function axisDir(v: Point): Point {
   return { x: 0, y: v.y < 0 ? -1 : 1 };
 }
 
-function shapeBox(shape: BoardElement): Bounds {
-  return { x: shape.x, y: shape.y, width: shape.width, height: shape.height };
-}
-
 function elbowBoundEnd(shape: BoardElement, binding: ArrowBinding, towards: Point): RouteEnd {
   let dir: Point;
   let border: Point;
   if (binding.anchor) {
-    const offset = { x: binding.anchor.x - 0.5, y: binding.anchor.y - 0.5 };
+    const offset = rotatePoint(
+      { x: binding.anchor.x - 0.5, y: binding.anchor.y - 0.5 },
+      { x: 0, y: 0 },
+      shape.rotation,
+    );
     dir = offset.x === 0 && offset.y === 0 ? axisDir(sub(towards, getCenter(shape))) : axisDir(offset);
     border = anchorPoint(shape, binding.anchor);
   } else {
     const center = getCenter(shape);
-    const v = sub(towards, center);
-    dir = axisDir({ x: v.x / Math.max(shape.width, 1), y: v.y / Math.max(shape.height, 1) });
+    const v = rotatePoint(sub(towards, center), { x: 0, y: 0 }, -shape.rotation);
+    const local = axisDir({ x: v.x / Math.max(shape.width, 1), y: v.y / Math.max(shape.height, 1) });
+    dir = axisDir(rotatePoint(local, { x: 0, y: 0 }, shape.rotation));
     border = getBorderPoint(shape, dir);
   }
   return {
     point: { x: border.x + dir.x * BINDING_GAP, y: border.y + dir.y * BINDING_GAP },
     dir,
-    obstacle: expandBounds(shapeBox(shape), ELBOW_MARGIN),
+    obstacle: expandBounds(getElementBounds(shape), ELBOW_MARGIN),
   };
 }
 

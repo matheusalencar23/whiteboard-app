@@ -14,12 +14,12 @@ import type {
 import { isBoxElement } from "../../../lib/elements/types";
 import {
   containsBounds,
-  containsPoint,
   getBounds,
+  getCenter,
   type Bounds,
 } from "../../../lib/geometry/bounds";
-import { distance } from "../../../lib/geometry/distance";
-import { constrainToSquare, snapToAngle } from "../../../lib/geometry/constrain";
+import { distance, rotatePoint } from "../../../lib/geometry/distance";
+import { constrainToSquare, snapAngleValue, snapToAngle } from "../../../lib/geometry/constrain";
 import {
   createBoxElement,
   getElementAtPoint,
@@ -46,15 +46,20 @@ import {
 import { createFreedraw, setFreedrawPoints } from "../../../lib/elements/shapes/freedraw";
 import { createText, setText } from "../../../lib/elements/shapes/text";
 import {
-  HANDLE_CURSORS,
+  ROTATION_SNAP,
+  frameContains,
   getArrowHandleAt,
   getHandleAt,
+  getHandleCursor,
   getSingleArrow,
-  getSelectionBounds,
   getSelectionFrame,
+  isOnRotationHandle,
   resizeBounds,
   resizeElementsToBounds,
+  resizeSingleElement,
+  rotateElements,
   type Handle,
+  type SelectionFrame,
 } from "../../../lib/selection";
 import { renderScene } from "../../../lib/render/renderScene";
 import { GRID_SIZE } from "../../../lib/render/grid";
@@ -92,6 +97,13 @@ type Interaction =
       handle: Handle;
       start: Point;
       bounds: Bounds;
+      originals: BoardElement[];
+      before: BoardElement[];
+    }
+  | {
+      kind: "rotating";
+      frame: SelectionFrame;
+      startAngle: number;
       originals: BoardElement[];
       before: BoardElement[];
     }
@@ -151,9 +163,14 @@ function detachFromStaying(moved: BoardElement[]): BoardElement[] {
 }
 
 function editorLayout(editing: Editing): TextEditorLayout {
-  if (editing.kind === "text") return { kind: "free", position: editing.element };
+  const { rotation } = editing.element;
+  if (editing.kind === "text") {
+    const el = editing.element;
+    const position = rotatePoint({ x: el.x, y: el.y }, getCenter(el), rotation);
+    return { kind: "free", position, rotation };
+  }
   const area = getLabelArea(editing.element) ?? editing.element;
-  return { kind: "label", area };
+  return { kind: "label", area, rotation };
 }
 
 function hasSize(element: BoardElement): boolean {
@@ -176,6 +193,7 @@ export function Canvas() {
 
   const [draft, setDraftState] = useState<BoardElement | null>(null);
   const [selectionBox, setSelectionBox] = useState<Bounds | null>(null);
+  const [frameOverride, setFrameOverride] = useState<SelectionFrame | null>(null);
   const [editing, setEditing] = useState<Editing | null>(null);
   const [isInteracting, setIsInteracting] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
@@ -315,6 +333,7 @@ export function Canvas() {
         showHandles: !isInteracting,
         bindingTarget,
         bindingAnchor: bindingHint?.anchor ?? null,
+        frameOverride,
       },
       viewport,
       dpr,
@@ -324,6 +343,7 @@ export function Canvas() {
     scene,
     selected,
     selectionBox,
+    frameOverride,
     showGrid,
     isInteracting,
     bindingTarget,
@@ -388,7 +408,7 @@ export function Canvas() {
     const { zoom } = store.viewport;
     const tolerance = HIT_TOLERANCE / zoom;
     const selectedNow = getSelectedElements();
-    const bounds = getSelectionBounds(selectedNow);
+    const frame = getSelectionFrame(selectedNow);
     const singleArrow = getSingleArrow(selectedNow);
 
     const arrowHandle = singleArrow && getArrowHandleAt(singleArrow, world, zoom);
@@ -429,13 +449,27 @@ export function Canvas() {
       return;
     }
 
-    const handle = !singleArrow && bounds && getHandleAt(world, bounds, zoom);
-    if (bounds && handle) {
+    const boxFrame = singleArrow ? null : frame;
+    if (boxFrame && isOnRotationHandle(world, boxFrame, zoom)) {
+      const center = getCenter(boxFrame.box);
+      interactionRef.current = {
+        kind: "rotating",
+        frame: boxFrame,
+        startAngle: Math.atan2(world.y - center.y, world.x - center.x),
+        originals: selectedNow,
+        before: store.elements,
+      };
+      setHoverCursor("grabbing");
+      return;
+    }
+
+    const handle = boxFrame && getHandleAt(world, boxFrame, zoom);
+    if (boxFrame && handle) {
       interactionRef.current = {
         kind: "resizing",
         handle,
         start: world,
-        bounds,
+        bounds: boxFrame.box,
         originals: selectedNow,
         before: store.elements,
       };
@@ -463,7 +497,7 @@ export function Canvas() {
       return;
     }
 
-    if (!shiftKey && bounds && containsPoint(getSelectionFrame(bounds, zoom), world)) {
+    if (!shiftKey && frame && frameContains(frame, world, zoom)) {
       interactionRef.current = {
         kind: "moving",
         start: world,
@@ -525,7 +559,7 @@ export function Canvas() {
     const store = useBoardStore.getState();
     const { zoom } = store.viewport;
     const selectedNow = getSelectedElements();
-    const bounds = getSelectionBounds(selectedNow);
+    const frame = getSelectionFrame(selectedNow);
     const singleArrow = getSingleArrow(selectedNow);
 
     const arrowHandle = singleArrow && getArrowHandleAt(singleArrow, world, zoom);
@@ -535,10 +569,12 @@ export function Canvas() {
       }
       return setHoverCursor("pointer");
     }
-    const handle = !singleArrow && bounds && getHandleAt(world, bounds, zoom);
-    if (handle) return setHoverCursor(HANDLE_CURSORS[handle]);
+    const boxFrame = singleArrow ? null : frame;
+    if (boxFrame && isOnRotationHandle(world, boxFrame, zoom)) return setHoverCursor("grab");
+    const handle = boxFrame && getHandleAt(world, boxFrame, zoom);
+    if (boxFrame && handle) return setHoverCursor(getHandleCursor(handle, boxFrame.rotation));
 
-    const overSelection = bounds && containsPoint(getSelectionFrame(bounds, zoom), world);
+    const overSelection = frame && frameContains(frame, world, zoom);
     const overElement = getElementAtPoint(store.elements, world, HIT_TOLERANCE / zoom);
     setHoverCursor(overSelection || overElement ? "move" : "default");
   }
@@ -632,15 +668,25 @@ export function Canvas() {
       }
 
       case "resizing": {
-        const next = resizeBounds(
-          interaction.bounds,
-          interaction.handle,
-          world.x - interaction.start.x,
-          world.y - interaction.start.y,
-          shiftKey,
-        );
-        const resized = resizeElementsToBounds(interaction.originals, interaction.bounds, next);
+        const delta = { x: world.x - interaction.start.x, y: world.y - interaction.start.y };
+        const { originals, handle, bounds } = interaction;
+        if (originals.length === 1) {
+          store.updateElements([resizeSingleElement(originals[0], handle, delta, shiftKey)]);
+          break;
+        }
+        const next = resizeBounds(bounds, handle, delta.x, delta.y, shiftKey);
+        const resized = resizeElementsToBounds(originals, bounds, next);
         store.updateElements(detachFromStaying(resized));
+        break;
+      }
+
+      case "rotating": {
+        const { frame, originals } = interaction;
+        const center = getCenter(frame.box);
+        let angle = Math.atan2(world.y - center.y, world.x - center.x) - interaction.startAngle;
+        if (shiftKey) angle = snapAngleValue(frame.rotation + angle, ROTATION_SNAP) - frame.rotation;
+        store.updateElements(detachFromStaying(rotateElements(originals, center, angle)));
+        if (originals.length > 1) setFrameOverride({ box: frame.box, rotation: angle });
         break;
       }
 
@@ -665,6 +711,7 @@ export function Canvas() {
     lastPointerRef.current = null;
     setDraft(null);
     setSelectionBox(null);
+    setFrameOverride(null);
     setIsInteracting(false);
     setIsPanning(false);
     setBindingHint(null);
@@ -691,6 +738,7 @@ export function Canvas() {
 
       case "moving":
       case "resizing":
+      case "rotating":
       case "draggingEndpoint":
       case "draggingPoint":
       case "draggingSegment":
@@ -701,7 +749,11 @@ export function Canvas() {
 
   function handlePointerCancel() {
     const interaction = interactionRef.current;
-    if (interaction?.kind === "moving" || interaction?.kind === "resizing") {
+    if (
+      interaction?.kind === "moving" ||
+      interaction?.kind === "resizing" ||
+      interaction?.kind === "rotating"
+    ) {
       useBoardStore.getState().updateElements(interaction.originals);
     } else if (
       interaction?.kind === "draggingEndpoint" ||

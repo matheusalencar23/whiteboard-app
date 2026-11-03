@@ -1,5 +1,6 @@
 import type { Point } from "../../types";
-import { containsPoint, expandBounds } from "../../geometry/bounds";
+import { containsPoint, expandBounds, getCenter } from "../../geometry/bounds";
+import { rotatePoint } from "../../geometry/distance";
 import { DEFAULT_FONT_SIZE, LINE_HEIGHT, fontString, measureText } from "../../text";
 import { baseFields, type ShapeUtil } from "../shapeUtil";
 import type { TextElement } from "../types";
@@ -10,7 +11,19 @@ export function createText(position: Point, text = "", fontSize = DEFAULT_FONT_S
 }
 
 export function setText(el: TextElement, text: string): TextElement {
-  return { ...el, text, ...measureText(text, el.fontSize) };
+  const size = measureText(text, el.fontSize);
+  if (el.rotation === 0) return { ...el, text, ...size };
+
+  const corner = rotatePoint({ x: el.x, y: el.y }, getCenter(el), el.rotation);
+  const half = rotatePoint({ x: size.width / 2, y: size.height / 2 }, { x: 0, y: 0 }, el.rotation);
+  const center = { x: corner.x + half.x, y: corner.y + half.y };
+  return {
+    ...el,
+    text,
+    ...size,
+    x: center.x - size.width / 2,
+    y: center.y - size.height / 2,
+  };
 }
 
 export const textUtil: ShapeUtil<TextElement> = {

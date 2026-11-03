@@ -52,3 +52,9 @@ export function rotatePoint(p: Point, center: Point, angle: number): Point {
     y: center.y + dx * sin + dy * cos,
   };
 }
+
+export function normalizeAngle(angle: number): number {
+  const full = Math.PI * 2;
+  const result = angle % full;
+  return result < 0 ? result + full : result;
+}

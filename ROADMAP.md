@@ -9,6 +9,7 @@ Marque os itens com `[x]` conforme forem concluídos.
 - Rota `/board` com um canvas em tela cheia (resolução ajustada para telas HiDPI).
 - Toolbar com as ferramentas mão, seleção, retângulo, losango, elipse, seta, lápis e texto, além de desfazer, refazer e apagar.
 - Seleção por clique, Shift + clique e caixa. Mover, redimensionar pelas 8 alças, apagar, e desfazer/refazer.
+- Rotação pela alça acima da seleção, de um elemento ou de vários juntos (Shift prende em 15°).
 - Shift mantém a proporção ao redimensionar e, ao desenhar, força quadrado, círculo ou seta em ângulos de 45°.
 - Câmera com pan (roda do mouse, Shift + roda, botão do meio ou Espaço + arrastar) e zoom (Ctrl/Cmd + roda ou pinça no trackpad, centrado no cursor).
 - Estado em uma store do zustand. `elements`, `viewport` e as preferências da grade são salvos sozinhos no `localStorage` (`src/lib/persistence.ts`, formato versão 3).
@@ -30,6 +31,7 @@ Marque os itens com `[x]` conforme forem concluídos.
 | Limpar seleção | `Esc` |
 | Mostrar / esconder a grade | `G` |
 | Manter proporção / quadrado / seta em 45° | Segurar `Shift` ao redimensionar ou desenhar |
+| Girar em passos de 15° | Segurar `Shift` ao girar |
 | Editar texto | Duplo clique no texto. Duplo clique no vazio cria um texto novo. `Esc` ou `Ctrl+Enter` confirmam. |
 
 ## Decisões tomadas
@@ -67,7 +69,7 @@ Esta é a ordem recomendada de trabalho a partir de agora. Ela não segue a nume
 
 - [ ] Os itens 3.1 (setas ligadas), 3.2 (pontos de conexão) 3.3 (texto dentro das formas), 3.5 (setas ortogonais) e 3.6 (setas curvas, com pontos ajustáveis) estão feitos. O 3.4 (snap e guias) foi descartado, e só a grade de fundo (4.1) ficou. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Do 3.1 ao 3.6, cada item depende do anterior. O 3.7 (texto nas setas) e o 3.8 (formato das pontas) não dependem dos outros e podem ser adiantados. Só a interface do 3.8 espera o painel de estilo (4.3).
 
-As outras pendências da etapa 2 (rotação, duplicar e copiar/colar) ficam para quando fizerem falta no uso. Nenhuma bloqueia a etapa 3.
+As outras pendências da etapa 2 (duplicar e copiar/colar) ficam para quando fizerem falta no uso. Nenhuma bloqueia a etapa 3.
 
 ## 1. Fundação
 
@@ -95,7 +97,14 @@ Fazer antes de qualquer ferramenta nova, porque o resto depende disso.
   - Na criação, `constrainToSquare` e `snapToAngle` ([src/lib/geometry/constrain.ts](src/lib/geometry/constrain.ts)) ajustam o ponto do cursor. Na seta, a ligação é procurada no ponto já ajustado.
   - Apertar ou soltar o Shift no meio do arraste já atualiza a forma, sem precisar mexer o mouse: o Canvas guarda o último ponto e reaplica a interação (`updateInteraction`) no `keydown`/`keyup` do Shift.
   - Arrastar as pontas ou os pontos de uma seta existente ainda não encaixa em 45°.
-- [ ] **Não há como girar elementos.** O campo `rotation` existe, e o desenho e o clique já o respeitam. Falta a alça de rotação, a caixa de seleção girando junto e a matemática de redimensionar um elemento girado, que é bem mais trabalhosa. Nunca esteve no plano da etapa 2.
+- [x] **Girar elementos.** Uma alça acima do quadro da seleção (haste e bolinha) gira a seleção, e Shift prende em passos de 15°. Detalhes da implementação:
+  - A seleção tem um quadro (`SelectionFrame`, em [src/lib/selection.ts](src/lib/selection.ts)): a caixa sem rotação e o ângulo em volta do centro dela. Com um elemento só, o quadro gira junto com o elemento. Com vários, o quadro fica alinhado aos eixos (a união das caixas giradas), e só durante o giro ele é desenhado girado (`frameOverride` no overlay). As alças, o clique nelas e o "está dentro do quadro" convertem o ponteiro para o sistema local do quadro.
+  - `getElementBounds` passa a devolver a caixa alinhada aos eixos do elemento girado. A caixa sem rotação é `getElementBox`. Isso corrige a caixa da seleção, a seleção por caixa e o obstáculo da seta ortogonal para formas giradas.
+  - Redimensionar um elemento girado (`resizeSingleElement`) converte o arraste para o sistema local, redimensiona a caixa e depois desloca o elemento para o ponto fixo (a alça oposta) não sair do lugar no mundo. Com vários elementos, cada um é escalado pelo centro, e um elemento girado recebe a escala projetada nos eixos dele (aproximação, como no Excalidraw).
+  - Girar vários elementos gira o centro de cada um em volta do centro do quadro e soma o ângulo à `rotation`. Setas não guardam `rotation`: o giro é aplicado nos pontos, porque ligações e rota ortogonal trabalham em coordenadas de mundo. A seta ortogonal perde os trechos fixos e refaz a rota. Uma seta selecionada sozinha não tem alça de rotação.
+  - Os cursores das alças de redimensionar giram junto com o elemento (`getHandleCursor`).
+  - O editor de texto gira junto: o texto solto gira em volta do canto superior esquerdo, e o rótulo em volta do centro da forma. `setText` mantém o canto superior esquerdo de um texto girado no lugar quando a largura muda.
+  - A seta ortogonal ligada a uma forma girada sai pelo eixo mais próximo da direção do lado da forma, porque a rota continua só horizontal e vertical.
 - [ ] **Faltam duplicar (`Ctrl+D`), copiar/colar e mover pelas setas do teclado.** Nunca estiveram no plano. São atalhos novos em [useShortcuts.ts](src/components/Board/useShortcuts.ts) que usam ações que a store já tem. Ao copiar setas ligadas (etapa 3), as ligações precisam apontar para as cópias das formas, não para as originais.
 
 ## 3. Diagramas (a parte draw.io)
@@ -259,6 +268,27 @@ O traço de esboço vem do Excalidraw, mas a interface tem identidade própria (
   - **Interface:** uma seção "Texto" no painel de estilo (4.3). Ela aparece quando a seleção tem texto solto, uma forma ou uma seta com texto, e altera todos os selecionados de uma vez. Atalhos para o mais comum: `Ctrl+B`, `Ctrl+I` e `Ctrl+Shift+<`/`>` para diminuir e aumentar o tamanho. Mudar o tamanho de um texto solto recalcula a caixa dele.
   - **Persistência:** a versão do formato salvo sobe, com uma migração que monta o `TextStyle` a partir do `fontSize` atual, com a fonte manuscrita, a cor herdada e o alinhamento de hoje (esquerda no texto solto, centro nos rótulos).
 - **Por quê:** a fonte manuscrita combina com o esboço, mas diagramas técnicos pedem uma fonte mais sóbria, e destacar títulos ou palavras-chave pede tamanho, peso e cor. Fazer um `TextStyle` único evita três implementações diferentes para texto solto, rótulo de forma e texto de seta. Fica depois do painel de estilo (4.3), que é onde a interface mora. O modelo pode ser adiantado se o item 3.7 for feito antes, para o texto das setas já nascer com o `TextStyle`.
+
+### 4.5 Indicador de zoom
+
+- [ ] **O quê:** um indicador sempre visível com o zoom atual em porcentagem (por exemplo, "125%"), que acompanha o zoom pela roda, pela pinça e por qualquer mudança futura.
+- **Como:**
+  - Um componente `ZoomIndicator` em `src/components/Board/`, renderizado pelo `Board` por cima do canvas, num canto que não disputa espaço com a toolbar (topo central) nem com o painel de estilo (lateral esquerda). O canto inferior esquerdo é o candidato natural.
+  - Ele lê só `viewport.zoom` da store, com um seletor que devolve o número, para não re-renderizar a cada pan. Mostra `Math.round(zoom * 100)`.
+  - **Sugestão de extensão** (decidir na hora): botões de diminuir e aumentar ao lado do número, e clique no número para voltar a 100%. Os três usam o `zoomAt` da store centrado no meio da tela, respeitando `MIN_ZOOM` e `MAX_ZOOM`. Atalhos naturais: `Ctrl+-`, `Ctrl+=` e `Ctrl+0`, registrados no `useShortcuts`.
+  - O visual segue os tokens do item 4.2. Se for feito antes dele, usa o mesmo estilo de superfície da toolbar, para ser trocado junto.
+- **Por quê:** hoje não há como saber o zoom atual nem voltar exatamente a 100%, o que atrapalha alinhar coisas a olho e comparar tamanhos.
+
+### 4.6 Indicadores de ângulo e dimensões
+
+- [ ] **O quê:** durante a rotação, um rótulo com o ângulo em graus. Durante o redimensionamento, um rótulo com a largura e a altura ("240 × 120"). Os dois só aparecem enquanto o arraste acontece e somem ao soltar o mouse.
+- **Como:**
+  - **Onde desenhar:** na camada de seleção do `renderScene`, como as alças, com tamanho fixo na tela (dividido pelo `zoom`) e numa fonte da interface, não na Caveat. Assim o rótulo acompanha o pan e o zoom sem um componente React a mais. O `SceneOverlay` ganha um campo `measurement` (`{ kind: "angle"; degrees } | { kind: "size"; width; height }` ou `null`).
+  - **Quem preenche:** o Canvas, a partir da `Interaction` ativa (`rotating` ou `resizing`), como estado transitório local, igual ao `frameOverride` e à caixa de seleção. Sem interação, o campo é `null`.
+  - **Ângulo:** com um elemento, a `rotation` dele em graus, de 0 a 359. Com vários, o quanto o grupo já girou desde o início do arraste. Com Shift, mostra os passos de 15°. Posição: perto da alça de rotação ou do cursor.
+  - **Dimensões:** com um elemento, o tamanho da caixa sem rotação (`getElementBox`), que é o tamanho "real" da forma mesmo girada. Com vários, o tamanho do quadro da seleção. Valores em unidades de mundo, arredondados para inteiro, para não mudar com o zoom. Posição: abaixo do quadro, centralizado, girando junto com o quadro de um elemento só ou ficando sempre na horizontal (decidir pela legibilidade).
+  - O rótulo tem fundo próprio (uma pílula com a cor de destaque), para continuar legível sobre formas e sobre a grade.
+- **Por quê:** girar e redimensionar a olho é impreciso. Com o número na tela, dá para deixar formas do mesmo tamanho ou no ângulo exato, o que importa nos diagramas da etapa 3. Mostrar só durante o arraste evita poluir a tela no resto do tempo.
 
 ## 5. Persistência
 

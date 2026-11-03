@@ -6,8 +6,8 @@ import { FONT_FAMILY, LINE_HEIGHT, layoutText, measureText } from "../../../lib/
 import { worldToScreen, type Viewport } from "../../../lib/viewport";
 
 export type TextEditorLayout =
-  | { kind: "free"; position: Point }
-  | { kind: "label"; area: Bounds };
+  | { kind: "free"; position: Point; rotation: number }
+  | { kind: "label"; area: Bounds; rotation: number };
 
 interface TextEditorProps {
   initialText: string;
@@ -82,6 +82,8 @@ export function TextEditor({
         fontFamily: FONT_FAMILY,
         lineHeight: LINE_HEIGHT,
         color,
+        transform: layout.rotation === 0 ? undefined : `rotate(${layout.rotation}rad)`,
+        transformOrigin: layout.kind === "free" ? "0 0" : "50% 50%",
       }}
     />
   );

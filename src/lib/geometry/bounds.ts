@@ -56,3 +56,12 @@ export function containsBounds(outer: Bounds, inner: Bounds): boolean {
 export function getCenter(b: Bounds): Point {
   return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
 }
+
+export function getCorners(b: Bounds): Point[] {
+  return [
+    { x: b.x, y: b.y },
+    { x: b.x + b.width, y: b.y },
+    { x: b.x + b.width, y: b.y + b.height },
+    { x: b.x, y: b.y + b.height },
+  ];
+}

@@ -21,3 +21,7 @@ export function snapToAngle(origin: Point, point: Point, step = Math.PI / 4): Po
     y: origin.y + length * Math.sin(angle),
   };
 }
+
+export function snapAngleValue(angle: number, step: number): number {
+  return Math.round(angle / step) * step;
+}

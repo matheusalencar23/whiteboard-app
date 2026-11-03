@@ -1,17 +1,21 @@
 import type { RoughCanvas } from "roughjs/bin/canvas";
 import { expandBounds, getCenter, type Bounds } from "../geometry/bounds";
 import type { ArrowElement, BoardElement } from "../elements/types";
-import { getConnectionAnchors, getElementBounds, renderElement } from "../elements/registry";
+import { getConnectionAnchors, renderElement } from "../elements/registry";
 import { anchorPoint, isSegmentFixed } from "../elements/bindings";
 import type { Point } from "../types";
 import { getDiamondVertices } from "../elements/shapes/diamond";
 import {
   ENDPOINT_RADIUS,
+  ROTATION_HANDLE_RADIUS,
   getArrowHandles,
+  getElementFrame,
   getHandleRects,
-  getSelectionBounds,
+  getRotationHandleLocal,
   getSelectionFrame,
   getSingleArrow,
+  padFrame,
+  type SelectionFrame,
 } from "../selection";
 import type { Viewport } from "../viewport";
 import { drawGrid } from "./grid";
@@ -24,6 +28,7 @@ export interface SceneOverlay {
   selectionBox: Bounds | null;
   bindingTarget: BoardElement | null;
   bindingAnchor: Point | null;
+  frameOverride: SelectionFrame | null;
 }
 
 const CONNECTION_POINT_RADIUS = 4;
@@ -107,6 +112,34 @@ function strokeFrame(ctx: CanvasRenderingContext2D, b: Bounds) {
   ctx.strokeRect(b.x, b.y, b.width, b.height);
 }
 
+function withFrame(ctx: CanvasRenderingContext2D, frame: SelectionFrame, draw: () => void) {
+  const center = getCenter(frame.box);
+  ctx.save();
+  ctx.translate(center.x, center.y);
+  ctx.rotate(frame.rotation);
+  ctx.translate(-center.x, -center.y);
+  draw();
+  ctx.restore();
+}
+
+function renderFrameHandles(ctx: CanvasRenderingContext2D, box: Bounds, zoom: number) {
+  ctx.fillStyle = "#ffffff";
+  for (const rect of Object.values(getHandleRects(box, zoom))) {
+    ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
+    strokeFrame(ctx, rect);
+  }
+
+  const { stem, knob } = getRotationHandleLocal(box, zoom);
+  ctx.beginPath();
+  ctx.moveTo(stem.x, stem.y);
+  ctx.lineTo(knob.x, knob.y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(knob.x, knob.y, ROTATION_HANDLE_RADIUS / zoom, 0, Math.PI * 2);
+  ctx.fillStyle = SELECTION_COLOR;
+  ctx.fill();
+}
+
 function renderOverlay(ctx: CanvasRenderingContext2D, overlay: SceneOverlay, zoom: number) {
   ctx.save();
   ctx.lineWidth = 1 / zoom;
@@ -122,28 +155,24 @@ function renderOverlay(ctx: CanvasRenderingContext2D, overlay: SceneOverlay, zoo
     renderConnectionPoints(ctx, overlay.bindingTarget, overlay.bindingAnchor, zoom);
   }
 
-  const bounds = getSelectionBounds(overlay.selected);
+  const frame = overlay.frameOverride ?? getSelectionFrame(overlay.selected);
   const singleArrow = getSingleArrow(overlay.selected);
   if (singleArrow) {
     renderArrowHandles(ctx, singleArrow, zoom);
-  } else if (bounds) {
+  } else if (frame) {
     if (overlay.selected.length > 1) {
       ctx.setLineDash([4 / zoom, 4 / zoom]);
       for (const el of overlay.selected) {
-        strokeFrame(ctx, getSelectionFrame(getElementBounds(el), zoom));
+        const own = getElementFrame(el);
+        withFrame(ctx, own, () => strokeFrame(ctx, padFrame(own.box, zoom)));
       }
       ctx.setLineDash([]);
     }
 
-    strokeFrame(ctx, getSelectionFrame(bounds, zoom));
-
-    if (overlay.showHandles) {
-      ctx.fillStyle = "#ffffff";
-      for (const rect of Object.values(getHandleRects(bounds, zoom))) {
-        ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
-        strokeFrame(ctx, rect);
-      }
-    }
+    withFrame(ctx, frame, () => {
+      strokeFrame(ctx, padFrame(frame.box, zoom));
+      if (overlay.showHandles) renderFrameHandles(ctx, frame.box, zoom);
+    });
   }
 
   if (overlay.selectionBox) {

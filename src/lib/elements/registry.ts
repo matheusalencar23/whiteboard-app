@@ -1,6 +1,6 @@
 import type { RoughCanvas } from "roughjs/bin/canvas";
 import type { Point } from "../types";
-import { containsPoint, expandBounds, getBounds, getCenter, type Bounds } from "../geometry/bounds";
+import { containsPoint, expandBounds, getBounds, getCenter, getCorners, type Bounds } from "../geometry/bounds";
 import { distance, rotatePoint } from "../geometry/distance";
 import { LINE_HEIGHT, fontString, layoutText } from "../text";
 import { baseFields, type ShapeUtil } from "./shapeUtil";
@@ -35,11 +35,16 @@ export function createBoxElement(type: BoxElementType, start: Point, end: Point)
   return { ...baseFields(getBounds([start, end])), type };
 }
 
-export function getElementBounds(element: BoardElement): Bounds {
-  const custom = getShapeUtil(element).getBounds?.(element);
-  if (custom) return custom;
+export function getElementBox(element: BoardElement): Bounds {
   const { x, y, width, height } = element;
   return { x, y, width, height };
+}
+
+export function getElementBounds(element: BoardElement): Bounds {
+  const box = getShapeUtil(element).getBounds?.(element) ?? getElementBox(element);
+  if (element.rotation === 0) return box;
+  const center = getCenter(element);
+  return getBounds(getCorners(box).map((p) => rotatePoint(p, center, element.rotation)));
 }
 
 export function isBindable(element: BoardElement): boolean {

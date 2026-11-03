@@ -10,9 +10,11 @@ Marque os itens com `[x]` conforme forem concluídos.
 - Toolbar com as ferramentas mão, seleção, retângulo, losango, elipse, seta, lápis e texto, além de desfazer, refazer e apagar.
 - Seleção por clique, Shift + clique e caixa. Mover, redimensionar pelas 8 alças, apagar, e desfazer/refazer.
 - Câmera com pan (roda do mouse, Shift + roda, botão do meio ou Espaço + arrastar) e zoom (Ctrl/Cmd + roda ou pinça no trackpad, centrado no cursor).
-- Estado em uma store do zustand. `elements`, `viewport` e as preferências da grade são salvos sozinhos no `localStorage` (`src/lib/persistence.ts`, formato versão 2).
+- Estado em uma store do zustand. `elements`, `viewport` e as preferências da grade são salvos sozinhos no `localStorage` (`src/lib/persistence.ts`, formato versão 3).
 - Setas ligadas às formas: acompanham quando a forma é movida ou redimensionada, e as pontas podem ser arrastadas para ligar, desligar ou trocar de forma. As pontas encaixam nos pontos de conexão das formas (meio dos lados ou vértices do losango).
 - Texto dentro das formas: duplo clique num retângulo, elipse ou losango edita um rótulo centralizado, que quebra linha na largura da forma.
+- Três tipos de seta, escolhidos no painel lateral: reta, curva e ortogonal. Na reta e na curva, a alça no meio de cada trecho cria um ponto que pode ser arrastado, como no Excalidraw. A ortogonal tem rota automática, que sai perpendicular ao lado da forma e contorna as formas das pontas.
+- Painel lateral de estilo, que aparece com a ferramenta de seta ou com setas selecionadas. Por enquanto, só tem o tipo da seta.
 - Grade de fundo, ligada por padrão, só visual (sem encaixe).
 - Dependência instalada mas ainda não usada: `react-color`.
 
@@ -61,7 +63,7 @@ Esta é a ordem recomendada de trabalho a partir de agora. Ela não segue a nume
 
 ### 3. Etapa 3, na ordem descrita na seção dela
 
-- [ ] Os itens 3.1 (setas ligadas), 3.2 (pontos de conexão) e 3.3 (texto dentro das formas) estão feitos. O 3.4 (snap e guias) foi descartado, e só a grade de fundo (4.1) ficou. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Do 3.1 ao 3.6, cada item depende do anterior. O 3.7 (texto nas setas) e o 3.8 (formato das pontas) não dependem dos outros e podem ser adiantados. Só a interface do 3.8 espera o painel de estilo (4.3).
+- [ ] Os itens 3.1 (setas ligadas), 3.2 (pontos de conexão) 3.3 (texto dentro das formas), 3.5 (setas ortogonais) e 3.6 (setas curvas, com pontos ajustáveis) estão feitos. O 3.4 (snap e guias) foi descartado, e só a grade de fundo (4.1) ficou. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Do 3.1 ao 3.6, cada item depende do anterior. O 3.7 (texto nas setas) e o 3.8 (formato das pontas) não dependem dos outros e podem ser adiantados. Só a interface do 3.8 espera o painel de estilo (4.3).
 
 As outras pendências da etapa 2 (Shift, rotação, duplicar e copiar/colar) ficam para quando fizerem falta no uso. Nenhuma bloqueia a etapa 3.
 
@@ -151,24 +153,28 @@ A parte que diferencia o projeto de um Excalidraw. Os itens estão na ordem de i
 
 ### 3.5 Setas ortogonais
 
-- [ ] **O quê:** um modo de seta que só faz linhas horizontais e verticais, com cotovelos de 90°, como as conexões do draw.io.
-- **Como:**
-  - `ArrowElement` ganha `routing: "straight" | "elbow"`, que pode ser trocado no painel de estilo.
-  - **Primeira versão:** a rota é calculada a partir dos pontos de conexão (item 3.2). A seta sai perpendicular ao lado da forma, faz um "L" ou um "Z" até o destino e chega perpendicular. Os pontos da rota são recalculados pelo mesmo `updateBoundArrows` do item 3.1.
-  - **Segunda versão (opcional):** contornar outras formas que estejam no caminho, com uma busca de caminho (A*) numa grade.
-- **Por quê:** setas ortogonais são o que dá a cara de diagrama técnico ao draw.io. Ficam por último porque dependem das ligações e dos pontos de conexão, e porque o roteamento é a parte mais complexa da etapa.
+- [x] **Feito.** A rota fica em `src/lib/geometry/orthogonalRoute.ts`, e o recálculo, em `refreshArrow` (`bindings.ts`). Detalhes da implementação:
+  - `ArrowElement` tem `routing: "straight" | "curved" | "elbow"`. O tipo é escolhido no painel lateral (`StylePanel`), que vale para as setas selecionadas e para as próximas.
+  - A rota é um menor caminho (Dijkstra) numa grade pequena: as linhas que passam pelas pontas, pelas bordas das formas das pontas (com uma margem de 30 unidades) e pelos corredores entre elas. Cada curva custa o mesmo que 50 unidades de comprimento, então a rota prefere poucas curvas. Ela já contorna as formas das pontas, então a "segunda versão" do plano fica só para outras formas que estejam no caminho.
+  - Ponta ligada a um ponto de conexão sai pelo lado desse ponto. Na ligação flutuante, sai do meio do lado virado para a outra ponta. Ponta solta não tem direção obrigatória, então uma seta ortogonal solta vira um "L".
+  - **Edição, como no Excalidraw:** cada trecho tem uma alça. Arrastar a alça move o trecho na perpendicular (`moveElbowSegment`), e a seta continua ortogonal. No trecho de uma ponta ligada, a ponta continua presa à forma: entra um trecho curto (até 30 unidades) saindo dela, e o trecho movido vem depois, como um degrau. Numa ponta solta, a própria ponta acompanha o trecho.
+  - **Cantos suaves:** cada cotovelo é um arco curto (Bézier quadrática com controle no canto), de raio até 12 unidades e no máximo metade de cada trecho vizinho. Para as emendas não aparecerem, retas e arcos são desenhados separados, com `preserveVertices` (o roughjs não sorteia as pontas), os arcos com pouca aleatoriedade (`maxRandomnessOffset` de 0,3, porque o padrão entorta um arco tão curto) e pontas de traço redondas (escondem o fio do anti-aliasing entre dois traços). Duas tentativas anteriores falharam: um `rc.path` sem `preserveVertices` (emendas abertas) e uma polilinha de pedacinhos (cortes em cunha em cada pedacinho).
+  - **Trechos fixos:** cada trecho arrastado entra em `fixedSegments` (relativos a `x, y`, como os `points`). O recálculo monta a rota em pedaços, com a rota automática ligando a ponta inicial ao primeiro trecho fixo, um fixo ao outro e o último à ponta final. Os fixos ficam onde o usuário deixou, e o resto se adapta quando as formas mudam. Ao arrastar um trecho, a ponta do vizinho fixo que encosta nele vai junto. Na ligação flutuante, a ponta sai pelo lado virado para o trecho fixo mais próximo na rota, e não para a outra ponta. Sem isso, mover a outra forma fazia a seta trocar de lado e voltar até o trecho fixo. Trocar o tipo da seta descarta os trechos fixos.
+  - **Soltar um trecho:** duplo clique na alça de um trecho fixo (`releaseElbowSegment`). Só ele volta a ser automático, e os outros fixos continuam, como no Excalidraw. As alças dos trechos fixos ficam mais fortes, para mostrar onde o duplo clique tem efeito.
+  - O formato salvo foi para a versão 3, com `routing: "straight"` nas setas antigas.
+- **Plano original:** um modo de seta que só faz linhas horizontais e verticais, com cotovelos de 90°, como as conexões do draw.io. A rota sai perpendicular ao lado da forma, faz um "L" ou um "Z" até o destino e chega perpendicular, e é recalculada pelo mesmo `updateBoundArrows` do item 3.1.
 
-### 3.6 Setas curvas que contornam a forma
+### 3.6 Setas curvas e pontos ajustáveis
 
-- [ ] **O quê:** hoje a seta ligada é sempre uma reta. Se a ponta está presa no lado de uma forma que fica de costas para a outra ponta (por exemplo, no lado direito de uma forma, com a outra ponta à esquerda), a reta atravessa a própria forma. A ideia é a seta sair perpendicular ao lado em que está presa e fazer uma curva, dando a volta na forma até o destino.
-- **Como:**
-  - Um terceiro modo de rota: `routing: "straight" | "elbow" | "curved"`, no mesmo campo do item 3.5.
-  - **Direção de saída:** cada ponta ligada tem uma direção para fora da forma. Num ponto de conexão, ela é a normal do lado (dá para tirar do próprio `anchor`: `(anchor.x - 0.5, anchor.y - 0.5)` aponta para fora no meio de cada lado e nos vértices do losango). Na ligação flutuante, é a direção do centro para a ponta. A seta ortogonal do item 3.5 usa essa mesma direção, então as duas compartilham a lógica.
-  - **Curva:** uma Bézier cúbica entre as pontas, com os pontos de controle afastados ao longo da direção de saída de cada ponta, a uma distância proporcional ao comprimento da seta. Isso já faz a seta sair e chegar perpendicular, e na maioria dos casos ela contorna a forma sozinha.
-  - **Contornar de verdade:** quando a direção de saída aponta para longe do destino, só a Bézier pode raspar na forma. Nesse caso, a rota ganha pontos intermediários que dão a volta pela caixa da forma, com uma folga, e uma curva suave passa por eles (Catmull-Rom ou Béziers encadeadas). É a mesma rota do modo ortogonal, só que suavizada.
-  - **Desenho e clique:** o roughjs desenha curvas com `rc.path` (caminho SVG com `C`) ou `rc.curve`. Hit test, caixa (`getBounds`) e direção da ponta da seta passam a usar a curva amostrada como polilinha, e a ponta segue a tangente no fim da curva.
-  - Os pontos da curva são recalculados pelo `updateBoundArrows` (item 3.1), como as outras rotas.
-- **Por quê:** com pontos de conexão em todos os lados, ligar no lado "de trás" de uma forma é comum em fluxogramas (laços, retornos). Uma reta que atravessa a forma fica ilegível. Fica depois do item 3.5 porque reaproveita a direção de saída e a rota que contorna a forma.
+- [x] **Feito**, no modelo do Excalidraw, em vez do plano original de uma curva automática.
+  - **Reta e curva** têm pontos livres. Com uma seta selecionada sozinha, aparece uma alça translúcida no meio de cada trecho. Arrastar essa alça cria um ponto ali, e os pontos do meio também podem ser arrastados (`getArrowHandles` em `selection.ts`).
+  - **Na reta**, a linha passa pelos pontos com quinas. **Na curva**, ela passa suave por eles: uma Catmull-Rom convertida em Béziers cúbicas, desenhada com `rc.path` do roughjs. Com só dois pontos, a curva é uma reta, como no Excalidraw.
+  - Clique, caixa de seleção e direção da ponta usam a curva amostrada (`getArrowPath`). A caixa inclui a curva, que pode passar além dos pontos.
+  - Trocar entre reta e curva mantém os pontos. Entrar ou sair da ortogonal deixa a seta só com as pontas.
+  - Com pontas ligadas, cada ponta mira o ponto vizinho, não o centro da outra forma.
+  - **Remover um ponto:** duplo clique num ponto do meio (`removeArrowPoint`). A dobra some, e as pontas ligadas se reajustam. As pontas da seta não podem ser removidas.
+  - **Ainda falta:** contornar a forma automaticamente na curva. Hoje, quem contorna é só a ortogonal.
+- **Plano original (substituído):** uma curva automática que saía perpendicular à forma e a contornava. Na prática, o controle manual pela alça do meio é o que se espera de um quadro no estilo do Excalidraw.
 
 ### 3.7 Texto nas setas
 
@@ -191,7 +197,7 @@ A parte que diferencia o projeto de um Excalidraw. Os itens estão na ordem de i
   - **Recuo da linha:** nos formatos cheios ou fechados (triângulo, círculo e losango), a haste para na base da ponta, para não aparecer dentro dela.
   - **Caixa:** o `getBounds` da seta passa a incluir as duas pontas, de qualquer formato.
   - **Interface:** os seletores das duas pontas ficam no painel de estilo (4.3). Até lá, dá para testar com um atalho temporário que troca o formato da seta selecionada.
-  - **Persistência:** a versão do formato salvo sobe para 3, com uma migração que coloca `startArrowhead: "none"` e `endArrowhead: "arrow"` nas setas antigas.
+  - **Persistência:** a versão do formato salvo sobe para 4, com uma migração que coloca `startArrowhead: "none"` e `endArrowhead: "arrow"` nas setas antigas.
 - **Por quê:** com uma ponta só, as setas cobrem os fluxogramas simples, mas não as relações de mão dupla, as ligações sem direção nem a notação de diagramas técnicos, que são parte do lado draw.io do projeto. O modelo e o desenho não dependem de nada pendente. Só a interface depende do painel de estilo.
 
 ## 4. Visual
@@ -228,6 +234,7 @@ O traço de esboço vem do Excalidraw, mas a interface tem identidade própria (
 ### 4.3 Painel de estilo
 
 - [ ] Painel de estilo (contorno, preenchimento, espessura) com o `react-color`, já no visual do item 4.2.
+  - **Começado:** o painel lateral (`src/components/Board/StylePanel/`) já existe, com a seção "Tipo de seta". Ele aparece com a ferramenta de seta ou com setas selecionadas. As próximas seções entram nele.
 
 ### 4.4 Estilo do texto
 

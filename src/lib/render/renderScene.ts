@@ -2,12 +2,12 @@ import type { RoughCanvas } from "roughjs/bin/canvas";
 import { expandBounds, getCenter, type Bounds } from "../geometry/bounds";
 import type { ArrowElement, BoardElement } from "../elements/types";
 import { getConnectionAnchors, getElementBounds, renderElement } from "../elements/registry";
-import { anchorPoint } from "../elements/bindings";
+import { anchorPoint, isSegmentFixed } from "../elements/bindings";
 import type { Point } from "../types";
 import { getDiamondVertices } from "../elements/shapes/diamond";
 import {
   ENDPOINT_RADIUS,
-  getEndpointHandles,
+  getArrowHandles,
   getHandleRects,
   getSelectionBounds,
   getSelectionFrame,
@@ -89,15 +89,29 @@ function renderConnectionPoints(
   }
 }
 
-function renderEndpointHandles(ctx: CanvasRenderingContext2D, arrow: ArrowElement, zoom: number) {
-  const handles = getEndpointHandles(arrow);
-  const bound = { start: arrow.startBinding !== null, end: arrow.endBinding !== null };
-  for (const end of ["start", "end"] as const) {
-    const p = handles[end];
+function renderArrowHandles(ctx: CanvasRenderingContext2D, arrow: ArrowElement, zoom: number) {
+  for (const handle of getArrowHandles(arrow, zoom)) {
+    const p = handle.position;
     ctx.beginPath();
+    if (handle.kind === "midpoint" || handle.kind === "segment") {
+      // Alça do meio: menor e translúcida, para ler como "dá para puxar daqui".
+      // Trecho fixo da ortogonal (arrastado pelo usuário), mais forte: o
+      // duplo clique solta só ele.
+      ctx.arc(p.x, p.y, (ENDPOINT_RADIUS * 0.7) / zoom, 0, Math.PI * 2);
+      ctx.save();
+      ctx.globalAlpha =
+        handle.kind === "segment" && isSegmentFixed(arrow, handle.index) ? 0.9 : 0.45;
+      ctx.fillStyle = SELECTION_COLOR;
+      ctx.fill();
+      ctx.restore();
+      continue;
+    }
     ctx.arc(p.x, p.y, ENDPOINT_RADIUS / zoom, 0, Math.PI * 2);
     // Ponta ligada a uma forma: alça preenchida.
-    ctx.fillStyle = bound[end] ? SELECTION_COLOR : "#ffffff";
+    const bound =
+      handle.kind === "end" &&
+      (handle.end === "start" ? arrow.startBinding : arrow.endBinding) !== null;
+    ctx.fillStyle = bound ? SELECTION_COLOR : "#ffffff";
     ctx.fill();
     ctx.stroke();
   }
@@ -126,7 +140,7 @@ function renderOverlay(ctx: CanvasRenderingContext2D, overlay: SceneOverlay, zoo
   const bounds = getSelectionBounds(overlay.selected);
   const singleArrow = getSingleArrow(overlay.selected);
   if (singleArrow) {
-    renderEndpointHandles(ctx, singleArrow, zoom);
+    renderArrowHandles(ctx, singleArrow, zoom);
   } else if (bounds) {
     // Na seleção múltipla, cada elemento ganha um contorno tracejado.
     if (overlay.selected.length > 1) {

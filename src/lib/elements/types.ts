@@ -57,13 +57,39 @@ export interface DiamondElement extends BoxBaseElement {
  * Elementos feitos de pontos. Os `points` são relativos a (`x`, `y`), então
  * mover o elemento só muda `x` e `y`.
  */
+/**
+ * Tipo da seta:
+ * - `straight`: linha reta entre os pontos, com quinas nos pontos do meio;
+ * - `curved`: curva suave passando pelos pontos (com dois pontos, é uma reta);
+ * - `elbow`: ortogonal, só horizontais e verticais, com a rota calculada a
+ *   partir das pontas, como no draw.io.
+ * Nas duas primeiras, os pontos do meio são do usuário (alça no meio de cada
+ * trecho); na ortogonal, são calculados.
+ */
+export type ArrowRouting = "straight" | "elbow" | "curved";
+
 export interface ArrowElement extends BaseElement {
   type: "arrow";
+  /** Na reta e na curva, os pontos do meio são do usuário; na ortogonal, são calculados. */
   points: Point[];
+  routing: ArrowRouting;
+  /**
+   * Só na ortogonal: trechos que o usuário arrastou, na ordem em que aparecem
+   * na seta, relativos a (`x`, `y`) como os `points`. A rota automática liga
+   * as pontas a eles, e eles ficam onde foram deixados. Ausente ou vazio =
+   * rota toda automática.
+   */
+  fixedSegments?: ArrowSegment[];
   /** Forma a que a primeira ponta está ligada, se houver. */
   startBinding: ArrowBinding | null;
   /** Forma a que a última ponta está ligada, se houver. */
   endBinding: ArrowBinding | null;
+}
+
+/** Trecho reto entre dois pontos (horizontal ou vertical, na seta ortogonal). */
+export interface ArrowSegment {
+  start: Point;
+  end: Point;
 }
 
 /** Ligação de uma ponta de seta a uma forma. */

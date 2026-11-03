@@ -32,6 +32,10 @@ import { createArrow, getArrowPoints, setArrowPoints } from "../../../lib/elemen
 import {
   findBinding,
   getBinding,
+  moveElbowSegment,
+  isSegmentFixed,
+  releaseElbowSegment,
+  removeArrowPoint,
   refreshArrow,
   releaseBindings,
   sameBinding,
@@ -42,7 +46,7 @@ import { createFreedraw, setFreedrawPoints } from "../../../lib/elements/shapes/
 import { createText, setText } from "../../../lib/elements/shapes/text";
 import {
   HANDLE_CURSORS,
-  getEndpointAt,
+  getArrowHandleAt,
   getHandleAt,
   getSingleArrow,
   getSelectionBounds,
@@ -97,6 +101,23 @@ type Interaction =
       start: Point;
       bounds: Bounds;
       originals: BoardElement[];
+      before: BoardElement[];
+    }
+  | {
+      kind: "draggingPoint";
+      /** Seta de base, já com o ponto novo quando o arraste começou numa alça do meio. */
+      arrow: ArrowElement;
+      /** Índice do ponto arrastado em `arrow.points`. */
+      index: number;
+      /** Seta como estava na store, para cancelar. */
+      original: ArrowElement;
+      before: BoardElement[];
+    }
+  | {
+      kind: "draggingSegment";
+      /** Seta ortogonal como estava no início (também usada para cancelar). */
+      original: ArrowElement;
+      index: number;
       before: BoardElement[];
     }
   | {
@@ -399,12 +420,40 @@ export function Canvas() {
     const bounds = getSelectionBounds(selectedNow);
     const singleArrow = getSingleArrow(selectedNow);
 
-    // 1a. Ponta de uma seta selecionada sozinha.
-    const end = singleArrow && getEndpointAt(singleArrow, world, zoom);
-    if (singleArrow && end) {
+    // 1a. Alça de uma seta selecionada sozinha: ponta, ponto do meio ou
+    // alça do meio de um trecho (que cria um ponto ali).
+    const arrowHandle = singleArrow && getArrowHandleAt(singleArrow, world, zoom);
+    if (singleArrow && arrowHandle) {
+      if (arrowHandle.kind === "end") {
+        interactionRef.current = {
+          kind: "draggingEndpoint",
+          end: arrowHandle.end,
+          original: singleArrow,
+          before: store.elements,
+        };
+        return;
+      }
+      if (arrowHandle.kind === "segment") {
+        interactionRef.current = {
+          kind: "draggingSegment",
+          original: singleArrow,
+          index: arrowHandle.index,
+          before: store.elements,
+        };
+        return;
+      }
+      let arrow = singleArrow;
+      let index = arrowHandle.index;
+      if (arrowHandle.kind === "midpoint") {
+        const points = getArrowPoints(singleArrow);
+        index = arrowHandle.index + 1;
+        points.splice(index, 0, arrowHandle.position);
+        arrow = setArrowPoints(singleArrow, points);
+      }
       interactionRef.current = {
-        kind: "draggingEndpoint",
-        end,
+        kind: "draggingPoint",
+        arrow,
+        index,
         original: singleArrow,
         before: store.elements,
       };
@@ -503,7 +552,7 @@ export function Canvas() {
     } else if (store.tool === "arrow") {
       const startBinding = findBindingAt(world);
       interactionRef.current = { kind: "creating", start: world, startBinding };
-      setDraft({ ...createArrow(world, world), startBinding });
+      setDraft({ ...createArrow(world, world, store.arrowRouting), startBinding });
       setBindingHint(startBinding);
     } else if (BOX_TOOLS.includes(store.tool)) {
       interactionRef.current = { kind: "creating", start: world, startBinding: null };
@@ -519,7 +568,14 @@ export function Canvas() {
     const bounds = getSelectionBounds(selectedNow);
     const singleArrow = getSingleArrow(selectedNow);
 
-    if (singleArrow && getEndpointAt(singleArrow, world, zoom)) return setHoverCursor("pointer");
+    const arrowHandle = singleArrow && getArrowHandleAt(singleArrow, world, zoom);
+    if (arrowHandle) {
+      // Trecho da ortogonal: o cursor mostra para onde ele anda.
+      if (arrowHandle.kind === "segment") {
+        return setHoverCursor(arrowHandle.axis === "x" ? "ns-resize" : "ew-resize");
+      }
+      return setHoverCursor("pointer");
+    }
     const handle = !singleArrow && bounds && getHandleAt(world, bounds, zoom);
     if (handle) return setHoverCursor(HANDLE_CURSORS[handle]);
 
@@ -562,6 +618,18 @@ export function Canvas() {
         setBindingHint(binding);
         break;
       }
+
+      case "draggingPoint": {
+        const points = getArrowPoints(interaction.arrow);
+        points[interaction.index] = world;
+        // A store reposiciona as pontas ligadas, que miram o ponto vizinho.
+        store.updateElements([setArrowPoints(interaction.arrow, points)]);
+        break;
+      }
+
+      case "draggingSegment":
+        store.updateElements([moveElbowSegment(interaction.original, interaction.index, world)]);
+        break;
 
       case "draggingEndpoint": {
         const { original, end } = interaction;
@@ -653,6 +721,8 @@ export function Canvas() {
       case "moving":
       case "resizing":
       case "draggingEndpoint":
+      case "draggingPoint":
+      case "draggingSegment":
         store.commitHistory(interaction.before);
         break;
     }
@@ -663,10 +733,36 @@ export function Canvas() {
     // Desfaz o que estava sendo arrastado, sem criar passo no histórico.
     if (interaction?.kind === "moving" || interaction?.kind === "resizing") {
       useBoardStore.getState().updateElements(interaction.originals);
-    } else if (interaction?.kind === "draggingEndpoint") {
+    } else if (
+      interaction?.kind === "draggingEndpoint" ||
+      interaction?.kind === "draggingPoint" ||
+      interaction?.kind === "draggingSegment"
+    ) {
       useBoardStore.getState().updateElements([interaction.original]);
     }
     endInteraction();
+  }
+
+  /**
+   * Duplo clique numa alça da seta selecionada: remove o ponto do meio (reta
+   * e curva) ou devolve a ortogonal ajustada à mão à rota automática.
+   * Devolve `true` se tratou o clique.
+   */
+  function handleArrowHandleDoubleClick(world: Point): boolean {
+    const store = useBoardStore.getState();
+    const arrow = getSingleArrow(getSelectedElements());
+    const handle = arrow && getArrowHandleAt(arrow, world, store.viewport.zoom);
+    if (!arrow || !handle) return false;
+
+    const byId = new Map(store.elements.map((el) => [el.id, el]));
+    if (handle.kind === "point") {
+      store.replaceElement(removeArrowPoint(arrow, handle.index, byId));
+    } else if (handle.kind === "segment" && isSegmentFixed(arrow, handle.index)) {
+      store.replaceElement(releaseElbowSegment(arrow, handle.index, byId));
+    }
+    // Pontas e alças do meio não fazem nada, mas o clique foi numa alça:
+    // não deve virar edição de texto nem criar um texto novo.
+    return true;
   }
 
   /**
@@ -679,6 +775,7 @@ export function Canvas() {
     if (store.tool !== "selection" || editing) return;
 
     const world = screenToWorld(getScreenPoint(e), store.viewport);
+    if (handleArrowHandleDoubleClick(world)) return;
     const tolerance = HIT_TOLERANCE / store.viewport.zoom;
     const hit = getElementAtPoint(store.elements, world, tolerance);
     const shape = hit ? hit : getLabelTargetAt(store.elements, world, 0);

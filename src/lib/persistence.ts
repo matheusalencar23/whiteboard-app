@@ -11,7 +11,7 @@ import { MAX_ZOOM, MIN_ZOOM, type Viewport } from "./viewport";
 const STORAGE_KEY = "whiteboard:board";
 
 /** Sobe quando o formato muda. Dados antigos passam por `migrate`. */
-export const CURRENT_VERSION = 2;
+export const CURRENT_VERSION = 3;
 
 export interface SavedBoard {
   elements: BoardElement[];
@@ -74,15 +74,21 @@ function migrate(data: unknown): SavedBoard | null {
   if (!isObject(data) || typeof data.version !== "number") return null;
   if (data.version < 1 || data.version > CURRENT_VERSION) return null;
 
-  let { elements } = data;
   const { viewport } = data;
-  if (!Array.isArray(elements)) return null;
+  if (!Array.isArray(data.elements)) return null;
+  let elements: unknown[] = data.elements;
 
   // Uma versão por vez.
   if (data.version < 2) {
     // v2: setas ganharam ligações a formas.
     elements = elements.map((el) =>
       isObject(el) && el.type === "arrow" ? { ...el, startBinding: null, endBinding: null } : el,
+    );
+  }
+  if (data.version < 3) {
+    // v3: setas ganharam o modo de rota (reta, ortogonal ou curva).
+    elements = elements.map((el) =>
+      isObject(el) && el.type === "arrow" ? { ...el, routing: "straight" } : el,
     );
   }
 
@@ -119,6 +125,15 @@ function isValidPoints(value: unknown): boolean {
   return Array.isArray(value) && value.every((p) => isObject(p) && isNumber(p.x) && isNumber(p.y));
 }
 
+/** Trechos fixos da seta ortogonal: opcionais. */
+function isValidSegments(value: unknown): boolean {
+  if (value === undefined) return true;
+  return (
+    Array.isArray(value) &&
+    value.every((s) => isObject(s) && isValidPoints([s.start, s.end]))
+  );
+}
+
 function isValidBinding(value: unknown): boolean {
   if (value === null) return true;
   if (!isObject(value) || typeof value.elementId !== "string") return false;
@@ -151,6 +166,8 @@ function isValidElement(value: unknown): value is BoardElement {
       return (
         isValidPoints(value.points) &&
         (value.points as unknown[]).length >= 2 &&
+        (value.routing === "straight" || value.routing === "elbow" || value.routing === "curved") &&
+        isValidSegments(value.fixedSegments) &&
         isValidBinding(value.startBinding) &&
         isValidBinding(value.endBinding)
       );

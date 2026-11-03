@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import type { BoardElement } from "../lib/elements/types";
-import { updateBoundArrows } from "../lib/elements/bindings";
+import type { ArrowRouting, BoardElement } from "../lib/elements/types";
+import { setArrowRouting, updateBoundArrows } from "../lib/elements/bindings";
 import type { Point } from "../lib/types";
 import { DEFAULT_PREFERENCES, debounce, loadBoard, saveBoard } from "../lib/persistence";
 import { INITIAL_VIEWPORT, panBy, zoomAt, type Viewport } from "../lib/viewport";
@@ -18,11 +18,13 @@ export type Tool =
 /** Quantos passos de desfazer guardar. */
 const HISTORY_LIMIT = 100;
 
-interface BoardState {
+export interface BoardState {
   elements: BoardElement[];
   selectedIds: string[];
   tool: Tool;
   viewport: Viewport;
+  /** Tipo das setas novas. Muda junto quando o tipo de setas selecionadas é trocado. */
+  arrowRouting: ArrowRouting;
   /** Grade de fundo visível. */
   showGrid: boolean;
   /** Snapshots anteriores de `elements`. O último é o mais recente. */
@@ -45,6 +47,11 @@ interface BoardState {
 
   setSelection: (ids: string[]) => void;
   setTool: (tool: Tool) => void;
+  /**
+   * Define o tipo das setas novas e, com setas selecionadas, troca o tipo
+   * delas (registra um passo no histórico).
+   */
+  setArrowRouting: (routing: ArrowRouting) => void;
   toggleGrid: () => void;
   panBy: (dx: number, dy: number) => void;
   zoomAt: (screenPoint: Point, factor: number) => void;
@@ -70,6 +77,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
   selectedIds: [],
   tool: "selection",
   viewport: saved?.viewport ?? INITIAL_VIEWPORT,
+  arrowRouting: "straight",
   showGrid: saved?.showGrid ?? DEFAULT_PREFERENCES.showGrid,
   past: [],
   future: [],
@@ -148,6 +156,19 @@ export const useBoardStore = create<BoardState>()((set) => ({
   // Trocar de ferramenta desfaz a seleção, como no Excalidraw.
   setTool: (tool) =>
     set((state) => ({ tool, selectedIds: tool === "selection" ? state.selectedIds : [] })),
+  setArrowRouting: (arrowRouting) =>
+    set((state) => {
+      const ids = new Set(state.selectedIds);
+      const byId = new Map(state.elements.map((el) => [el.id, el]));
+      let changed = false;
+      const elements = state.elements.map((el) => {
+        if (el.type !== "arrow" || !ids.has(el.id) || el.routing === arrowRouting) return el;
+        changed = true;
+        return setArrowRouting(el, arrowRouting, byId);
+      });
+      if (!changed) return { arrowRouting };
+      return { arrowRouting, elements, past: pushPast(state.past, state.elements), future: [] };
+    }),
   toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
   panBy: (dx, dy) => set((state) => ({ viewport: panBy(state.viewport, dx, dy) })),
   zoomAt: (screenPoint, factor) =>

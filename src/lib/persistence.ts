@@ -5,8 +5,6 @@ import { GRID_STYLES, type GridStyle } from "./render/grid";
 
 const STORAGE_KEY = "whiteboard:board";
 
-export const CURRENT_VERSION = 3;
-
 export interface SavedBoard {
   elements: BoardElement[];
   viewport: Viewport;
@@ -19,10 +17,6 @@ export const DEFAULT_PREFERENCES: Pick<SavedBoard, "showGrid" | "gridStyle"> = {
   gridStyle: "dots",
 };
 
-interface StoredBoard extends SavedBoard {
-  version: number;
-}
-
 const ELEMENT_TYPES: Record<ElementType, true> = {
   rectangle: true,
   ellipse: true,
@@ -33,9 +27,8 @@ const ELEMENT_TYPES: Record<ElementType, true> = {
 };
 
 export function saveBoard(board: SavedBoard): void {
-  const stored: StoredBoard = { version: CURRENT_VERSION, ...board };
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(board));
   } catch (error) {
     console.warn("Não foi possível salvar o board.", error);
   }
@@ -58,31 +51,15 @@ export function loadBoard(): SavedBoard | null {
 
 function parseBoard(raw: string): SavedBoard | null {
   try {
-    return migrate(JSON.parse(raw));
+    return readBoard(JSON.parse(raw));
   } catch {
     return null;
   }
 }
 
-function migrate(data: unknown): SavedBoard | null {
-  if (!isObject(data) || typeof data.version !== "number") return null;
-  if (data.version < 1 || data.version > CURRENT_VERSION) return null;
-
-  const { viewport } = data;
-  if (!Array.isArray(data.elements)) return null;
-  let elements: unknown[] = data.elements;
-
-  if (data.version < 2) {
-    elements = elements.map((el) =>
-      isObject(el) && el.type === "arrow" ? { ...el, startBinding: null, endBinding: null } : el,
-    );
-  }
-  if (data.version < 3) {
-    elements = elements.map((el) =>
-      isObject(el) && el.type === "arrow" ? { ...el, routing: "straight" } : el,
-    );
-  }
-
+function readBoard(data: unknown): SavedBoard | null {
+  if (!isObject(data)) return null;
+  const { elements, viewport } = data;
   if (!Array.isArray(elements) || !elements.every(isValidElement)) return null;
   if (!isValidViewport(viewport)) return null;
   const showGrid =
@@ -127,6 +104,7 @@ function isValidSegments(value: unknown): boolean {
 function isValidBinding(value: unknown): boolean {
   if (value === null) return true;
   if (!isObject(value) || typeof value.elementId !== "string") return false;
+  if (typeof value.fixed !== "boolean") return false;
   const { anchor } = value;
   return anchor === null || (isObject(anchor) && isNumber(anchor.x) && isNumber(anchor.y));
 }

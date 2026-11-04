@@ -58,6 +58,7 @@ export interface ArrowSegment {
 export interface ArrowBinding {
   elementId: string;
   anchor: Point | null;
+  fixed: boolean;
 }
 
 export interface FreedrawElement extends BaseElement {

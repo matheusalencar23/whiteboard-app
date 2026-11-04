@@ -12,8 +12,8 @@ Marque os itens com `[x]` conforme forem concluídos.
 - Rotação pela alça acima da seleção, de um elemento ou de vários juntos (Shift prende em 15°).
 - Shift mantém a proporção ao redimensionar e, ao desenhar, força quadrado, círculo ou seta em ângulos de 45°.
 - Câmera com pan (roda do mouse, Shift + roda, botão do meio ou Espaço + arrastar) e zoom (Ctrl/Cmd + roda ou pinça no trackpad, centrado no cursor).
-- Estado em uma store do zustand. `elements`, `viewport` e as preferências da grade são salvos sozinhos no `localStorage` (`src/lib/persistence.ts`, formato versão 3).
-- Setas ligadas às formas: acompanham quando a forma é movida ou redimensionada, e as pontas podem ser arrastadas para ligar, desligar ou trocar de forma. As pontas encaixam nos pontos de conexão das formas (meio dos lados ou vértices do losango).
+- Estado em uma store do zustand. `elements`, `viewport` e as preferências da grade são salvos sozinhos no `localStorage` (`src/lib/persistence.ts`). Durante o desenvolvimento, o formato salvo não tem versão nem migração: se mudar, o board antigo é descartado.
+- Setas ligadas às formas: acompanham quando a forma é movida ou redimensionada, e as pontas podem ser arrastadas para ligar, desligar ou trocar de forma. As pontas encaixam nos pontos de conexão das formas (meio dos lados ou vértices do losango). O ponto é escolhido de novo quando as formas mudam, para a seta sair pelo lado virado para a outra ponta. Segurar `Alt` ao soltar prende a ponta no ponto escolhido.
 - Texto dentro das formas: duplo clique num retângulo, elipse ou losango edita um rótulo centralizado, que quebra linha na largura da forma.
 - Três tipos de seta, escolhidos no painel lateral: reta, curva e ortogonal. Na reta e na curva, a alça no meio de cada trecho cria um ponto que pode ser arrastado, como no Excalidraw. A ortogonal tem rota automática, que sai perpendicular ao lado da forma e contorna as formas das pontas.
 - Painel de estilo ao lado da toolbar, que aparece com a ferramenta de seta ou com setas selecionadas. Por enquanto, só tem o tipo da seta.
@@ -34,6 +34,7 @@ Marque os itens com `[x]` conforme forem concluídos.
 | Alternar a grade entre pontos e linhas | `Shift+G` |
 | Manter proporção / quadrado / seta em 45° | Segurar `Shift` ao redimensionar ou desenhar |
 | Girar em passos de 15° | Segurar `Shift` ao girar |
+| Prender a ponta da seta num ponto de conexão | Segurar `Alt` ao soltar a ponta |
 | Editar texto | Duplo clique no texto. Duplo clique no vazio cria um texto novo. `Esc` ou `Ctrl+Enter` confirmam. |
 
 ## Decisões tomadas
@@ -43,6 +44,7 @@ Marque os itens com `[x]` conforme forem concluídos.
 - Formas sem preenchimento só são clicáveis pela borda, como no Excalidraw. Para mover uma forma vazia já selecionada, dá para arrastar pelo meio da caixa de seleção.
 - As funcionalidades seguem o Excalidraw e o draw.io, mas o visual da interface é próprio: toolbar, painéis, cores, seleção e alças não devem copiar o Excalidraw. O `roughjs` continua sendo o traço das formas. Veja o item [4.2](#42-identidade-visual-própria).
 - Depois de criar uma forma, uma seta ou um texto, a ferramenta volta para a seleção com o elemento novo selecionado. O lápis continua ativo.
+- Enquanto o projeto está em desenvolvimento, o formato salvo no `localStorage` não tem número de versão nem migrações, para não poluir o código. Um board salvo num formato antigo não passa na validação e abre vazio. As versões e migrações voltam quando houver usuários com dados a preservar.
 
 ## Próximos passos (em ordem)
 
@@ -62,14 +64,13 @@ Esta é a ordem recomendada de trabalho a partir de agora. Ela não segue a nume
 - **Como:**
   - Usar `useBoardStore.subscribe` para observar mudanças em `elements` e `viewport`, e gravar com um *debounce* de uns 300 ms. Sem o debounce, cada movimento do mouse durante um arraste faria um `JSON.stringify` do board inteiro.
   - Ao abrir o board, ler o `localStorage` e usar o valor como estado inicial da store.
-  - Gravar junto um número de versão (`{ version: 1, elements, viewport }`). A etapa 3 vai mudar o formato da seta, e com a versão dá para converter dados antigos em vez de quebrar o board salvo.
-  - Se os dados lidos forem inválidos (JSON corrompido ou versão desconhecida), ignorar e abrir um board vazio, sem travar a página.
-  - Deixar a lógica em `src/lib/persistence.ts` (ler, gravar, validar e migrar), sem React, e ligar à store num ponto só.
+  - Se os dados lidos forem inválidos (JSON corrompido ou formato antigo), ignorar e abrir um board vazio, sem travar a página. A versão e as migrações foram tiradas (veja as decisões tomadas).
+  - Deixar a lógica em `src/lib/persistence.ts` (ler, gravar e validar), sem React, e ligar à store num ponto só.
 - **Por quê:** hoje recarregar a página apaga tudo. Os testes manuais da etapa 3 precisam de diagramas com várias formas e setas, e remontar tudo a cada recarga (inclusive a cada mudança de código, quando o HMR recarrega a página) atrapalha. É uma tarefa pequena, porque a store já guarda dados simples e imutáveis, prontos para virar JSON.
 
 ### 3. Etapa 3, na ordem descrita na seção dela
 
-- [ ] Os itens 3.1 (setas ligadas), 3.2 (pontos de conexão) 3.3 (texto dentro das formas), 3.5 (setas ortogonais) e 3.6 (setas curvas, com pontos ajustáveis) estão feitos. O 3.4 (snap e guias) foi descartado, e só a grade de fundo (4.1) ficou. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Do 3.1 ao 3.6, cada item depende do anterior. O 3.7 (texto nas setas) e o 3.8 (formato das pontas) não dependem dos outros e podem ser adiantados. Só a interface do 3.8 espera o painel de estilo (4.3). O 3.9 (lado de saída da seta e laços) corrige problemas das setas ligadas e pode entrar antes do 3.7 e do 3.8.
+- [ ] Os itens 3.1 (setas ligadas), 3.2 (pontos de conexão) 3.3 (texto dentro das formas), 3.5 (setas ortogonais) e 3.6 (setas curvas, com pontos ajustáveis) estão feitos. O 3.4 (snap e guias) foi descartado, e só a grade de fundo (4.1) ficou. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Do 3.1 ao 3.6, cada item depende do anterior. O 3.7 (texto nas setas) e o 3.8 (formato das pontas) não dependem dos outros e podem ser adiantados. Só a interface do 3.8 espera o painel de estilo (4.3). O 3.9 (lado de saída da seta e laços) corrige problemas das setas ligadas e pode entrar antes do 3.7 e do 3.8. O 3.9.1 está feito. A ordem combinada é 3.9.2, 3.7 e depois 3.8.
 
 As outras pendências da etapa 2 (duplicar e copiar/colar) ficam para quando fizerem falta no uso. Nenhuma bloqueia a etapa 3.
 
@@ -129,7 +130,6 @@ A parte que diferencia o projeto de um Excalidraw. Os itens estão na ordem de i
   - **Apagar uma forma:** as setas ligadas a ela não são apagadas. A ligação vira `null` e a ponta fica onde estava.
   - **Interação:** a seleção de uma seta mostra alças nas pontas, em vez das 8 alças de caixa. Ao arrastar uma ponta, a forma sob o cursor fica destacada para mostrar onde a seta vai ligar.
   - **Pendência da etapa 2:** a caixa da seta passa a incluir a ponta. O `ShapeUtil` ganha um `getBounds` opcional, e a seta o implementa.
-  - **Persistência:** a versão do formato salvo sobe para 2, com uma migração que coloca `startBinding: null` e `endBinding: null` nas setas antigas.
 - **Por quê:** é a base do lado draw.io. Pontos de conexão, setas ortogonais e fluxogramas que se reorganizam dependem de a seta saber a que forma está ligada. Fazendo a recalculação dentro da store, o resto do código não precisa saber que ligações existem.
 
 ### 3.2 Pontos de conexão
@@ -153,7 +153,6 @@ A parte que diferencia o projeto de um Excalidraw. Os itens estão na ordem de i
   - O duplo clique acha a forma pela borda, pelo texto do rótulo ou pelo interior (mesmo sem preenchimento). Apagar todo o texto remove o rótulo.
   - Clicar no texto do rótulo seleciona a forma, mesmo sem preenchimento.
   - O rótulo tem fonte fixa (`LABEL_FONT_SIZE`, 20) e não escala ao redimensionar a forma: só quebra as linhas de novo. Texto que não cabe na altura transborda, centralizado.
-  - O campo `label` é opcional, então o formato salvo continua na versão 2.
   - Ainda falta abrir a edição do rótulo com `Enter` numa forma selecionada, como no Excalidraw.
 - **O quê:** duplo clique numa forma abre a edição de um texto centralizado dentro dela. O texto quebra linha na largura da forma e se move e redimensiona junto com ela.
 - **Como:**
@@ -178,7 +177,6 @@ A parte que diferencia o projeto de um Excalidraw. Os itens estão na ordem de i
   - **Cantos suaves:** cada cotovelo é um arco curto (Bézier quadrática com controle no canto), de raio até 12 unidades e no máximo metade de cada trecho vizinho. Para as emendas não aparecerem, retas e arcos são desenhados separados, com `preserveVertices` (o roughjs não sorteia as pontas), os arcos com pouca aleatoriedade (`maxRandomnessOffset` de 0,3, porque o padrão entorta um arco tão curto) e pontas de traço redondas (escondem o fio do anti-aliasing entre dois traços). Duas tentativas anteriores falharam: um `rc.path` sem `preserveVertices` (emendas abertas) e uma polilinha de pedacinhos (cortes em cunha em cada pedacinho).
   - **Trechos fixos:** cada trecho arrastado entra em `fixedSegments` (relativos a `x, y`, como os `points`). O recálculo monta a rota em pedaços, com a rota automática ligando a ponta inicial ao primeiro trecho fixo, um fixo ao outro e o último à ponta final. Os fixos ficam onde o usuário deixou, e o resto se adapta quando as formas mudam. Ao arrastar um trecho, a ponta do vizinho fixo que encosta nele vai junto. Na ligação flutuante, a ponta sai pelo lado virado para o trecho fixo mais próximo na rota, e não para a outra ponta. Sem isso, mover a outra forma fazia a seta trocar de lado e voltar até o trecho fixo. Trocar o tipo da seta descarta os trechos fixos.
   - **Soltar um trecho:** duplo clique na alça de um trecho fixo (`releaseElbowSegment`). Só ele volta a ser automático, e os outros fixos continuam, como no Excalidraw. As alças dos trechos fixos ficam mais fortes, para mostrar onde o duplo clique tem efeito.
-  - O formato salvo foi para a versão 3, com `routing: "straight"` nas setas antigas.
 - **Plano original:** um modo de seta que só faz linhas horizontais e verticais, com cotovelos de 90°, como as conexões do draw.io. A rota sai perpendicular ao lado da forma, faz um "L" ou um "Z" até o destino e chega perpendicular, e é recalculada pelo mesmo `updateBoundArrows` do item 3.1.
 
 ### 3.6 Setas curvas e pontos ajustáveis
@@ -214,7 +212,6 @@ A parte que diferencia o projeto de um Excalidraw. Os itens estão na ordem de i
   - **Recuo da linha:** nos formatos cheios ou fechados (triângulo, círculo e losango), a haste para na base da ponta, para não aparecer dentro dela.
   - **Caixa:** o `getBounds` da seta passa a incluir as duas pontas, de qualquer formato.
   - **Interface:** os seletores das duas pontas ficam no painel de estilo (4.3). Até lá, dá para testar com um atalho temporário que troca o formato da seta selecionada.
-  - **Persistência:** a versão do formato salvo sobe para 4, com uma migração que coloca `startArrowhead: "none"` e `endArrowhead: "arrow"` nas setas antigas.
 - **Por quê:** com uma ponta só, as setas cobrem os fluxogramas simples, mas não as relações de mão dupla, as ligações sem direção nem a notação de diagramas técnicos, que são parte do lado draw.io do projeto. O modelo e o desenho não dependem de nada pendente. Só a interface depende do painel de estilo.
 
 ### 3.9 Revisar a ligação das setas (pendente)
@@ -223,13 +220,20 @@ Dois pontos, que podem ser feitos separados. Os dois mexem em `bindings.ts` e na
 
 #### 3.9.1 A seta sai pelo lado errado depois de mover a forma
 
-- [ ] **Problema relatado:** ao mover uma forma ligada, a seta continua saindo pelo mesmo lado, mesmo quando a outra forma passou a ficar em outra direção. Ela dá a volta na forma em vez de sair pelo lado virado para o destino.
+- [x] **Feito.** Detalhes da implementação:
+  - `ArrowBinding` ganhou `fixed: boolean`. A ligação flutuante (`anchor: null`) tem sempre `fixed: false`.
+  - No `refreshArrow` (reta, curva e ortogonal), uma ligação com ponto e sem `fixed` troca o `anchor` pelo ponto de conexão mais próximo da referência da outra ponta (`resolveBindings`). A referência é o ponto vizinho da seta, quando ela tem pontos do meio. Sem pontos do meio, é o centro da outra forma (ou o ponto preso, se a outra ponta estiver presa). O ponto usado é o mais próximo, e não o da direção do centro, porque assim a escolha fica igual à do ímã ao arrastar. Como as duas pontas automáticas miram o centro da outra forma, uma não depende da outra.
+  - O `anchor` resolvido fica salvo na ligação. Assim o destaque, o desenho e o arquivo salvo mostram o ponto real de saída.
+  - Para prender, segura-se `Alt` ao soltar a ponta (ao criar ou ao arrastar uma ponta existente). Foi escolhido em vez do raio menor de encaixe porque soltar sobre o ponto destacado é justamente o que o usuário faz sem querer escolher o lado. O Canvas passa `Shift` e `Alt` juntos (`Modifiers`), e apertar ou soltar o `Alt` no meio do arraste já atualiza o destaque. O `keydown` e o `keyup` do `Alt` têm `preventDefault` durante o arraste, para o navegador não abrir a barra de menu. No Linux, `Alt` + clique pode ser capturado pelo gerenciador de janelas, mas apertar o `Alt` depois de começar o arraste funciona.
+  - O destaque ao arrastar mostra o ponto já resolvido pelo `refreshArrow`, e não o mais perto do cursor.
+  - A segunda suspeita (ortogonal com trechos fixos) ficou como está. A ponta precisa chegar ao primeiro trecho fixo, então mirar nele é o comportamento certo.
+  - **Seta entrando na elipse:** o roughjs soma ao raio da elipse um valor aleatório proporcional ao raio (`rx * (1 - curveFitting)`), então elipses largas eram desenhadas dezenas de pixels além da borda usada pela ligação. A elipse passou a usar `curveFitting: 1`, que mantém o raio exato e só deixa o tremor pequeno de cada ponto, coberto pelo `BINDING_GAP`.
+- **Problema relatado:** ao mover uma forma ligada, a seta continua saindo pelo mesmo lado, mesmo quando a outra forma passou a ficar em outra direção. Ela dá a volta na forma em vez de sair pelo lado virado para o destino.
 - **Causa provável:** quando a ponta encaixa num ponto de conexão, o ponto vira o `anchor` da ligação e nunca mais muda. O ímã de 12 px faz quase toda ligação cair num ponto, mesmo sem o usuário querer escolher o lado. Só a ligação flutuante (`anchor: null`) escolhe o lado sozinha. Na ortogonal, há uma segunda suspeita: com trechos fixos, a ligação flutuante sai pelo lado virado para o trecho fixo mais próximo, e não para a outra forma. Reproduzir os dois casos para confirmar.
 - **Proposta:**
   - Separar "o usuário escolheu este ponto" de "a seta só encaixou no ponto mais próximo". A ligação ganha um campo, por exemplo `fixed: boolean`. Sem ele, o recálculo (`refreshArrow`) escolhe de novo o ponto de conexão virado para a outra ponta (ou para o próximo ponto da seta) sempre que as formas mudam. Com ele, o ponto fica preso, como hoje.
   - Quando o ponto fica preso: segurar uma tecla (por exemplo `Alt`) ao soltar a ponta, ou soltar exatamente sobre o ponto, num raio bem menor que o ímã atual. Decidir na hora qual dos dois funciona melhor.
   - O ponto escolhido continua aparecendo destacado ao arrastar, para o usuário ver de onde a seta vai sair.
-  - **Persistência:** sobe a versão do formato, e a migração marca as ligações antigas com ponto como não presas (`fixed: false`), para elas já se beneficiarem da correção.
 
 #### 3.9.2 Laços: seta ligada duas vezes à mesma forma
 
@@ -251,10 +255,10 @@ O traço de esboço vem do Excalidraw, mas a interface tem identidade própria (
 
 ### 4.1 Grid de fundo
 
-- [x] **Feito** em `src/lib/render/grid.ts`. A grade pode ser de pontos (o padrão desde o item 4.2) ou de linhas, com um ponto maior ou uma linha mais forte a cada 5. Quando o espaçamento na tela fica abaixo de 10 px, ela multiplica o espaçamento por 5 em vez de dobrar, para as linhas fortes virarem as normais e o desenho não "pular". A toolbar tem dois botões, "Grade em pontos" e "Grade em linhas": clicar no inativo liga a grade naquele estilo, e clicar no ativo esconde a grade. `G` mostra ou esconde sem esquecer o estilo, e `Shift+G` alterna o estilo. O `gridStyle` fica na store e é salvo junto do `showGrid`, com `"dots"` como valor padrão na leitura, sem subir a versão do formato. As cores vêm do tema (item 4.2), com tokens separados para pontos e linhas, porque as linhas precisam de bem menos opacidade.
+- [x] **Feito** em `src/lib/render/grid.ts`. A grade pode ser de pontos (o padrão desde o item 4.2) ou de linhas, com um ponto maior ou uma linha mais forte a cada 5. Quando o espaçamento na tela fica abaixo de 10 px, ela multiplica o espaçamento por 5 em vez de dobrar, para as linhas fortes virarem as normais e o desenho não "pular". A toolbar tem dois botões, "Grade em pontos" e "Grade em linhas": clicar no inativo liga a grade naquele estilo, e clicar no ativo esconde a grade. `G` mostra ou esconde sem esquecer o estilo, e `Shift+G` alterna o estilo. O `gridStyle` fica na store e é salvo junto do `showGrid`, com `"dots"` como valor padrão na leitura. As cores vêm do tema (item 4.2), com tokens separados para pontos e linhas, porque as linhas precisam de bem menos opacidade.
 - **O quê:** uma grade desenhada no fundo do quadro, que acompanha o pan e o zoom. Ligada por padrão, com um botão e um atalho (`G`) para esconder. Ela é só visual. O encaixe na grade (item 3.4) foi descartado.
 - **Como:**
-  - `showGrid` e `gridSize` (em unidades de mundo, por exemplo 20) ficam na store. `showGrid` entra no formato salvo da persistência, porque é uma preferência do board. Como é um campo novo e opcional, basta um valor padrão na leitura, sem subir a versão.
+  - `showGrid` e `gridSize` (em unidades de mundo, por exemplo 20) ficam na store. `showGrid` entra no formato salvo da persistência, porque é uma preferência do board.
   - Uma função `drawGrid(ctx, viewport, size)` em `src/lib/render/`, chamada pelo `renderScene` antes dos elementos. Ela calcula a área visível com `screenToWorld` e desenha só as linhas ou pontos dessa área.
   - Quando o zoom diminui e o espaçamento na tela fica pequeno demais (abaixo de uns 8 px), a grade dobra de tamanho até voltar a ficar legível. Assim ela não vira um borrão nem desenha milhares de linhas.
   - A espessura das linhas é fixa na tela (dividida pelo `zoom`), como as alças. A cor sai dos tokens do item 4.2.
@@ -301,7 +305,6 @@ O traço de esboço vem do Excalidraw, mas a interface tem identidade própria (
   - **Fontes:** o elemento guarda uma chave (`"hand" | "sans" | "mono"`), não o nome CSS. Um mapa em `src/lib/text.ts` traduz a chave para a família, e as fontes são carregadas no `index.html` como a Caveat. O redesenho quando a fonte chega (o `fontsLoaded` do Canvas) passa a esperar todas.
   - **Medição única:** `fontString` passa a receber o `TextStyle` inteiro (peso, itálico, família e tamanho). `measureText`, `wrapText`, o desenho no canvas e o `TextEditor` usam todos a mesma função, para continuarem alinhados.
   - **Interface:** uma seção "Texto" no painel de estilo (4.3). Ela aparece quando a seleção tem texto solto, uma forma ou uma seta com texto, e altera todos os selecionados de uma vez. Atalhos para o mais comum: `Ctrl+B`, `Ctrl+I` e `Ctrl+Shift+<`/`>` para diminuir e aumentar o tamanho. Mudar o tamanho de um texto solto recalcula a caixa dele.
-  - **Persistência:** a versão do formato salvo sobe, com uma migração que monta o `TextStyle` a partir do `fontSize` atual, com a fonte manuscrita, a cor herdada e o alinhamento de hoje (esquerda no texto solto, centro nos rótulos).
 - **Por quê:** a fonte manuscrita combina com o esboço, mas diagramas técnicos pedem uma fonte mais sóbria, e destacar títulos ou palavras-chave pede tamanho, peso e cor. Fazer um `TextStyle` único evita três implementações diferentes para texto solto, rótulo de forma e texto de seta. Fica depois do painel de estilo (4.3), que é onde a interface mora. O modelo pode ser adiantado se o item 3.7 for feito antes, para o texto das setas já nascer com o `TextStyle`.
 
 ### 4.5 Indicador de zoom

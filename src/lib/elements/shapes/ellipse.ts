@@ -14,7 +14,7 @@ export const ellipseUtil: ShapeUtil<EllipseElement> = {
       el.y + el.height / 2,
       el.width,
       el.height,
-      roughOptions(el.style, el.seed),
+      { ...roughOptions(el.style, el.seed), curveFitting: 1 },
     );
   },
 

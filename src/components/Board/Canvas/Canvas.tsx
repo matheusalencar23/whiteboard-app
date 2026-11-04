@@ -146,7 +146,20 @@ function getSelectedElements(): BoardElement[] {
   return elements.filter((el) => ids.has(el.id));
 }
 
-function findBindingAt(world: Point, excludeIds: (string | null | undefined)[] = []) {
+interface Modifiers {
+  shift: boolean;
+  alt: boolean;
+}
+
+function getModifiers(e: { shiftKey: boolean; altKey: boolean }): Modifiers {
+  return { shift: e.shiftKey, alt: e.altKey };
+}
+
+function findBindingAt(
+  world: Point,
+  excludeIds: (string | null | undefined)[] = [],
+  fixed = false,
+) {
   const { elements, viewport } = useBoardStore.getState();
   const { zoom } = viewport;
   return findBinding(
@@ -155,6 +168,7 @@ function findBindingAt(world: Point, excludeIds: (string | null | undefined)[] =
     BINDING_TOLERANCE / zoom,
     CONNECTION_SNAP_DISTANCE / zoom,
     excludeIds,
+    fixed,
   );
 }
 
@@ -209,7 +223,7 @@ export function Canvas() {
   }
 
   const lastPointerRef = useRef<Point | null>(null);
-  const updateInteractionRef = useRef<(world: Point, shiftKey: boolean) => void>(() => {});
+  const updateInteractionRef = useRef<(world: Point, modifiers: Modifiers) => void>(() => {});
 
   function setDraft(element: BoardElement | null) {
     draftRef.current = element;
@@ -264,19 +278,20 @@ export function Canvas() {
   }, []);
 
   useEffect(() => {
-    function reapplyShift(e: KeyboardEvent) {
-      if (e.key !== "Shift" || e.repeat || !lastPointerRef.current) return;
-      updateInteractionRef.current(lastPointerRef.current, e.type === "keydown");
+    function reapplyModifiers(e: KeyboardEvent) {
+      if ((e.key !== "Shift" && e.key !== "Alt") || e.repeat || !lastPointerRef.current) return;
+      if (e.key === "Alt") e.preventDefault();
+      updateInteractionRef.current(lastPointerRef.current, getModifiers(e));
     }
     function handleKeyDown(e: KeyboardEvent) {
-      reapplyShift(e);
+      reapplyModifiers(e);
       if (e.code !== "Space" || e.repeat || isTypingTarget(e.target)) return;
       e.preventDefault();
       spacePressedRef.current = true;
       setSpacePressed(true);
     }
     function handleKeyUp(e: KeyboardEvent) {
-      reapplyShift(e);
+      reapplyModifiers(e);
       if (e.code !== "Space") return;
       spacePressedRef.current = false;
       setSpacePressed(false);
@@ -547,7 +562,7 @@ export function Canvas() {
       interactionRef.current = { kind: "freedrawing", points: [world] };
       setDraft(createFreedraw([world]));
     } else if (store.tool === "arrow") {
-      const startBinding = findBindingAt(world);
+      const startBinding = findBindingAt(world, [], e.altKey);
       interactionRef.current = { kind: "creating", start: world, startBinding };
       setDraft({ ...createArrow(world, world, store.arrowRouting), startBinding });
       setBindingHint(startBinding);
@@ -589,7 +604,7 @@ export function Canvas() {
 
     if (!interaction) {
       if (store.tool === "selection" && !editing) updateHoverCursor(world);
-      if (store.tool === "arrow") setBindingHint(findBindingAt(world));
+      if (store.tool === "arrow") setBindingHint(findBindingAt(world, [], e.altKey));
       return;
     }
 
@@ -600,10 +615,11 @@ export function Canvas() {
     }
 
     lastPointerRef.current = world;
-    updateInteraction(world, e.shiftKey);
+    updateInteraction(world, getModifiers(e));
   }
 
-  function updateInteraction(world: Point, shiftKey: boolean) {
+  function updateInteraction(world: Point, modifiers: Modifiers) {
+    const shiftKey = modifiers.shift;
     const store = useBoardStore.getState();
     const interaction = interactionRef.current;
     if (!interaction) return;
@@ -618,11 +634,12 @@ export function Canvas() {
           break;
         }
         const target = shiftKey ? snapToAngle(interaction.start, world) : world;
-        const binding = findBindingAt(target, [interaction.startBinding?.elementId]);
+        const binding = findBindingAt(target, [interaction.startBinding?.elementId], modifiers.alt);
         const arrow = setBinding(setArrowPoints(current, [interaction.start, target]), "end", binding);
         const byId = new Map(store.elements.map((el) => [el.id, el]));
-        setDraft(refreshArrow(arrow, byId));
-        setBindingHint(binding);
+        const refreshed = refreshArrow(arrow, byId);
+        setDraft(refreshed);
+        setBindingHint(refreshed.endBinding);
         break;
       }
 
@@ -640,13 +657,15 @@ export function Canvas() {
       case "draggingEndpoint": {
         const { original, end } = interaction;
         const other = getBinding(original, end === "start" ? "end" : "start");
-        const binding = findBindingAt(world, [other?.elementId]);
+        const binding = findBindingAt(world, [other?.elementId], modifiers.alt);
 
         const points = getArrowPoints(original);
         points[end === "start" ? 0 : points.length - 1] = world;
         const arrow = setBinding(setArrowPoints(original, points), end, binding);
-        store.updateElements([arrow]);
-        setBindingHint(binding);
+        const byId = new Map(store.elements.map((el) => [el.id, el]));
+        const refreshed = refreshArrow(arrow, byId);
+        store.updateElements([refreshed]);
+        setBindingHint(getBinding(refreshed, end));
         break;
       }
 

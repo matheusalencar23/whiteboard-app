@@ -18,7 +18,42 @@ export function anchorPoint(shape: BoardElement, anchor: Point): Point {
 }
 
 function focusPoint(shape: BoardElement, binding: ArrowBinding): Point {
-  return binding.anchor ? anchorPoint(shape, binding.anchor) : getCenter(shape);
+  return binding.anchor && binding.fixed ? anchorPoint(shape, binding.anchor) : getCenter(shape);
+}
+
+function nearestAnchor(shape: BoardElement, point: Point): Point | null {
+  let best: Point | null = null;
+  let bestDistance = Infinity;
+  for (const candidate of getConnectionAnchors(shape)) {
+    const d = distance(anchorPoint(shape, candidate), point);
+    if (d < bestDistance) {
+      bestDistance = d;
+      best = candidate;
+    }
+  }
+  return best;
+}
+
+function resolveBinding(shape: BoardElement, binding: ArrowBinding, towards: Point): ArrowBinding {
+  if (!binding.anchor || binding.fixed) return binding;
+  const anchor = nearestAnchor(shape, towards);
+  if (!anchor || (anchor.x === binding.anchor.x && anchor.y === binding.anchor.y)) return binding;
+  return { ...binding, anchor };
+}
+
+function resolveBindings(
+  arrow: ArrowElement,
+  start: BoardElement | null | undefined,
+  end: BoardElement | null | undefined,
+  startTowards: Point,
+  endTowards: Point,
+): ArrowElement {
+  const startBinding =
+    start && arrow.startBinding ? resolveBinding(start, arrow.startBinding, startTowards) : arrow.startBinding;
+  const endBinding =
+    end && arrow.endBinding ? resolveBinding(end, arrow.endBinding, endTowards) : arrow.endBinding;
+  if (startBinding === arrow.startBinding && endBinding === arrow.endBinding) return arrow;
+  return { ...arrow, startBinding, endBinding };
 }
 
 function bindingPoint(shape: BoardElement, binding: ArrowBinding, from: Point): Point {
@@ -55,6 +90,7 @@ export function refreshArrow(arrow: ArrowElement, byId: Map<string, BoardElement
         ? focusPoint(start, arrow.startBinding)
         : points[0];
 
+  arrow = resolveBindings(arrow, start, end, startFrom, endFrom);
   if (start && arrow.startBinding) points[0] = bindingPoint(start, arrow.startBinding, startFrom);
   if (end && arrow.endBinding) points[last] = bindingPoint(end, arrow.endBinding, endFrom);
   return setArrowPoints(arrow, points);
@@ -114,6 +150,7 @@ function refreshElbowArrow(arrow: ArrowElement, byId: Map<string, BoardElement>)
       : start && arrow.startBinding
         ? focusPoint(start, arrow.startBinding)
         : first;
+  arrow = resolveBindings(arrow, start, end, startFocus, endFocus);
   const startEnd = start && arrow.startBinding ? elbowBoundEnd(start, arrow.startBinding, startFocus) : null;
   const endEnd = end && arrow.endBinding ? elbowBoundEnd(end, arrow.endBinding, endFocus) : null;
 
@@ -309,6 +346,7 @@ export function findBinding(
   tolerance: number,
   snapDistance: number,
   excludeIds: (string | null | undefined)[] = [],
+  fixed = false,
 ): ArrowBinding | null {
   const inside = getBindableAt(elements, point, tolerance, excludeIds);
   const target = inside ?? getBindableAt(elements, point, snapDistance, excludeIds);
@@ -324,12 +362,12 @@ export function findBinding(
     }
   }
   if (!inside && !anchor) return null;
-  return { elementId: target.id, anchor };
+  return { elementId: target.id, anchor, fixed: anchor !== null && fixed };
 }
 
 export function sameBinding(a: ArrowBinding | null, b: ArrowBinding | null): boolean {
   if (a === null || b === null) return a === b;
-  if (a.elementId !== b.elementId) return false;
+  if (a.elementId !== b.elementId || a.fixed !== b.fixed) return false;
   if (a.anchor === null || b.anchor === null) return a.anchor === b.anchor;
   return a.anchor.x === b.anchor.x && a.anchor.y === b.anchor.y;
 }

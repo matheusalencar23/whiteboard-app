@@ -13,7 +13,7 @@ Marque os itens com `[x]` conforme forem concluídos.
 - Shift mantém a proporção ao redimensionar e, ao desenhar, força quadrado, círculo ou seta em ângulos de 45°.
 - Câmera com pan (roda do mouse, Shift + roda, botão do meio ou Espaço + arrastar) e zoom (Ctrl/Cmd + roda ou pinça no trackpad, centrado no cursor).
 - Estado em uma store do zustand. `elements`, `viewport` e as preferências da grade são salvos sozinhos no `localStorage` (`src/lib/persistence.ts`). Durante o desenvolvimento, o formato salvo não tem versão nem migração: se mudar, o board antigo é descartado.
-- Setas ligadas às formas: acompanham quando a forma é movida ou redimensionada, e as pontas podem ser arrastadas para ligar, desligar ou trocar de forma. As pontas encaixam nos pontos de conexão das formas (meio dos lados ou vértices do losango). O ponto é escolhido de novo quando as formas mudam, para a seta sair pelo lado virado para a outra ponta. Segurar `Alt` ao soltar prende a ponta no ponto escolhido.
+- Setas ligadas às formas: acompanham quando a forma é movida ou redimensionada, e as pontas podem ser arrastadas para ligar, desligar ou trocar de forma. Toda ponta ligada sai de um ponto de conexão (meio dos lados ou vértices do losango). Soltar sobre um ponto prende a ponta nele. Soltar no corpo da forma deixa a ponta automática: ela sai pelo ponto virado para a outra ponta e troca de lado quando as formas se movem. As duas pontas podem se ligar à mesma forma, formando um laço.
 - Texto dentro das formas: duplo clique num retângulo, elipse ou losango edita um rótulo centralizado, que quebra linha na largura da forma.
 - Três tipos de seta, escolhidos no painel lateral: reta, curva e ortogonal. Na reta e na curva, a alça no meio de cada trecho cria um ponto que pode ser arrastado, como no Excalidraw. A ortogonal tem rota automática, que sai perpendicular ao lado da forma e contorna as formas das pontas.
 - Painel de estilo ao lado da toolbar, que aparece com a ferramenta de seta ou com setas selecionadas. Por enquanto, só tem o tipo da seta.
@@ -34,7 +34,6 @@ Marque os itens com `[x]` conforme forem concluídos.
 | Alternar a grade entre pontos e linhas | `Shift+G` |
 | Manter proporção / quadrado / seta em 45° | Segurar `Shift` ao redimensionar ou desenhar |
 | Girar em passos de 15° | Segurar `Shift` ao girar |
-| Prender a ponta da seta num ponto de conexão | Segurar `Alt` ao soltar a ponta |
 | Editar texto | Duplo clique no texto. Duplo clique no vazio cria um texto novo. `Esc` ou `Ctrl+Enter` confirmam. |
 
 ## Decisões tomadas
@@ -70,7 +69,7 @@ Esta é a ordem recomendada de trabalho a partir de agora. Ela não segue a nume
 
 ### 3. Etapa 3, na ordem descrita na seção dela
 
-- [ ] Os itens 3.1 (setas ligadas), 3.2 (pontos de conexão) 3.3 (texto dentro das formas), 3.5 (setas ortogonais) e 3.6 (setas curvas, com pontos ajustáveis) estão feitos. O 3.4 (snap e guias) foi descartado, e só a grade de fundo (4.1) ficou. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Do 3.1 ao 3.6, cada item depende do anterior. O 3.7 (texto nas setas) e o 3.8 (formato das pontas) não dependem dos outros e podem ser adiantados. Só a interface do 3.8 espera o painel de estilo (4.3). O 3.9 (lado de saída da seta e laços) corrige problemas das setas ligadas e pode entrar antes do 3.7 e do 3.8. O 3.9.1 está feito. A ordem combinada é 3.9.2, 3.7 e depois 3.8.
+- [ ] Os itens 3.1 (setas ligadas), 3.2 (pontos de conexão) 3.3 (texto dentro das formas), 3.5 (setas ortogonais) e 3.6 (setas curvas, com pontos ajustáveis) estão feitos. O 3.4 (snap e guias) foi descartado, e só a grade de fundo (4.1) ficou. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Do 3.1 ao 3.6, cada item depende do anterior. O 3.7 (texto nas setas) e o 3.8 (formato das pontas) não dependem dos outros e podem ser adiantados. Só a interface do 3.8 espera o painel de estilo (4.3). O 3.9 (lado de saída da seta e laços) corrige problemas das setas ligadas e pode entrar antes do 3.7 e do 3.8. O 3.9 está feito. A ordem combinada segue com o 3.7 e depois o 3.8.
 
 As outras pendências da etapa 2 (duplicar e copiar/colar) ficam para quando fizerem falta no uso. Nenhuma bloqueia a etapa 3.
 
@@ -118,7 +117,7 @@ A parte que diferencia o projeto de um Excalidraw. Os itens estão na ordem de i
 
 - [x] **Feito.** A lógica está em `src/lib/elements/bindings.ts`. Detalhes da implementação:
   - Só retângulo, elipse e losango aceitam ligação: são os que têm `getBorderOffset`. A ponta flutuante fica a `BINDING_GAP` (6 unidades de mundo) da borda.
-  - A forma alvo é a mais acima cujo interior, com uma folga de 8 px na tela, contém a ponta. Formas sem preenchimento também contam pelo interior. A ponta final não se liga à mesma forma da inicial.
+  - A forma alvo é a mais acima cujo interior, com uma folga de 8 px na tela, contém a ponta. Formas sem preenchimento também contam pelo interior. A ponta final só se liga à mesma forma da inicial num laço (item 3.9.2).
   - Mover ou redimensionar uma seta sem as formas a que ela está ligada desliga as pontas (`releaseBindings`), como no Excalidraw.
   - Nesta etapa, toda ligação é flutuante (`anchor: null`). O `anchor` já é respeitado no recálculo e passa a ser preenchido no item 3.2.
   - As alças das pontas ficam preenchidas quando a ponta está ligada.
@@ -175,7 +174,7 @@ A parte que diferencia o projeto de um Excalidraw. Os itens estão na ordem de i
   - Ponta ligada a um ponto de conexão sai pelo lado desse ponto. Na ligação flutuante, sai do meio do lado virado para a outra ponta. Ponta solta não tem direção obrigatória, então uma seta ortogonal solta vira um "L".
   - **Edição, como no Excalidraw:** cada trecho tem uma alça. Arrastar a alça move o trecho na perpendicular (`moveElbowSegment`), e a seta continua ortogonal. No trecho de uma ponta ligada, a ponta continua presa à forma: entra um trecho curto (até 30 unidades) saindo dela, e o trecho movido vem depois, como um degrau. Numa ponta solta, a própria ponta acompanha o trecho.
   - **Cantos suaves:** cada cotovelo é um arco curto (Bézier quadrática com controle no canto), de raio até 12 unidades e no máximo metade de cada trecho vizinho. Para as emendas não aparecerem, retas e arcos são desenhados separados, com `preserveVertices` (o roughjs não sorteia as pontas), os arcos com pouca aleatoriedade (`maxRandomnessOffset` de 0,3, porque o padrão entorta um arco tão curto) e pontas de traço redondas (escondem o fio do anti-aliasing entre dois traços). Duas tentativas anteriores falharam: um `rc.path` sem `preserveVertices` (emendas abertas) e uma polilinha de pedacinhos (cortes em cunha em cada pedacinho).
-  - **Trechos fixos:** cada trecho arrastado entra em `fixedSegments` (relativos a `x, y`, como os `points`). O recálculo monta a rota em pedaços, com a rota automática ligando a ponta inicial ao primeiro trecho fixo, um fixo ao outro e o último à ponta final. Os fixos ficam onde o usuário deixou, e o resto se adapta quando as formas mudam. Ao arrastar um trecho, a ponta do vizinho fixo que encosta nele vai junto. Na ligação flutuante, a ponta sai pelo lado virado para o trecho fixo mais próximo na rota, e não para a outra ponta. Sem isso, mover a outra forma fazia a seta trocar de lado e voltar até o trecho fixo. Trocar o tipo da seta descarta os trechos fixos.
+  - **Trechos fixos:** cada trecho arrastado entra em `fixedSegments` (relativos a `x, y`, como os `points`). O recálculo monta a rota em pedaços, com a rota automática ligando a ponta inicial ao primeiro trecho fixo, um fixo ao outro e o último à ponta final. Os fixos ficam onde o usuário deixou, e o resto se adapta quando as formas mudam. Ao arrastar um trecho, a ponta do vizinho fixo que encosta nele vai junto. Na ligação automática, a ponta sai pelo lado virado para o trecho fixo mais próximo na rota, e não para a outra ponta. Sem isso, mover a outra forma fazia a seta trocar de lado e voltar até o trecho fixo. Trocar o tipo da seta descarta os trechos fixos.
   - **Soltar um trecho:** duplo clique na alça de um trecho fixo (`releaseElbowSegment`). Só ele volta a ser automático, e os outros fixos continuam, como no Excalidraw. As alças dos trechos fixos ficam mais fortes, para mostrar onde o duplo clique tem efeito.
 - **Plano original:** um modo de seta que só faz linhas horizontais e verticais, com cotovelos de 90°, como as conexões do draw.io. A rota sai perpendicular ao lado da forma, faz um "L" ou um "Z" até o destino e chega perpendicular, e é recalculada pelo mesmo `updateBoundArrows` do item 3.1.
 
@@ -221,10 +220,11 @@ Dois pontos, que podem ser feitos separados. Os dois mexem em `bindings.ts` e na
 #### 3.9.1 A seta sai pelo lado errado depois de mover a forma
 
 - [x] **Feito.** Detalhes da implementação:
-  - `ArrowBinding` ganhou `fixed: boolean`. A ligação flutuante (`anchor: null`) tem sempre `fixed: false`.
+  - `ArrowBinding` ganhou `fixed: boolean`, e o `anchor` passou a ser obrigatório. A ligação flutuante pura (mirar o centro e parar em qualquer lugar da borda) deixou de existir: toda ponta ligada sai de um ponto de conexão.
   - No `refreshArrow` (reta, curva e ortogonal), uma ligação com ponto e sem `fixed` troca o `anchor` pelo ponto de conexão mais próximo da referência da outra ponta (`resolveBindings`). A referência é o ponto vizinho da seta, quando ela tem pontos do meio. Sem pontos do meio, é o centro da outra forma (ou o ponto preso, se a outra ponta estiver presa). O ponto usado é o mais próximo, e não o da direção do centro, porque assim a escolha fica igual à do ímã ao arrastar. Como as duas pontas automáticas miram o centro da outra forma, uma não depende da outra.
   - O `anchor` resolvido fica salvo na ligação. Assim o destaque, o desenho e o arquivo salvo mostram o ponto real de saída.
-  - Para prender, segura-se `Alt` ao soltar a ponta (ao criar ou ao arrastar uma ponta existente). Foi escolhido em vez do raio menor de encaixe porque soltar sobre o ponto destacado é justamente o que o usuário faz sem querer escolher o lado. O Canvas passa `Shift` e `Alt` juntos (`Modifiers`), e apertar ou soltar o `Alt` no meio do arraste já atualiza o destaque. O `keydown` e o `keyup` do `Alt` têm `preventDefault` durante o arraste, para o navegador não abrir a barra de menu. No Linux, `Alt` + clique pode ser capturado pelo gerenciador de janelas, mas apertar o `Alt` depois de começar o arraste funciona.
+  - **Presa ou automática, no modelo do draw.io:** soltar a ponta a até 8 px de tela de um ponto de conexão prende a ponta nele (`fixed: true`). Soltar no corpo da forma, longe dos pontos, deixa a ponta automática. A primeira versão prendia com `Alt` ao soltar, mas, nos testes, arrastar uma ponta até um ponto e ver a seta pular para outro ponto pareceu errado, e o momento certo de apertar o `Alt` não era intuitivo. O ímã caiu de 12 para 8 px, para o corpo da forma ficar fácil de alcançar.
+  - No destaque, o ponto de uma ponta presa fica maior. O de uma ponta automática fica preenchido, mas do tamanho normal, e só aparece durante o arraste. Ao passar o mouse com a ferramenta de seta, antes de clicar, ainda não há outra ponta para resolver o lado.
   - O destaque ao arrastar mostra o ponto já resolvido pelo `refreshArrow`, e não o mais perto do cursor.
   - A segunda suspeita (ortogonal com trechos fixos) ficou como está. A ponta precisa chegar ao primeiro trecho fixo, então mirar nele é o comportamento certo.
   - **Seta entrando na elipse:** o roughjs soma ao raio da elipse um valor aleatório proporcional ao raio (`rx * (1 - curveFitting)`), então elipses largas eram desenhadas dezenas de pixels além da borda usada pela ligação. A elipse passou a usar `curveFitting: 1`, que mantém o raio exato e só deixa o tremor pequeno de cada ponto, coberto pelo `BINDING_GAP`.
@@ -237,9 +237,17 @@ Dois pontos, que podem ser feitos separados. Os dois mexem em `bindings.ts` e na
 
 #### 3.9.2 Laços: seta ligada duas vezes à mesma forma
 
-- [ ] **O quê:** permitir que as duas pontas de uma seta se liguem à mesma forma, para fazer laços (por exemplo, "repetir" num fluxograma).
+- [x] **Feito.** Detalhes da implementação:
+  - O Canvas não exclui mais a forma da outra ponta. A regra do laço fica em `bindArrowEnd` (`bindings.ts`), chamada ao criar a seta e ao arrastar uma ponta. Na mesma forma, a ponta só se liga se cair num ponto de conexão diferente do da outra ponta. Fora dos pontos ou no mesmo ponto, ela fica solta. Isso também evita que a seta se ligue à forma de onde acabou de sair, enquanto o cursor ainda está dentro dela.
+  - Num laço, a ponta só se liga se for presa (solta sobre um ponto). Uma ponta automática na mesma forma fica solta, senão a seta viraria um laço assim que o cursor passasse pelo corpo da forma de onde ela saiu.
+  - Num laço, as pontas não escolhem o lado sozinhas (item 3.9.1), porque "virado para a outra ponta" não faz sentido na mesma forma. As duas cairiam no mesmo ponto.
+  - **Reta e curva:** o laço fica como o usuário desenhar, mesmo cruzando a forma. A primeira versão criava sozinha pontos do meio por fora da forma e trocava a seta para curva, mas isso foi descartado: as curvas são adicionadas à mão, com as alças do meio.
+  - **Ortogonal:** a rota já contornava a forma das pontas, e funciona com as duas na mesma forma sem mudança no Dijkstra.
+  - **Acompanhar a forma:** os pontos do meio que o usuário adicionou a um laço vão junto com a forma. O `updateBoundArrows` recebe os elementos de antes (`previous`, passado pela store em `updateElements` e `replaceElement`). Quando só a forma de um laço muda, os pontos do meio e os trechos fixos passam pela mesma transformação da forma (posição, tamanho e rotação). Se a forma gira, os trechos fixos de uma ortogonal são descartados, porque deixariam de ser horizontais e verticais.
+  - Verificado com um script em retângulos (normal e bem achatado), elipse, losango e retângulo girado: nenhum laço ortogonal atravessa a forma.
+- **O quê:** permitir que as duas pontas de uma seta se liguem à mesma forma, para fazer laços (por exemplo, "repetir" num fluxograma).
 - **Como:**
-  - Tirar a regra que exclui a forma da ponta inicial ao procurar a ligação da ponta final (os `excludeIds` passados para `findBinding` e `getBindableAt` pelo Canvas). As duas pontas não podem cair no mesmo ponto de conexão: nesse caso, a ligação fica flutuante ou a ponta fica solta.
+  - Tirar a regra que exclui a forma da ponta inicial ao procurar a ligação da ponta final (os `excludeIds`, que foram removidos). As duas pontas não podem cair no mesmo ponto de conexão: nesse caso, a ligação fica flutuante ou a ponta fica solta.
   - **Ortogonal:** a rota já contorna as formas das pontas. Com as duas pontas na mesma forma, ela sai por um lado, contorna pela margem (`ELBOW_MARGIN`) e entra pelo outro. Verificar se o Dijkstra encontra esse caminho quando as duas formas são a mesma.
   - **Reta e curva:** uma reta entre dois pontos da mesma forma atravessaria a forma. Ao criar o laço, a seta ganha automaticamente um ponto do meio fora da forma, no lado das pontas, e vira uma curva que dá a volta. Depois o usuário ajusta esse ponto como qualquer outro.
   - **Ligação flutuante nas duas pontas:** as duas mirariam o centro e cairiam no mesmo lugar. Num laço, cada ponta flutuante mira o ponto vizinho da seta (já é o comportamento quando a seta tem pontos do meio), então o ponto do meio criado automaticamente resolve isso.

@@ -27,6 +27,7 @@ export interface SceneOverlay {
   selectionBox: Bounds | null;
   bindingTarget: BoardElement | null;
   bindingAnchor: Point | null;
+  bindingFixed: boolean;
   frameOverride: SelectionFrame | null;
 }
 
@@ -72,13 +73,15 @@ function renderConnectionPoints(
   ctx: CanvasRenderingContext2D,
   shape: BoardElement,
   active: Point | null,
+  fixed: boolean,
   zoom: number,
 ) {
   for (const anchor of getConnectionAnchors(shape)) {
     const p = anchorPoint(shape, anchor);
     const isActive = active !== null && active.x === anchor.x && active.y === anchor.y;
+    const radius = isActive && fixed ? CONNECTION_POINT_RADIUS * 1.5 : CONNECTION_POINT_RADIUS;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, (isActive ? CONNECTION_POINT_RADIUS * 1.5 : CONNECTION_POINT_RADIUS) / zoom, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, radius / zoom, 0, Math.PI * 2);
     ctx.fillStyle = isActive ? theme.canvas.selection : theme.canvas.handleFill;
     ctx.fill();
     ctx.stroke();
@@ -156,7 +159,7 @@ function renderOverlay(ctx: CanvasRenderingContext2D, overlay: SceneOverlay, zoo
     traceOutline(ctx, overlay.bindingTarget, BINDING_HIGHLIGHT_PADDING / zoom);
     ctx.stroke();
     ctx.restore();
-    renderConnectionPoints(ctx, overlay.bindingTarget, overlay.bindingAnchor, zoom);
+    renderConnectionPoints(ctx, overlay.bindingTarget, overlay.bindingAnchor, overlay.bindingFixed, zoom);
   }
 
   const frame = overlay.frameOverride ?? getSelectionFrame(overlay.selected);

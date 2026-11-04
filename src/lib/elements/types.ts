@@ -57,7 +57,7 @@ export interface ArrowSegment {
 
 export interface ArrowBinding {
   elementId: string;
-  anchor: Point | null;
+  anchor: Point;
   fixed: boolean;
 }
 

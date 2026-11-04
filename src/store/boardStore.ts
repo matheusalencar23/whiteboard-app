@@ -86,6 +86,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
       elements: updateBoundArrows(
         state.elements.map((el) => (el.id === element.id ? element : el)),
         [element.id],
+        state.elements,
       ),
       past: pushPast(state.past, state.elements),
       future: [],
@@ -109,7 +110,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
     set((state) => {
       const byId = new Map(updated.map((el) => [el.id, el]));
       const elements = state.elements.map((el) => byId.get(el.id) ?? el);
-      return { elements: updateBoundArrows(elements, byId.keys()) };
+      return { elements: updateBoundArrows(elements, byId.keys(), state.elements) };
     }),
 
   commitHistory: (before) =>

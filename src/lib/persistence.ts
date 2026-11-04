@@ -106,7 +106,7 @@ function isValidBinding(value: unknown): boolean {
   if (!isObject(value) || typeof value.elementId !== "string") return false;
   if (typeof value.fixed !== "boolean") return false;
   const { anchor } = value;
-  return anchor === null || (isObject(anchor) && isNumber(anchor.x) && isNumber(anchor.y));
+  return isObject(anchor) && isNumber(anchor.x) && isNumber(anchor.y);
 }
 
 function isValidElement(value: unknown): value is BoardElement {

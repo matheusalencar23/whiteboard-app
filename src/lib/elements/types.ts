@@ -41,10 +41,40 @@ export interface DiamondElement extends BoxBaseElement {
 
 export type ArrowRouting = "straight" | "elbow" | "curved";
 
+export const ARROWHEADS = [
+  "none",
+  "arrow",
+  "bar",
+  "cross",
+  "triangle",
+  "triangleOutline",
+  "diamond",
+  "diamondOutline",
+  "circle",
+  "circleOutline",
+  "erOne",
+  "erMandOne",
+  "erMany",
+  "erOneToMany",
+  "erZeroToOne",
+  "erZeroToMany",
+] as const;
+
+export type Arrowhead = (typeof ARROWHEADS)[number];
+
+export interface ArrowheadPair {
+  start: Arrowhead;
+  end: Arrowhead;
+}
+
+export const DEFAULT_ARROWHEADS: ArrowheadPair = { start: "none", end: "arrow" };
+
 export interface ArrowElement extends BaseElement {
   type: "arrow";
   points: Point[];
   routing: ArrowRouting;
+  startArrowhead: Arrowhead;
+  endArrowhead: Arrowhead;
   fixedSegments?: ArrowSegment[];
   startBinding: ArrowBinding | null;
   endBinding: ArrowBinding | null;

@@ -1,12 +1,24 @@
 import type { Point } from "../../types";
-import { getBounds, unionBounds } from "../../geometry/bounds";
+import { expandBounds, getBounds, unionBounds } from "../../geometry/bounds";
 import { distance, distanceToPolyline } from "../../geometry/distance";
 import { getPathMidpoint } from "../../geometry/path";
 import type { Options } from "roughjs/bin/core";
+import type { ArrowEnd } from "../bindings";
+import {
+  getArrowheadHoles,
+  getArrowheadParts,
+  getArrowheadPoints,
+  type ArrowheadGeometry,
+} from "../arrowheads";
 import { baseFields, roughOptions, scalePoints, type ShapeUtil } from "../shapeUtil";
-import type { ArrowElement, ArrowRouting, ArrowSegment } from "../types";
+import {
+  DEFAULT_ARROWHEADS,
+  type ArrowElement,
+  type ArrowheadPair,
+  type ArrowRouting,
+  type ArrowSegment,
+} from "../types";
 
-const HEAD_ANGLE = Math.PI / 7;
 const LABEL_AREA_WIDTH = 216;
 
 export function getArrowPoints(el: ArrowElement): Point[] {
@@ -21,13 +33,20 @@ function geometryFrom(points: Point[]) {
   };
 }
 
-export function createArrow(start: Point, end: Point, routing: ArrowRouting = "straight"): ArrowElement {
+export function createArrow(
+  start: Point,
+  end: Point,
+  routing: ArrowRouting = "straight",
+  arrowheads: ArrowheadPair = DEFAULT_ARROWHEADS,
+): ArrowElement {
   const geometry = geometryFrom([start, end]);
   return {
     ...baseFields(geometry),
     type: "arrow",
     points: geometry.points,
     routing,
+    startArrowhead: arrowheads.start,
+    endArrowhead: arrowheads.end,
     startBinding: null,
     endBinding: null,
   };
@@ -201,27 +220,83 @@ function curvePathData(points: Point[]): string {
   return parts.join(" ");
 }
 
-function getArrowHead(el: ArrowElement): [Point, Point, Point] | null {
+function getArrowheadGeometry(el: ArrowElement, end: ArrowEnd): ArrowheadGeometry | null {
+  const arrowhead = end === "start" ? el.startArrowhead : el.endArrowhead;
+  if (arrowhead === "none") return null;
+
   const path = getArrowPath(el);
   const points = getArrowPoints(el);
-  const tip = path[path.length - 1];
-  const from = path[path.length - 2];
-  const segment = distance(points[points.length - 2], points[points.length - 1]);
+  const [tip, from] = end === "start" ? [path[0], path[1]] : [path[path.length - 1], path[path.length - 2]];
+  const [first, second] =
+    end === "start" ? [points[0], points[1]] : [points[points.length - 1], points[points.length - 2]];
+  const segment = distance(first, second);
   if (distance(from, tip) === 0 || segment === 0) return null;
 
-  const headLength = Math.min(16 + el.style.strokeWidth * 2, segment / 2);
-  const angle = Math.atan2(tip.y - from.y, tip.x - from.x);
-  const [left, right] = [-1, 1].map((side) => {
-    const a = angle + Math.PI + side * HEAD_ANGLE;
-    return { x: tip.x + Math.cos(a) * headLength, y: tip.y + Math.sin(a) * headLength };
-  });
-  return [tip, left, right];
+  const size = Math.min(16 + el.style.strokeWidth * 2, segment / 2);
+  const back = Math.atan2(from.y - tip.y, from.x - tip.x);
+  return getArrowheadParts(arrowhead, tip, back, size);
+}
+
+function getArrowheads(el: ArrowElement): ArrowheadGeometry[] {
+  return [getArrowheadGeometry(el, "start"), getArrowheadGeometry(el, "end")].filter(
+    (head): head is ArrowheadGeometry => head !== null,
+  );
+}
+
+function retreatEnds(points: Point[], startRetreat: number, endRetreat: number): Point[] {
+  const result = [...points];
+  const last = result.length - 1;
+  if (startRetreat > 0) result[0] = towards(result[0], result[1], startRetreat);
+  if (endRetreat > 0) result[last] = towards(result[last], result[last - 1], endRetreat);
+  return result;
+}
+
+function drawArrowhead(
+  geometry: ArrowheadGeometry,
+  rc: Parameters<ShapeUtil<ArrowElement>["draw"]>[1],
+  options: Options,
+) {
+  const filled = { ...options, fill: options.stroke, fillStyle: "solid" };
+  for (const part of geometry.parts) {
+    const partOptions = part.kind !== "line" && part.filled ? filled : options;
+    if (part.kind === "line") {
+      rc.line(part.from.x, part.from.y, part.to.x, part.to.y, options);
+    } else if (part.kind === "polygon") {
+      rc.polygon(
+        part.points.map((p): [number, number] => [p.x, p.y]),
+        partOptions,
+      );
+    } else {
+      rc.circle(part.center.x, part.center.y, part.radius * 2, partOptions);
+    }
+  }
+}
+
+const HOLE_CLIP_MARGIN = 50;
+
+function clipArrowheadHoles(el: ArrowElement, heads: ArrowheadGeometry[], ctx: CanvasRenderingContext2D) {
+  const holes = heads.flatMap(getArrowheadHoles);
+  if (holes.length === 0) return false;
+  const outer = expandBounds(getBounds(getArrowPath(el)), HOLE_CLIP_MARGIN);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(outer.x, outer.y, outer.width, outer.height);
+  for (const { center, radius } of holes) {
+    ctx.moveTo(center.x + radius, center.y);
+    ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
+  }
+  ctx.clip("evenodd");
+  return true;
 }
 
 export const arrowUtil: ShapeUtil<ArrowElement> = {
   draw(el, rc, ctx) {
-    const points = getArrowPoints(el);
+    const startHead = getArrowheadGeometry(el, "start");
+    const endHead = getArrowheadGeometry(el, "end");
+    const heads = [startHead, endHead].filter((head): head is ArrowheadGeometry => head !== null);
+    const points = retreatEnds(getArrowPoints(el), startHead?.retreat ?? 0, endHead?.retreat ?? 0);
     const options = roughOptions(el.style, el.seed);
+    const clipped = clipArrowheadHoles(el, heads, ctx);
     if (isCurve(el)) {
       ctx.save();
       ctx.lineCap = "round";
@@ -240,11 +315,9 @@ export const arrowUtil: ShapeUtil<ArrowElement> = {
       );
     }
 
-    const head = getArrowHead(el);
-    if (!head) return;
-    const [tip, left, right] = head;
-    rc.line(tip.x, tip.y, left.x, left.y, options);
-    rc.line(tip.x, tip.y, right.x, right.y, options);
+    if (clipped) ctx.restore();
+    const headOptions = { ...options, fill: undefined };
+    for (const head of heads) drawArrowhead(head, rc, headOptions);
   },
 
   hitTest(el, p, tolerance) {
@@ -266,8 +339,8 @@ export const arrowUtil: ShapeUtil<ArrowElement> = {
     const box = isCurve(el)
       ? getBounds(getArrowPath(el))
       : { x: el.x, y: el.y, width: el.width, height: el.height };
-    const head = getArrowHead(el);
-    return head ? unionBounds([box, getBounds(head)]) : box;
+    const heads = getArrowheads(el).map((head) => getBounds(getArrowheadPoints(head)));
+    return unionBounds([box, ...heads]);
   },
 
   getLabelArea(el) {

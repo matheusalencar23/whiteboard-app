@@ -1,4 +1,4 @@
-import type { BoardElement, ElementType } from "./elements/types";
+import { ARROWHEADS, type BoardElement, type ElementType } from "./elements/types";
 import { updateBoundArrows } from "./elements/bindings";
 import { MAX_ZOOM, MIN_ZOOM, type Viewport } from "./viewport";
 import { GRID_STYLES, type GridStyle } from "./render/grid";
@@ -135,6 +135,8 @@ function isValidElement(value: unknown): value is BoardElement {
         isValidPoints(value.points) &&
         (value.points as unknown[]).length >= 2 &&
         (value.routing === "straight" || value.routing === "elbow" || value.routing === "curved") &&
+        isArrowhead(value.startArrowhead) &&
+        isArrowhead(value.endArrowhead) &&
         isValidSegments(value.fixedSegments) &&
         isValidBinding(value.startBinding) &&
         isValidBinding(value.endBinding) &&
@@ -149,6 +151,10 @@ function isValidElement(value: unknown): value is BoardElement {
     case "diamond":
       return isValidLabel(value.label);
   }
+}
+
+function isArrowhead(value: unknown): boolean {
+  return (ARROWHEADS as readonly unknown[]).includes(value);
 }
 
 function isValidLabel(value: unknown): boolean {

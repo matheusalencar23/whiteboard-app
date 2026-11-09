@@ -1,6 +1,12 @@
 import { create } from "zustand";
-import type { ArrowRouting, BoardElement } from "../lib/elements/types";
-import { setArrowRouting, updateBoundArrows } from "../lib/elements/bindings";
+import {
+  DEFAULT_ARROWHEADS,
+  type Arrowhead,
+  type ArrowheadPair,
+  type ArrowRouting,
+  type BoardElement,
+} from "../lib/elements/types";
+import { setArrowRouting, updateBoundArrows, type ArrowEnd } from "../lib/elements/bindings";
 import type { Point } from "../lib/types";
 import { DEFAULT_PREFERENCES, debounce, loadBoard, saveBoard } from "../lib/persistence";
 import { GRID_STYLES, type GridStyle } from "../lib/render/grid";
@@ -24,6 +30,7 @@ export interface BoardState {
   tool: Tool;
   viewport: Viewport;
   arrowRouting: ArrowRouting;
+  arrowheads: ArrowheadPair;
   showGrid: boolean;
   gridStyle: GridStyle;
   past: BoardElement[][];
@@ -42,6 +49,7 @@ export interface BoardState {
   setSelection: (ids: string[]) => void;
   setTool: (tool: Tool) => void;
   setArrowRouting: (routing: ArrowRouting) => void;
+  setArrowhead: (end: ArrowEnd, arrowhead: Arrowhead) => void;
   toggleGrid: () => void;
   setGridStyle: (style: GridStyle) => void;
   cycleGridStyle: () => void;
@@ -68,6 +76,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
   tool: "selection",
   viewport: saved?.viewport ?? INITIAL_VIEWPORT,
   arrowRouting: "straight",
+  arrowheads: DEFAULT_ARROWHEADS,
   showGrid: saved?.showGrid ?? DEFAULT_PREFERENCES.showGrid,
   gridStyle: saved?.gridStyle ?? DEFAULT_PREFERENCES.gridStyle,
   past: [],
@@ -157,6 +166,20 @@ export const useBoardStore = create<BoardState>()((set) => ({
       });
       if (!changed) return { arrowRouting };
       return { arrowRouting, elements, past: pushPast(state.past, state.elements), future: [] };
+    }),
+  setArrowhead: (end, arrowhead) =>
+    set((state) => {
+      const key = end === "start" ? "startArrowhead" : "endArrowhead";
+      const arrowheads = { ...state.arrowheads, [end]: arrowhead };
+      const ids = new Set(state.selectedIds);
+      let changed = false;
+      const elements = state.elements.map((el) => {
+        if (el.type !== "arrow" || !ids.has(el.id) || el[key] === arrowhead) return el;
+        changed = true;
+        return { ...el, [key]: arrowhead };
+      });
+      if (!changed) return { arrowheads };
+      return { arrowheads, elements, past: pushPast(state.past, state.elements), future: [] };
     }),
   toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
   setGridStyle: (gridStyle) => set({ gridStyle, showGrid: true }),

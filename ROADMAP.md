@@ -17,7 +17,8 @@ Marque os itens com `[x]` conforme forem concluídos.
 - Texto dentro das formas: duplo clique num retângulo, elipse ou losango edita um rótulo centralizado, que quebra linha na largura da forma.
 - Texto nas setas: duplo clique numa seta edita um texto no meio do caminho dela, que interrompe a linha e acompanha a seta quando ela é recalculada.
 - Três tipos de seta, escolhidos no painel lateral: reta, curva e ortogonal. Na reta e na curva, a alça no meio de cada trecho cria um ponto que pode ser arrastado, como no Excalidraw. A ortogonal tem rota automática, que sai perpendicular ao lado da forma e contorna as formas das pontas.
-- Painel de estilo ao lado da toolbar, que aparece com a ferramenta de seta ou com setas selecionadas. Por enquanto, só tem o tipo da seta.
+- Pontas das setas escolhidas de forma independente no início e no fim, com 16 formatos inspirados no draw.io: básicas (nenhuma, seta aberta, barra, X), UML (triângulo, losango e círculo, cheios ou vazados) e a notação pé de galinha do diagrama entidade-relacionamento.
+- Painel de estilo ao lado da toolbar, que aparece com a ferramenta de seta ou com setas selecionadas. Por enquanto, tem o tipo da seta e o formato das duas pontas.
 - Grade de fundo em pontos ou linhas, à escolha do usuário. Fica ligada por padrão e é só visual (sem encaixe).
 - Identidade visual própria ("caderno técnico"): branco, cinzas e destaque azul suave, com todos os valores em `src/lib/theme.ts`.
 - Dependência instalada mas ainda não usada: `react-color`.
@@ -70,7 +71,7 @@ Esta é a ordem recomendada de trabalho a partir de agora. Ela não segue a nume
 
 ### 3. Etapa 3, na ordem descrita na seção dela
 
-- [ ] Os itens 3.1 (setas ligadas), 3.2 (pontos de conexão) 3.3 (texto dentro das formas), 3.5 (setas ortogonais) e 3.6 (setas curvas, com pontos ajustáveis) estão feitos. O 3.4 (snap e guias) foi descartado, e só a grade de fundo (4.1) ficou. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Do 3.1 ao 3.6, cada item depende do anterior. O 3.7 (texto nas setas) e o 3.8 (formato das pontas) não dependem dos outros e podem ser adiantados. Só a interface do 3.8 espera o painel de estilo (4.3). O 3.9 (lado de saída da seta e laços) corrige problemas das setas ligadas e pode entrar antes do 3.7 e do 3.8. O 3.9 e o 3.7 estão feitos. A ordem combinada segue com o 3.8.
+- [ ] Os itens 3.1 (setas ligadas), 3.2 (pontos de conexão) 3.3 (texto dentro das formas), 3.5 (setas ortogonais) e 3.6 (setas curvas, com pontos ajustáveis) estão feitos. O 3.4 (snap e guias) foi descartado, e só a grade de fundo (4.1) ficou. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Do 3.1 ao 3.6, cada item depende do anterior. O 3.7 (texto nas setas) e o 3.8 (formato das pontas) não dependem dos outros e podem ser adiantados. Só a interface do 3.8 espera o painel de estilo (4.3). O 3.9 (lado de saída da seta e laços) corrige problemas das setas ligadas e pode entrar antes do 3.7 e do 3.8. O 3.9, o 3.7 e o 3.8 estão feitos, e a etapa 3 está completa.
 
 As outras pendências da etapa 2 (duplicar e copiar/colar) ficam para quando fizerem falta no uso. Nenhuma bloqueia a etapa 3.
 
@@ -213,7 +214,15 @@ A parte que diferencia o projeto de um Excalidraw. Os itens estão na ordem de i
 
 ### 3.8 Formato das pontas das setas
 
-- [ ] **O quê:** escolher o formato de cada ponta da seta, no início e no fim, de forma independente. Os formatos são nenhum, seta aberta (o atual), triângulo cheio, círculo, losango e barra. Isso permite setas de mão dupla, linhas sem ponta e as notações de diagramas como UML e ER.
+- [x] **Feito.** Detalhes da implementação:
+  - `ArrowElement` tem `startArrowhead` e `endArrowhead` obrigatórios (`ARROWHEADS` em `types.ts`). A store guarda o padrão das setas novas em `arrowheads` (`DEFAULT_ARROWHEADS`: nenhuma no início, seta no fim), e `setArrowhead` muda o padrão e as setas selecionadas num passo do histórico, como o `setArrowRouting`. Como os campos são obrigatórios e não há migração, boards salvos antes disso são descartados ao abrir.
+  - Os formatos foram ampliados com base no draw.io, ficando com os que fazem sentido para o projeto: nenhuma, seta, barra, X; triângulo, losango e círculo, cheios ou vazados (herança, composição e agregação do UML); e a notação pé de galinha do ER (um, um e somente um, muitos, um ou muitos, zero ou um, zero ou muitos). Variantes finas, meia seta e outras quase iguais às existentes ficaram de fora.
+  - A geometria é pura, em `src/lib/elements/arrowheads.ts`: `getArrowheadParts(formato, ponta, direção, tamanho)` devolve as partes (linhas, polígonos e círculos, cheios ou não) e o recuo da haste. O canvas e os ícones do painel usam a mesma função, então o ícone nunca diverge do desenho.
+  - `getArrowheadGeometry` (`arrow.ts`) acha a ponta e a direção pelos dois últimos pontos do caminho amostrado, então segue a tangente nas curvas. O tamanho continua `min(16 + 2 × espessura, metade do último trecho)`.
+  - As partes cheias usam `fillStyle: "solid"` na cor do traço. Nos formatos fechados que ficam na ponta, a haste recua até a base (`retreatEnds`), ao longo do último trecho dos pontos, que na curva Catmull-Rom com a ponta repetida é a própria tangente, e na ortogonal mantém o trecho reto. Os círculos vazados do ER ficam no meio da haste, então ela é recortada dentro deles com `ctx.clip("evenodd")` (`getArrowheadHoles`); no ícone, o mesmo recorte é uma máscara SVG.
+  - O `getBounds` da seta junta a caixa das duas pontas. O clique continua só na haste.
+  - Interface: com 16 formatos, uma fileira de botões por ponta não cabia. O painel tem a seção "Pontas" com um botão para cada ponta, que mostra o formato atual e abre uma caixa (`Popover` em `src/ui/`) com os formatos agrupados em Básicas, UML e Entidade-relacionamento. A caixa abre abaixo do botão (ou acima, se não couber) e fecha com Escape, clique fora ou ao escolher. Com seleção mista, o botão mostra reticências. Botões que abrem uma caixa têm um triângulo pequeno no canto inferior direito (`hasPopup` no `IconButton`, que também troca o `aria-pressed` por `aria-haspopup` e `aria-expanded`).
+- **O quê:** escolher o formato de cada ponta da seta, no início e no fim, de forma independente. Os formatos são nenhum, seta aberta (o atual), triângulo cheio, círculo, losango e barra. Isso permite setas de mão dupla, linhas sem ponta e as notações de diagramas como UML e ER.
 - **Como:**
   - `ArrowElement` ganha `startArrowhead` e `endArrowhead`, cada um `"none" | "arrow" | "triangle" | "circle" | "diamond" | "bar"`. O padrão é `"none"` no início e `"arrow"` no fim, como hoje.
   - **Desenho:** cada formato é uma função que recebe a ponta, a direção do último segmento (ou a tangente, nas curvas do 3.6) e o tamanho, e desenha com o roughjs. Os formatos cheios usam `fillStyle: "solid"` na cor do traço. A `getArrowHead` atual vira o caso `"arrow"`.

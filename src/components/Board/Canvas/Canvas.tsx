@@ -559,7 +559,7 @@ export function Canvas() {
     } else if (store.tool === "arrow") {
       const startBinding = findBindingAt(world);
       interactionRef.current = { kind: "creating", start: world, startBinding };
-      setDraft({ ...createArrow(world, world, store.arrowRouting), startBinding });
+      setDraft({ ...createArrow(world, world, store.arrowRouting, store.arrowheads), startBinding });
       setBindingHint(startBinding);
     } else if (BOX_TOOLS.includes(store.tool)) {
       interactionRef.current = { kind: "creating", start: world, startBinding: null };

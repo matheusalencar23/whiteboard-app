@@ -5,3 +5,13 @@
     background: var(--color-surface-sunken);
     border-radius: var(--radius-md);
 }
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(6, auto);
+    justify-content: start;
+    gap: 2px;
+    padding: 2px;
+    background: var(--color-surface-sunken);
+    border-radius: var(--radius-md);
+}

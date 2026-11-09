@@ -66,3 +66,17 @@
         color: var(--color-accent);
     }
 }
+
+.popupMarker {
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    width: 5px;
+    height: 5px;
+    background: var(--color-text-muted);
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+
+    .button[data-active="true"] & {
+        background: var(--color-accent);
+    }
+}

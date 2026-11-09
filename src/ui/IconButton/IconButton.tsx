@@ -66,7 +66,7 @@ export function IconButton({
         {badge && <span className={styles.badge}>{badge}</span>}
         {hasPopup && <span className={styles.popupMarker} aria-hidden="true" />}
       </button>
-      {anchor && !disabled && (
+      {anchor && !disabled && !(hasPopup && active) && (
         <Tooltip anchor={anchor} side={tooltipSide} label={label} shortcut={shortcut} />
       )}
     </>

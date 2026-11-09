@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import styles from "./Tooltip.module.scss";
 
@@ -25,9 +26,30 @@ function position(anchor: DOMRect, side: TooltipSide): React.CSSProperties {
   }
 }
 
+const OPPOSITE: Record<TooltipSide, TooltipSide> = {
+  top: "bottom",
+  bottom: "top",
+  left: "right",
+  right: "left",
+};
+
+function fitsInViewport(rect: DOMRect): boolean {
+  return rect.top >= 0 && rect.left >= 0 && rect.bottom <= window.innerHeight && rect.right <= window.innerWidth;
+}
+
 export function Tooltip({ anchor, side, label, shortcut }: TooltipProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [placedSide, setPlacedSide] = useState(side);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (el && placedSide === side && !fitsInViewport(el.getBoundingClientRect())) {
+      setPlacedSide(OPPOSITE[side]);
+    }
+  }, [placedSide, side]);
+
   return createPortal(
-    <div className={styles.tooltip} role="tooltip" style={position(anchor, side)}>
+    <div ref={ref} className={styles.tooltip} role="tooltip" style={position(anchor, placedSide)}>
       <span>{label}</span>
       {shortcut && <kbd className={styles.shortcut}>{shortcut}</kbd>}
     </div>,

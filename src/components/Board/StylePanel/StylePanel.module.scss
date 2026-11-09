@@ -15,3 +15,17 @@
     background: var(--color-surface-sunken);
     border-radius: var(--radius-md);
 }
+
+.arrowheads {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.arrowPreview {
+    display: flex;
+    align-items: center;
+    padding: 2px;
+    background: var(--color-surface-sunken);
+    border-radius: var(--radius-md);
+}

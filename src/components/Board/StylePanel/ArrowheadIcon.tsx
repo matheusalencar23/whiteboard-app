@@ -6,6 +6,13 @@ import { getArrowheadHoles, getArrowheadParts, type ArrowheadPart } from "../../
 const TIP = { x: 21, y: 12 };
 const SHAFT_START = 3;
 const HEAD_SIZE = 10;
+const BLEED_SHAFT_START = -12;
+
+interface ArrowheadIconProps {
+  arrowhead: Arrowhead;
+  end: ArrowEnd;
+  bleed?: boolean;
+}
 
 function Part({ part }: { part: ArrowheadPart }) {
   switch (part.kind) {
@@ -30,7 +37,7 @@ function Part({ part }: { part: ArrowheadPart }) {
   }
 }
 
-export function ArrowheadIcon({ arrowhead, end }: { arrowhead: Arrowhead; end: ArrowEnd }) {
+export function ArrowheadIcon({ arrowhead, end, bleed = false }: ArrowheadIconProps) {
   const maskId = useId();
   const geometry = getArrowheadParts(arrowhead, TIP, Math.PI, HEAD_SIZE);
   const holes = geometry ? getArrowheadHoles(geometry) : [];
@@ -46,11 +53,12 @@ export function ArrowheadIcon({ arrowhead, end }: { arrowhead: Arrowhead; end: A
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
+      overflow={bleed ? "visible" : undefined}
       aria-hidden="true"
     >
       {holes.length > 0 && (
-        <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
-          <rect width="24" height="24" fill="white" stroke="none" />
+        <mask id={maskId} maskUnits="userSpaceOnUse" x="-24" y="0" width="72" height="24">
+          <rect x="-24" width="72" height="24" fill="white" stroke="none" />
           {holes.map(({ center, radius }, i) => (
             <circle key={i} cx={center.x} cy={center.y} r={radius} fill="black" stroke="none" />
           ))}
@@ -58,7 +66,8 @@ export function ArrowheadIcon({ arrowhead, end }: { arrowhead: Arrowhead; end: A
       )}
       <g transform={end === "start" ? "matrix(-1 0 0 1 24 0)" : undefined}>
         <line
-          x1={SHAFT_START}
+          x1={bleed ? BLEED_SHAFT_START : SHAFT_START}
+          strokeLinecap={bleed ? "butt" : undefined}
           y1={TIP.y}
           x2={shaftEnd}
           y2={TIP.y}

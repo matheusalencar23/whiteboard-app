@@ -50,6 +50,7 @@ export interface BoardState {
   setTool: (tool: Tool) => void;
   setArrowRouting: (routing: ArrowRouting) => void;
   setArrowhead: (end: ArrowEnd, arrowhead: Arrowhead) => void;
+  swapArrowheads: () => void;
   toggleGrid: () => void;
   setGridStyle: (style: GridStyle) => void;
   cycleGridStyle: () => void;
@@ -177,6 +178,19 @@ export const useBoardStore = create<BoardState>()((set) => ({
         if (el.type !== "arrow" || !ids.has(el.id) || el[key] === arrowhead) return el;
         changed = true;
         return { ...el, [key]: arrowhead };
+      });
+      if (!changed) return { arrowheads };
+      return { arrowheads, elements, past: pushPast(state.past, state.elements), future: [] };
+    }),
+  swapArrowheads: () =>
+    set((state) => {
+      const arrowheads = { start: state.arrowheads.end, end: state.arrowheads.start };
+      const ids = new Set(state.selectedIds);
+      let changed = false;
+      const elements = state.elements.map((el) => {
+        if (el.type !== "arrow" || !ids.has(el.id) || el.startArrowhead === el.endArrowhead) return el;
+        changed = true;
+        return { ...el, startArrowhead: el.endArrowhead, endArrowhead: el.startArrowhead };
       });
       if (!changed) return { arrowheads };
       return { arrowheads, elements, past: pushPast(state.past, state.elements), future: [] };

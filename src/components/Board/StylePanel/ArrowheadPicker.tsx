@@ -35,22 +35,27 @@ const ARROWHEAD_GROUPS: { title: string; arrowheads: Arrowhead[] }[] = [
     arrowheads: ["triangle", "triangleOutline", "diamond", "diamondOutline", "circle", "circleOutline"],
   },
   {
-    title: "Entidade-relacionamento",
+    title: "ER",
     arrowheads: ["erOne", "erMandOne", "erMany", "erOneToMany", "erZeroToOne", "erZeroToMany"],
   },
 ];
 
-function iconsFor(end: ArrowEnd): Record<Arrowhead, IconType> {
+function iconsFor(end: ArrowEnd, bleed: boolean): Record<Arrowhead, IconType> {
   const icons = {} as Record<Arrowhead, IconType>;
   for (const arrowhead of ARROWHEADS) {
-    icons[arrowhead] = () => <ArrowheadIcon arrowhead={arrowhead} end={end} />;
+    icons[arrowhead] = () => <ArrowheadIcon arrowhead={arrowhead} end={end} bleed={bleed} />;
   }
   return icons;
 }
 
 const ICONS: Record<ArrowEnd, Record<Arrowhead, IconType>> = {
-  start: iconsFor("start"),
-  end: iconsFor("end"),
+  start: iconsFor("start", false),
+  end: iconsFor("end", false),
+};
+
+const PREVIEW_ICONS: Record<ArrowEnd, Record<Arrowhead, IconType>> = {
+  start: iconsFor("start", true),
+  end: iconsFor("end", true),
 };
 
 const END_TITLES: Record<ArrowEnd, string> = { start: "Ponta inicial", end: "Ponta final" };
@@ -72,16 +77,16 @@ export function ArrowheadPicker({ end, value, onChange }: ArrowheadPickerProps) 
   return (
     <div ref={anchorRef}>
       <IconButton
-        icon={value === "mixed" ? LuEllipsis : ICONS[end][value]}
+        icon={value === "mixed" ? LuEllipsis : PREVIEW_ICONS[end][value]}
         label={`${title}: ${current}`}
         size="sm"
-        hasPopup
         tooltipSide="bottom"
+        hasPopup
         active={anchor !== null}
-        onClick={() => setAnchor((current) => (current ? null : anchorRef.current))}
+        onClick={() => setAnchor((open) => (open ? null : anchorRef.current))}
       />
       {anchor && (
-        <Popover anchor={anchor} onClose={close}>
+        <Popover anchor={anchor} side="right" boundary={anchor.closest("aside")} onClose={close}>
           <Panel label={title}>
             {ARROWHEAD_GROUPS.map((group) => (
               <PanelSection key={group.title} title={group.title}>
@@ -91,7 +96,6 @@ export function ArrowheadPicker({ end, value, onChange }: ArrowheadPickerProps) 
                       key={arrowhead}
                       icon={ICONS[end][arrowhead]}
                       label={ARROWHEAD_LABELS[arrowhead]}
-                      size="sm"
                       tooltipSide="top"
                       active={value === arrowhead}
                       onClick={() => {

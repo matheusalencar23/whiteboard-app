@@ -1,5 +1,5 @@
 import type { IconType } from "react-icons";
-import { LuCornerDownRight, LuMoveRight, LuSpline } from "react-icons/lu";
+import { LuArrowLeftRight, LuCornerDownRight, LuMoveRight, LuSpline } from "react-icons/lu";
 import styles from "./StylePanel.module.scss";
 import type { ArrowElement, ArrowRouting } from "../../../lib/elements/types";
 import { useBoardStore, type BoardState } from "../../../store/boardStore";
@@ -42,6 +42,7 @@ export function StylePanel() {
   const selectedEnd = useBoardStore(selectEndArrowhead);
   const setArrowRouting = useBoardStore((s) => s.setArrowRouting);
   const setArrowhead = useBoardStore((s) => s.setArrowhead);
+  const swapArrowheads = useBoardStore((s) => s.swapArrowheads);
 
   const showArrowOptions = tool === "arrow" || selectedRouting !== null;
   if (!showArrowOptions) return null;
@@ -67,16 +68,25 @@ export function StylePanel() {
         </div>
       </PanelSection>
       <PanelSection title="Pontas">
-        <div className={styles.options}>
-          <ArrowheadPicker
-            end="start"
-            value={activeArrowheads.start}
-            onChange={(arrowhead) => setArrowhead("start", arrowhead)}
-          />
-          <ArrowheadPicker
-            end="end"
-            value={activeArrowheads.end}
-            onChange={(arrowhead) => setArrowhead("end", arrowhead)}
+        <div className={styles.arrowheads}>
+          <div className={styles.arrowPreview}>
+            <ArrowheadPicker
+              end="start"
+              value={activeArrowheads.start}
+              onChange={(arrowhead) => setArrowhead("start", arrowhead)}
+            />
+            <ArrowheadPicker
+              end="end"
+              value={activeArrowheads.end}
+              onChange={(arrowhead) => setArrowhead("end", arrowhead)}
+            />
+          </div>
+          <IconButton
+            icon={LuArrowLeftRight}
+            label="Inverter pontas"
+            size="sm"
+            tooltipSide="bottom"
+            onClick={swapArrowheads}
           />
         </div>
       </PanelSection>

@@ -12,7 +12,15 @@ interface PopoverProps {
   children: React.ReactNode;
 }
 
-function initialPosition(anchor: HTMLElement, side: PopoverSide, boundary: HTMLElement | null) {
+interface Position {
+  left: number;
+  top: number;
+}
+
+const GAP = 8;
+const VIEWPORT_MARGIN = 8;
+
+function preferredPosition(anchor: HTMLElement, side: PopoverSide, boundary: HTMLElement | null): Position {
   const rect = anchor.getBoundingClientRect();
   if (side === "right") {
     const edge = (boundary ?? anchor).getBoundingClientRect().right;
@@ -21,31 +29,45 @@ function initialPosition(anchor: HTMLElement, side: PopoverSide, boundary: HTMLE
   return { left: rect.left, top: rect.bottom + GAP };
 }
 
-function fitVertically(anchor: HTMLElement, side: PopoverSide, top: number, height: number) {
-  const limit = window.innerHeight - VIEWPORT_MARGIN;
-  if (top + height <= limit) return top;
-  if (side === "right") return Math.max(VIEWPORT_MARGIN, limit - height);
-  return Math.max(VIEWPORT_MARGIN, anchor.getBoundingClientRect().top - GAP - height);
-}
+function fitToViewport(
+  anchor: HTMLElement,
+  side: PopoverSide,
+  boundary: HTMLElement | null,
+  size: { width: number; height: number },
+): Position {
+  const preferred = preferredPosition(anchor, side, boundary);
+  const rect = anchor.getBoundingClientRect();
+  const right = window.innerWidth - VIEWPORT_MARGIN;
+  const bottom = window.innerHeight - VIEWPORT_MARGIN;
 
-const GAP = 8;
-const VIEWPORT_MARGIN = 8;
+  let { left, top } = preferred;
+  if (left + size.width > right) {
+    left =
+      side === "right"
+        ? (boundary ?? anchor).getBoundingClientRect().left - GAP - size.width
+        : right - size.width;
+  }
+  if (top + size.height > bottom) {
+    top = side === "right" ? bottom - size.height : rect.top - GAP - size.height;
+  }
+  return { left: Math.max(VIEWPORT_MARGIN, left), top: Math.max(VIEWPORT_MARGIN, top) };
+}
 
 export function Popover({ anchor, side = "bottom", boundary = null, onClose, children }: PopoverProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState(() => initialPosition(anchor, side, boundary));
+  const pointerInsideRef = useRef(false);
+  const [position, setPosition] = useState(() => preferredPosition(anchor, side, boundary));
 
   useLayoutEffect(() => {
-    const height = ref.current?.offsetHeight ?? 0;
-    const next = initialPosition(anchor, side, boundary);
-    setPosition({ ...next, top: fitVertically(anchor, side, next.top, height) });
+    const size = { width: ref.current?.offsetWidth ?? 0, height: ref.current?.offsetHeight ?? 0 };
+    setPosition(fitToViewport(anchor, side, boundary, size));
   }, [anchor, side, boundary]);
 
   useEffect(() => {
     function handlePointerDown(e: PointerEvent) {
-      const target = e.target as Node;
-      if (ref.current?.contains(target) || anchor.contains(target)) return;
-      onClose();
+      const inside = pointerInsideRef.current || anchor.contains(e.target as Node);
+      pointerInsideRef.current = false;
+      if (!inside) onClose();
     }
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -59,7 +81,14 @@ export function Popover({ anchor, side = "bottom", boundary = null, onClose, chi
   }, [anchor, onClose]);
 
   return createPortal(
-    <div ref={ref} className={styles.popover} style={position}>
+    <div
+      ref={ref}
+      className={styles.popover}
+      style={position}
+      onPointerDownCapture={() => {
+        pointerInsideRef.current = true;
+      }}
+    >
       {children}
     </div>,
     document.body,

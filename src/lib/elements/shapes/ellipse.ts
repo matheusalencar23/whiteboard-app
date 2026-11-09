@@ -1,5 +1,5 @@
 import type { Point } from "../../types";
-import { centeredArea, isFilled, resizeBox, roughOptions, scaleToBorder, SIDE_MIDPOINTS, type ShapeUtil } from "../shapeUtil";
+import { centeredArea, isFilled, resizeBox, drawFillAndStroke, scaleToBorder, SIDE_MIDPOINTS, type ShapeUtil } from "../shapeUtil";
 import type { EllipseElement } from "../types";
 
 function isInsideEllipse(p: Point, center: Point, rx: number, ry: number) {
@@ -8,13 +8,12 @@ function isInsideEllipse(p: Point, center: Point, rx: number, ry: number) {
 }
 
 export const ellipseUtil: ShapeUtil<EllipseElement> = {
-  draw(el, rc) {
-    rc.ellipse(
-      el.x + el.width / 2,
-      el.y + el.height / 2,
-      el.width,
-      el.height,
-      { ...roughOptions(el.style, el.seed), curveFitting: 1 },
+  draw(el, rc, ctx) {
+    drawFillAndStroke(ctx, el.style, el.seed, (options) =>
+      rc.ellipse(el.x + el.width / 2, el.y + el.height / 2, el.width, el.height, {
+        ...options,
+        curveFitting: 1,
+      }),
     );
   },
 

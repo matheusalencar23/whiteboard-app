@@ -1,10 +1,12 @@
 import { containsPoint, expandBounds } from "../../geometry/bounds";
-import { centeredArea, isFilled, resizeBox, roughOptions, scaleToBorder, SIDE_MIDPOINTS, type ShapeUtil } from "../shapeUtil";
+import { centeredArea, isFilled, resizeBox, drawFillAndStroke, scaleToBorder, SIDE_MIDPOINTS, type ShapeUtil } from "../shapeUtil";
 import type { RectangleElement } from "../types";
 
 export const rectangleUtil: ShapeUtil<RectangleElement> = {
-  draw(el, rc) {
-    rc.rectangle(el.x, el.y, el.width, el.height, roughOptions(el.style, el.seed));
+  draw(el, rc, ctx) {
+    drawFillAndStroke(ctx, el.style, el.seed, (options) =>
+      rc.rectangle(el.x, el.y, el.width, el.height, options),
+    );
   },
 
   hitTest(el, p, tolerance) {

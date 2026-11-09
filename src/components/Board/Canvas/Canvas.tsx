@@ -47,7 +47,10 @@ import {
 import { createFreedraw, setFreedrawPoints } from "../../../lib/elements/shapes/freedraw";
 import { createText, setText } from "../../../lib/elements/shapes/text";
 import {
+  ROTATION_HANDLE_DISTANCE,
+  ROTATION_HANDLE_RADIUS,
   ROTATION_SNAP,
+  getSelectionBounds,
   frameContains,
   getArrowHandleAt,
   getHandleAt,
@@ -64,10 +67,11 @@ import {
 } from "../../../lib/selection";
 import { renderScene } from "../../../lib/render/renderScene";
 import { GRID_SIZE } from "../../../lib/render/grid";
-import { screenToWorld } from "../../../lib/viewport";
+import { screenToWorld, worldToScreen } from "../../../lib/viewport";
 import { FONT_FAMILY, LABEL_FONT_SIZE, LINE_HEIGHT } from "../../../lib/text";
 import { useBoardStore } from "../../../store/boardStore";
 import { TextEditor, type TextEditorLayout } from "../TextEditor/TextEditor";
+import { StyleBar, type StyleBarPlacement } from "../StyleBar/StyleBar";
 import { isTypingTarget } from "../useShortcuts";
 
 const ZOOM_SENSITIVITY = 0.005;
@@ -171,6 +175,10 @@ function editorLayout(editing: Editing): TextEditorLayout {
   }
   const area = getLabelArea(editing.element) ?? editing.element;
   return { kind: "label", area, rotation };
+}
+
+function withCurrentStyle<T extends BoardElement>(element: T): T {
+  return { ...element, style: { ...useBoardStore.getState().currentStyle } };
 }
 
 function hasSize(element: BoardElement): boolean {
@@ -541,7 +549,7 @@ export function Canvas() {
     const world = screenToWorld(screen, store.viewport);
 
     if (!wantsPan && store.tool === "text") {
-      startEditingText(createText(world), true);
+      startEditingText(withCurrentStyle(createText(world)), true);
       return;
     }
 
@@ -555,15 +563,18 @@ export function Canvas() {
       startSelectionInteraction(world, e.shiftKey);
     } else if (store.tool === "freedraw") {
       interactionRef.current = { kind: "freedrawing", points: [world] };
-      setDraft(createFreedraw([world]));
+      setDraft(withCurrentStyle(createFreedraw([world])));
     } else if (store.tool === "arrow") {
       const startBinding = findBindingAt(world);
       interactionRef.current = { kind: "creating", start: world, startBinding };
-      setDraft({ ...createArrow(world, world, store.arrowRouting, store.arrowheads), startBinding });
+      setDraft({
+        ...withCurrentStyle(createArrow(world, world, store.arrowRouting, store.arrowheads)),
+        startBinding,
+      });
       setBindingHint(startBinding);
     } else if (BOX_TOOLS.includes(store.tool)) {
       interactionRef.current = { kind: "creating", start: world, startBinding: null };
-      setDraft(createBoxElement(store.tool as BoxElementType, world, world));
+      setDraft(withCurrentStyle(createBoxElement(store.tool as BoxElementType, world, world)));
     }
   }
 
@@ -815,9 +826,22 @@ export function Canvas() {
     } else if (shape && isLabeledElement(shape)) {
       startEditingLabel(shape);
     } else if (!hit) {
-      const text = createText(world);
+      const text = withCurrentStyle(createText(world));
       startEditingText({ ...text, y: world.y - (text.fontSize * LINE_HEIGHT) / 2 }, true);
     }
+  }
+
+  let styleBarPlacement: StyleBarPlacement = { kind: "top" };
+  const selectionBounds = getSelectionBounds(selected);
+  if (selectionBounds) {
+    const topLeft = worldToScreen(selectionBounds, viewport);
+    const handleReach = ROTATION_HANDLE_DISTANCE + ROTATION_HANDLE_RADIUS;
+    const width = selectionBounds.width * viewport.zoom;
+    const height = selectionBounds.height * viewport.zoom;
+    styleBarPlacement = {
+      kind: "selection",
+      rect: { x: topLeft.x, y: topLeft.y - handleReach, width, height: height + handleReach },
+    };
   }
 
   let cursor: string;
@@ -839,6 +863,7 @@ export function Canvas() {
         onPointerCancel={handlePointerCancel}
         onDoubleClick={handleDoubleClick}
       />
+      {!editing && !isInteracting && <StyleBar placement={styleBarPlacement} viewportWidth={size.width} />}
       {editing && (
         <TextEditor
           key={editing.element.id}

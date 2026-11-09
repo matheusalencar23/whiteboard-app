@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import type { IconType } from "react-icons";
 import { LuEllipsis } from "react-icons/lu";
-import styles from "./StylePanel.module.scss";
+import styles from "./StyleBar.module.scss";
 import { ARROWHEADS, type Arrowhead } from "../../../lib/elements/types";
 import type { ArrowEnd } from "../../../lib/elements/bindings";
 import { IconButton } from "../../../ui/IconButton/IconButton";

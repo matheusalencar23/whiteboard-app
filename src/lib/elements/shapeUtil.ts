@@ -4,7 +4,13 @@ import type { RoughCanvas } from "roughjs/bin/canvas";
 import type { Options } from "roughjs/bin/core";
 import type { Point } from "../types";
 import type { Bounds } from "../geometry/bounds";
-import { DEFAULT_STYLE, type BoardElement, type ElementStyle } from "./types";
+import {
+  DEFAULT_STYLE,
+  TRANSPARENT,
+  type BoardElement,
+  type ElementStyle,
+  type StrokeStyle,
+} from "./types";
 
 export interface ShapeUtil<T extends BoardElement> {
   draw(element: T, rc: RoughCanvas, ctx: CanvasRenderingContext2D): void;
@@ -49,18 +55,51 @@ export function baseFields(bounds: Bounds) {
   };
 }
 
-export function roughOptions(style: ElementStyle, seed: number): Options {
+function lineDash(lineStyle: StrokeStyle, width: number): number[] | undefined {
+  if (lineStyle === "dashed") return [8 + width * 2, 6 + width * 2];
+  if (lineStyle === "dotted") return [0.5, 4 + width * 2];
+  return undefined;
+}
+
+export function strokeOptions(style: ElementStyle, seed: number): Options {
   return {
     seed,
     stroke: style.strokeColor,
     strokeWidth: style.strokeWidth,
-    roughness: style.roughness,
-    fill: style.fillColor === "transparent" ? undefined : style.fillColor,
+    roughness: style.strokeRoughness,
+    strokeLineDash: lineDash(style.strokeStyle, style.strokeWidth),
+    disableMultiStroke: style.strokeStyle !== "solid",
   };
 }
 
+function fillOptions(style: ElementStyle, seed: number): Options {
+  return {
+    seed,
+    stroke: "none",
+    roughness: style.fillRoughness,
+    fill: style.fillColor,
+    fillStyle: style.fillStyle,
+    fillWeight: style.strokeWidth / 2,
+  };
+}
+
+export function drawFillAndStroke(
+  ctx: CanvasRenderingContext2D,
+  style: ElementStyle,
+  seed: number,
+  draw: (options: Options) => void,
+) {
+  if (isFilled(style)) {
+    ctx.save();
+    ctx.globalAlpha = style.fillOpacity / 100;
+    draw(fillOptions(style, seed));
+    ctx.restore();
+  }
+  draw(strokeOptions(style, seed));
+}
+
 export function isFilled(style: ElementStyle): boolean {
-  return style.fillColor !== "transparent";
+  return style.fillColor !== TRANSPARENT;
 }
 
 export function resizeBox<T extends BoardElement>(element: T, bounds: Bounds): T {

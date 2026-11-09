@@ -1,10 +1,26 @@
 import type { Point } from "../types";
+import { theme } from "../theme";
+
+export const FILL_STYLES = ["hachure", "cross-hatch", "solid"] as const;
+
+export type FillStyle = (typeof FILL_STYLES)[number];
+
+export const STROKE_STYLES = ["solid", "dashed", "dotted"] as const;
+
+export type StrokeStyle = (typeof STROKE_STYLES)[number];
+
+export const TRANSPARENT = "transparent";
 
 export interface ElementStyle {
   strokeColor: string;
-  fillColor: string;
   strokeWidth: number;
-  roughness: number;
+  strokeStyle: StrokeStyle;
+  strokeRoughness: number;
+  strokeOpacity: number;
+  fillColor: string;
+  fillStyle: FillStyle;
+  fillRoughness: number;
+  fillOpacity: number;
 }
 
 interface BaseElement {
@@ -130,8 +146,13 @@ export function isLabeledElement(element: BoardElement): element is LabeledEleme
 }
 
 export const DEFAULT_STYLE: ElementStyle = {
-  strokeColor: "#1e1e1e",
-  fillColor: "transparent",
+  strokeColor: theme.palette.ink,
   strokeWidth: 2,
-  roughness: 1,
+  strokeStyle: "solid",
+  strokeRoughness: 1,
+  strokeOpacity: 100,
+  fillColor: TRANSPARENT,
+  fillStyle: "hachure",
+  fillRoughness: 1,
+  fillOpacity: 100,
 };

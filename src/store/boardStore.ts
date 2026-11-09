@@ -1,6 +1,9 @@
 import { create } from "zustand";
+import { applyStyle } from "../lib/elements/style";
 import {
   DEFAULT_ARROWHEADS,
+  DEFAULT_STYLE,
+  type ElementStyle,
   type Arrowhead,
   type ArrowheadPair,
   type ArrowRouting,
@@ -31,6 +34,7 @@ export interface BoardState {
   viewport: Viewport;
   arrowRouting: ArrowRouting;
   arrowheads: ArrowheadPair;
+  currentStyle: ElementStyle;
   showGrid: boolean;
   gridStyle: GridStyle;
   past: BoardElement[][];
@@ -51,6 +55,7 @@ export interface BoardState {
   setArrowRouting: (routing: ArrowRouting) => void;
   setArrowhead: (end: ArrowEnd, arrowhead: Arrowhead) => void;
   swapArrowheads: () => void;
+  setStyle: (patch: Partial<ElementStyle>, options?: { record?: boolean }) => void;
   toggleGrid: () => void;
   setGridStyle: (style: GridStyle) => void;
   cycleGridStyle: () => void;
@@ -78,6 +83,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
   viewport: saved?.viewport ?? INITIAL_VIEWPORT,
   arrowRouting: "straight",
   arrowheads: DEFAULT_ARROWHEADS,
+  currentStyle: DEFAULT_STYLE,
   showGrid: saved?.showGrid ?? DEFAULT_PREFERENCES.showGrid,
   gridStyle: saved?.gridStyle ?? DEFAULT_PREFERENCES.gridStyle,
   past: [],
@@ -181,6 +187,21 @@ export const useBoardStore = create<BoardState>()((set) => ({
       });
       if (!changed) return { arrowheads };
       return { arrowheads, elements, past: pushPast(state.past, state.elements), future: [] };
+    }),
+  setStyle: (patch, options) =>
+    set((state) => {
+      const currentStyle = { ...state.currentStyle, ...patch };
+      const ids = new Set(state.selectedIds);
+      let changed = false;
+      const elements = state.elements.map((el) => {
+        if (!ids.has(el.id)) return el;
+        const styled = applyStyle(el, patch);
+        if (styled !== el) changed = true;
+        return styled;
+      });
+      if (!changed) return { currentStyle };
+      if (options?.record === false) return { currentStyle, elements };
+      return { currentStyle, elements, past: pushPast(state.past, state.elements), future: [] };
     }),
   swapArrowheads: () =>
     set((state) => {

@@ -1,4 +1,10 @@
-import { ARROWHEADS, type BoardElement, type ElementType } from "./elements/types";
+import {
+  ARROWHEADS,
+  FILL_STYLES,
+  STROKE_STYLES,
+  type BoardElement,
+  type ElementType,
+} from "./elements/types";
 import { updateBoundArrows } from "./elements/bindings";
 import { MAX_ZOOM, MIN_ZOOM, type Viewport } from "./viewport";
 import { GRID_STYLES, type GridStyle } from "./render/grid";
@@ -124,9 +130,14 @@ function isValidElement(value: unknown): value is BoardElement {
     isNumber(value.seed) &&
     isObject(style) &&
     typeof style.strokeColor === "string" &&
-    typeof style.fillColor === "string" &&
     isNumber(style.strokeWidth) &&
-    isNumber(style.roughness);
+    isOneOf(STROKE_STYLES, style.strokeStyle) &&
+    isNumber(style.strokeRoughness) &&
+    isNumber(style.strokeOpacity) &&
+    typeof style.fillColor === "string" &&
+    isOneOf(FILL_STYLES, style.fillStyle) &&
+    isNumber(style.fillRoughness) &&
+    isNumber(style.fillOpacity);
   if (!baseOk) return false;
 
   switch (value.type as ElementType) {
@@ -153,8 +164,12 @@ function isValidElement(value: unknown): value is BoardElement {
   }
 }
 
+function isOneOf(options: readonly string[], value: unknown): boolean {
+  return (options as readonly unknown[]).includes(value);
+}
+
 function isArrowhead(value: unknown): boolean {
-  return (ARROWHEADS as readonly unknown[]).includes(value);
+  return isOneOf(ARROWHEADS, value);
 }
 
 function isValidLabel(value: unknown): boolean {

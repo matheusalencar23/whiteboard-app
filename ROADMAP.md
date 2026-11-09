@@ -18,10 +18,9 @@ Marque os itens com `[x]` conforme forem concluídos.
 - Texto nas setas: duplo clique numa seta edita um texto no meio do caminho dela, que interrompe a linha e acompanha a seta quando ela é recalculada.
 - Três tipos de seta, escolhidos no painel lateral: reta, curva e ortogonal. Na reta e na curva, a alça no meio de cada trecho cria um ponto que pode ser arrastado, como no Excalidraw. A ortogonal tem rota automática, que sai perpendicular ao lado da forma e contorna as formas das pontas.
 - Pontas das setas escolhidas de forma independente no início e no fim, com 16 formatos inspirados no draw.io: básicas (nenhuma, seta aberta, barra, X), UML (triângulo, losango e círculo, cheios ou vazados) e a notação pé de galinha do diagrama entidade-relacionamento.
-- Painel de estilo ao lado da toolbar, que aparece com a ferramenta de seta ou com setas selecionadas. Por enquanto, tem o tipo da seta e o formato das duas pontas.
+- Barra de estilo flutuante acima da seleção (ou no topo, com uma ferramenta de desenho ativa), com submenus para o contorno (cor, espessura, estilo do traço, esboço, opacidade), o preenchimento (cor, hachura ou sólido, esboço, opacidade) e, nas setas, o tipo e as pontas. O estilo escolhido vale para os próximos elementos.
 - Grade de fundo em pontos ou linhas, à escolha do usuário. Fica ligada por padrão e é só visual (sem encaixe).
 - Identidade visual própria ("caderno técnico"): branco, cinzas e destaque azul suave, com todos os valores em `src/lib/theme.ts`.
-- Dependência instalada mas ainda não usada: `react-color`.
 
 ### Atalhos
 
@@ -171,7 +170,7 @@ A parte que diferencia o projeto de um Excalidraw. Os itens estão na ordem de i
 ### 3.5 Setas ortogonais
 
 - [x] **Feito.** A rota fica em `src/lib/geometry/orthogonalRoute.ts`, e o recálculo, em `refreshArrow` (`bindings.ts`). Detalhes da implementação:
-  - `ArrowElement` tem `routing: "straight" | "curved" | "elbow"`. O tipo é escolhido no painel lateral (`StylePanel`), que vale para as setas selecionadas e para as próximas.
+  - `ArrowElement` tem `routing: "straight" | "curved" | "elbow"`. O tipo é escolhido na barra de estilo (`StyleBar`), que vale para as setas selecionadas e para as próximas.
   - A rota é um menor caminho (Dijkstra) numa grade pequena: as linhas que passam pelas pontas, pelas bordas das formas das pontas (com uma margem de 30 unidades) e pelos corredores entre elas. Cada curva custa o mesmo que 50 unidades de comprimento, então a rota prefere poucas curvas. Ela já contorna as formas das pontas, então a "segunda versão" do plano fica só para outras formas que estejam no caminho.
   - Ponta ligada a um ponto de conexão sai pelo lado desse ponto. Na ligação flutuante, sai do meio do lado virado para a outra ponta. Ponta solta não tem direção obrigatória, então uma seta ortogonal solta vira um "L".
   - **Edição, como no Excalidraw:** cada trecho tem uma alça. Arrastar a alça move o trecho na perpendicular (`moveElbowSegment`), e a seta continua ortogonal. No trecho de uma ponta ligada, a ponta continua presa à forma: entra um trecho curto (até 30 unidades) saindo dela, e o trecho movido vem depois, como um degrau. Numa ponta solta, a própria ponta acompanha o trecho.
@@ -314,8 +313,16 @@ O traço de esboço vem do Excalidraw, mas a interface tem identidade própria (
 
 ### 4.3 Painel de estilo
 
-- [ ] Painel de estilo (contorno, preenchimento, espessura) com o `react-color`, já no visual do item 4.2.
-  - **Começado:** o painel lateral (`src/components/Board/StylePanel/`) já existe, com a seção "Tipo de seta". Ele aparece com a ferramenta de seta ou com setas selecionadas. As próximas seções entram nele.
+- [x] **Feito**, como uma barra flutuante sobre a seleção em vez de um painel fixo. Além do contorno, preenchimento e espessura do plano original, entraram o estilo do preenchimento, o estilo do traço, o esboço e a opacidade, com controles separados para o contorno e o preenchimento. Detalhes da implementação:
+  - **Modelo:** `ElementStyle` tem dois grupos. Contorno: `strokeColor`, `strokeWidth` (1, 2 ou 4), `strokeStyle` (`solid`, `dashed`, `dotted`), `strokeRoughness` (0 limpo, 1 esboço, 2 esboço forte) e `strokeOpacity` (0 a 100). Preenchimento: `fillColor`, `fillStyle` (`hachure`, `cross-hatch`, `solid`), `fillRoughness` e `fillOpacity`. As linhas da hachura são sempre contínuas: um estilo de traço próprio do preenchimento chegou a existir, mas foi tirado por não acrescentar ao visual. A persistência valida todos, então boards salvos antes são descartados.
+  - **O que cada tipo aceita** fica em `src/lib/elements/style.ts` (`supportsStyle`): formas de caixa aceitam tudo; setas, só o contorno; o lápis, cor, espessura e opacidade; o texto, cor e opacidade. `applyStyle` ignora as propriedades que o elemento não aceita, então aplicar a uma seleção mista é seguro.
+  - **Desenho em duas etapas:** as formas de caixa chamam `drawFillAndStroke` (`shapeUtil.ts`), que desenha primeiro o preenchimento (`stroke: "none"`, com `fillRoughness` e `globalAlpha` do preenchimento) e depois o contorno (`strokeOptions`), cada um com as próprias opções. O `renderElement` aplica a opacidade do contorno a tudo o mais (setas, lápis, texto e rótulos) e usa `lineCap: "round"`, que transforma o pontilhado em pontos. Os traços tracejados e pontilhados usam `disableMultiStroke`, para o traço duplo do roughjs não borrá-los. As pontas das setas não herdam o tracejado.
+  - **Estilo atual:** a store guarda `currentStyle`, o estilo das próximas formas. `setStyle(patch)` atualiza o `currentStyle` e os selecionados num passo do histórico. O Canvas aplica o `currentStyle` ao criar qualquer elemento (`withCurrentStyle`).
+  - **Barra flutuante** (`src/components/Board/StyleBar/`): o painel fixo ao lado da toolbar tomava muito espaço do board. A barra tem um botão por grupo ("Contorno", com um anel na cor do traço; "Preenchimento", com a cor; "Seta", com o tipo da seta), e cada um abre um submenu com os controles do grupo. O Canvas a renderiza centralizada acima da caixa da seleção, acima da alça de rotação, e embaixo da seleção quando não cabe em cima. Sem seleção e com uma ferramenta de desenho ativa, ela fica no topo da tela, para escolher o estilo antes de desenhar. Ela some durante qualquer arraste e durante a edição de texto.
+  - **Escopo:** com seleção, os tipos selecionados; sem seleção, o tipo da ferramenta ativa. Os seletores (`selectors.ts`) devolvem o valor comum ou `"mixed"` e caem no `currentStyle` quando nada selecionado aceita a propriedade. No preenchimento, o estilo, o esboço e a opacidade só aparecem quando há cor.
+  - **Caixas aninhadas:** o `Popover` trata como "dentro" qualquer clique que passe por ele na árvore do React (`onPointerDownCapture`), inclusive em caixas filhas renderizadas em portal. Assim, o seletor de cor e o de pontas abrem dentro de um submenu sem fechá-lo. O `Popover` também não sai da tela: à direita, ele troca de lado; embaixo, sobe.
+  - **Cores:** paleta curta no tema (`theme.palette`: tinta, vermelho, verde, azul, âmbar e as versões claras para preenchimento) e um botão de cor livre (com `hasPopup`) que abre um seletor próprio montado com o `CustomPicker`, `Saturation` e `Hue` do `react-color`. O campo hex aplica a cor assim que tiver um hexadecimal válido de 6 caracteres, e marca o campo como inválido antes disso. Os seletores prontos do `react-color` não foram usados, para seguir o visual do projeto.
+  - **Mudanças contínuas** (arrastar no seletor de cor, digitar o hex e mexer na opacidade) usam `setStyle(patch, { record: false })` e um único `commitHistory` no fim (`useStylePreview`, que também registra ao ser desmontado), então cada sessão vira um passo de desfazer.
 
 ### 4.4 Estilo do texto
 

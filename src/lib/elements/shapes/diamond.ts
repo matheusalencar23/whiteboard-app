@@ -1,6 +1,6 @@
 import type { Point } from "../../types";
 import { distanceToPolygonEdge, isPointInPolygon } from "../../geometry/distance";
-import { centeredArea, isFilled, resizeBox, roughOptions, scaleToBorder, type ShapeUtil } from "../shapeUtil";
+import { centeredArea, isFilled, resizeBox, drawFillAndStroke, scaleToBorder, type ShapeUtil } from "../shapeUtil";
 import type { DiamondElement } from "../types";
 
 export function getDiamondVertices(el: DiamondElement): Point[] {
@@ -15,9 +15,9 @@ export function getDiamondVertices(el: DiamondElement): Point[] {
 }
 
 export const diamondUtil: ShapeUtil<DiamondElement> = {
-  draw(el, rc) {
+  draw(el, rc, ctx) {
     const vertices = getDiamondVertices(el).map((p): [number, number] => [p.x, p.y]);
-    rc.polygon(vertices, roughOptions(el.style, el.seed));
+    drawFillAndStroke(ctx, el.style, el.seed, (options) => rc.polygon(vertices, options));
   },
 
   hitTest(el, p, tolerance) {

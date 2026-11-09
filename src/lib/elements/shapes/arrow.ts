@@ -10,7 +10,7 @@ import {
   getArrowheadPoints,
   type ArrowheadGeometry,
 } from "../arrowheads";
-import { baseFields, roughOptions, scalePoints, type ShapeUtil } from "../shapeUtil";
+import { baseFields, scalePoints, strokeOptions, type ShapeUtil } from "../shapeUtil";
 import {
   DEFAULT_ARROWHEADS,
   type ArrowElement,
@@ -295,7 +295,7 @@ export const arrowUtil: ShapeUtil<ArrowElement> = {
     const endHead = getArrowheadGeometry(el, "end");
     const heads = [startHead, endHead].filter((head): head is ArrowheadGeometry => head !== null);
     const points = retreatEnds(getArrowPoints(el), startHead?.retreat ?? 0, endHead?.retreat ?? 0);
-    const options = roughOptions(el.style, el.seed);
+    const options = strokeOptions(el.style, el.seed);
     const clipped = clipArrowheadHoles(el, heads, ctx);
     if (isCurve(el)) {
       ctx.save();
@@ -316,7 +316,7 @@ export const arrowUtil: ShapeUtil<ArrowElement> = {
     }
 
     if (clipped) ctx.restore();
-    const headOptions = { ...options, fill: undefined };
+    const headOptions = { ...options, strokeLineDash: undefined, disableMultiStroke: false };
     for (const head of heads) drawArrowhead(head, rc, headOptions);
   },
 

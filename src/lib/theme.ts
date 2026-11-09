@@ -35,6 +35,17 @@ export interface Theme {
     panel: string;
     tooltip: string;
   };
+  palette: {
+    ink: string;
+    red: string;
+    green: string;
+    blue: string;
+    amber: string;
+    redLight: string;
+    greenLight: string;
+    blueLight: string;
+    amberLight: string;
+  };
 }
 
 const accent = "#5a82d6";
@@ -75,6 +86,17 @@ export const notebookTheme: Theme = {
   shadow: {
     panel: "0 1px 0 rgba(30, 35, 45, 0.04), 0 8px 20px -12px rgba(30, 35, 45, 0.25)",
     tooltip: "0 4px 12px -4px rgba(30, 35, 45, 0.35)",
+  },
+  palette: {
+    ink: "#1f2328",
+    red: "#c9463d",
+    green: "#3a8a5c",
+    blue: "#3f6fc4",
+    amber: "#c98a1b",
+    redLight: "#f4cfcb",
+    greenLight: "#cfe8d8",
+    blueLight: "#d3e0f5",
+    amberLight: "#f5e2bb",
   },
 };
 

@@ -148,10 +148,11 @@ export function renderElement(
   showLabel = true,
 ) {
   const util = getShapeUtil(element);
-  const rotated = element.rotation !== 0;
-  if (rotated) {
+  ctx.save();
+  ctx.globalAlpha = element.style.strokeOpacity / 100;
+  ctx.lineCap = "round";
+  if (element.rotation !== 0) {
     const center = getCenter(element);
-    ctx.save();
     ctx.translate(center.x, center.y);
     ctx.rotate(element.rotation);
     ctx.translate(-center.x, -center.y);
@@ -160,7 +161,7 @@ export function renderElement(
   util.draw(element, rc, ctx);
   if (clipped) ctx.restore();
   if (showLabel) drawLabel(element, ctx);
-  if (rotated) ctx.restore();
+  ctx.restore();
 }
 
 export function hitTestElement(element: BoardElement, point: Point, tolerance: number) {

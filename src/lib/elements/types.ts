@@ -48,6 +48,7 @@ export interface ArrowElement extends BaseElement {
   fixedSegments?: ArrowSegment[];
   startBinding: ArrowBinding | null;
   endBinding: ArrowBinding | null;
+  label?: ShapeLabel;
 }
 
 export interface ArrowSegment {
@@ -90,6 +91,12 @@ export type BoxElement = ElementOfType<BoxElementType>;
 
 export function isBoxElement(element: BoardElement): element is BoxElement {
   return element.type === "rectangle" || element.type === "ellipse" || element.type === "diamond";
+}
+
+export type LabeledElement = BoxElement | ArrowElement;
+
+export function isLabeledElement(element: BoardElement): element is LabeledElement {
+  return isBoxElement(element) || element.type === "arrow";
 }
 
 export const DEFAULT_STYLE: ElementStyle = {

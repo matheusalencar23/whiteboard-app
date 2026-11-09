@@ -1,11 +1,13 @@
 import type { Point } from "../../types";
 import { getBounds, unionBounds } from "../../geometry/bounds";
 import { distance, distanceToPolyline } from "../../geometry/distance";
+import { getPathMidpoint } from "../../geometry/path";
 import type { Options } from "roughjs/bin/core";
 import { baseFields, roughOptions, scalePoints, type ShapeUtil } from "../shapeUtil";
 import type { ArrowElement, ArrowRouting, ArrowSegment } from "../types";
 
 const HEAD_ANGLE = Math.PI / 7;
+const LABEL_AREA_WIDTH = 216;
 
 export function getArrowPoints(el: ArrowElement): Point[] {
   return el.points.map((p) => ({ x: el.x + p.x, y: el.y + p.y }));
@@ -266,5 +268,10 @@ export const arrowUtil: ShapeUtil<ArrowElement> = {
       : { x: el.x, y: el.y, width: el.width, height: el.height };
     const head = getArrowHead(el);
     return head ? unionBounds([box, getBounds(head)]) : box;
+  },
+
+  getLabelArea(el) {
+    const center = getPathMidpoint(getArrowPath(el));
+    return { x: center.x - LABEL_AREA_WIDTH / 2, y: center.y, width: LABEL_AREA_WIDTH, height: 0 };
   },
 };

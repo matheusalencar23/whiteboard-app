@@ -15,6 +15,7 @@ interface TextEditorProps {
   color: string;
   layout: TextEditorLayout;
   viewport: Viewport;
+  onChange?: (text: string) => void;
   onSubmit: (text: string) => void;
 }
 
@@ -24,6 +25,7 @@ export function TextEditor({
   color,
   layout,
   viewport,
+  onChange,
   onSubmit,
 }: TextEditorProps) {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -70,7 +72,10 @@ export function TextEditor({
       value={text}
       wrap={layout.kind === "free" ? "off" : "soft"}
       spellCheck={false}
-      onChange={(e) => setText(e.target.value)}
+      onChange={(e) => {
+        setText(e.target.value);
+        onChange?.(e.target.value);
+      }}
       onKeyDown={handleKeyDown}
       onBlur={submit}
       style={{

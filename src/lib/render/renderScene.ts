@@ -29,6 +29,7 @@ export interface SceneOverlay {
   bindingAnchor: Point | null;
   bindingFixed: boolean;
   frameOverride: SelectionFrame | null;
+  hiddenLabelId: string | null;
 }
 
 const CONNECTION_POINT_RADIUS = 4;
@@ -214,7 +215,7 @@ export function renderScene(
   }
 
   for (const element of elements) {
-    renderElement(element, rc, ctx);
+    renderElement(element, rc, ctx, element.id !== overlay.hiddenLabelId);
   }
   renderOverlay(ctx, overlay, viewport.zoom);
 }

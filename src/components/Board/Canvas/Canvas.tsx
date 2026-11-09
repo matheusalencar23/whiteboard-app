@@ -7,11 +7,11 @@ import type {
   ArrowBinding,
   ArrowElement,
   BoardElement,
-  BoxElement,
   BoxElementType,
+  LabeledElement,
   TextElement,
 } from "../../../lib/elements/types";
-import { isBoxElement } from "../../../lib/elements/types";
+import { isLabeledElement } from "../../../lib/elements/types";
 import {
   containsBounds,
   getBounds,
@@ -135,7 +135,7 @@ type Editing =
       element: TextElement;
       isNew: boolean;
     }
-  | { kind: "label"; element: BoxElement };
+  | { kind: "label"; element: LabeledElement };
 
 function getScreenPoint(e: { nativeEvent: MouseEvent }): Point {
   return { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY };
@@ -196,6 +196,7 @@ export function Canvas() {
   const [selectionBox, setSelectionBox] = useState<Bounds | null>(null);
   const [frameOverride, setFrameOverride] = useState<SelectionFrame | null>(null);
   const [editing, setEditing] = useState<Editing | null>(null);
+  const [editingText, setEditingText] = useState("");
   const [isInteracting, setIsInteracting] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const [spacePressed, setSpacePressed] = useState(false);
@@ -294,10 +295,15 @@ export function Canvas() {
     if (editing?.kind === "text") {
       visible = elements.filter((el) => el.id !== editing.element.id);
     } else if (editing?.kind === "label") {
-      visible = elements.map((el) => (el.id === editing.element.id ? { ...el, label: undefined } : el));
+      const fontSize = editing.element.label?.fontSize ?? LABEL_FONT_SIZE;
+      visible = elements.map((el) =>
+        el.id === editing.element.id && isLabeledElement(el)
+          ? { ...el, label: { text: editingText, fontSize } }
+          : el,
+      );
     }
     return draft ? [...visible, draft] : visible;
-  }, [elements, draft, editing]);
+  }, [elements, draft, editing, editingText]);
 
   const selected = useMemo(() => {
     const ids = new Set(selectedIds);
@@ -336,6 +342,7 @@ export function Canvas() {
         bindingAnchor: bindingHint && (bindingHint.fixed || isInteracting) ? bindingHint.anchor : null,
         bindingFixed: bindingHint?.fixed ?? false,
         frameOverride,
+        hiddenLabelId: editing?.kind === "label" ? editing.element.id : null,
       },
       viewport,
       dpr,
@@ -346,6 +353,7 @@ export function Canvas() {
     selected,
     selectionBox,
     frameOverride,
+    editing,
     showGrid,
     gridStyle,
     isInteracting,
@@ -361,8 +369,9 @@ export function Canvas() {
     setEditing({ kind: "text", element, isNew });
   }
 
-  function startEditingLabel(element: BoxElement) {
+  function startEditingLabel(element: LabeledElement) {
     useBoardStore.getState().setSelection([]);
+    setEditingText(element.label?.text ?? "");
     setEditing({ kind: "label", element });
   }
 
@@ -377,7 +386,7 @@ export function Canvas() {
   function finishEditingLabel(id: string, text: string) {
     const store = useBoardStore.getState();
     const shape = store.elements.find((el) => el.id === id);
-    if (shape && isBoxElement(shape)) {
+    if (shape && isLabeledElement(shape)) {
       const isEmpty = text.trim() === "";
       if (isEmpty && shape.label) {
         store.replaceElement({ ...shape, label: undefined });
@@ -785,6 +794,8 @@ export function Canvas() {
       store.replaceElement(removeArrowPoint(arrow, handle.index, byId));
     } else if (handle.kind === "segment" && isSegmentFixed(arrow, handle.index)) {
       store.replaceElement(releaseElbowSegment(arrow, handle.index, byId));
+    } else if (handle.kind !== "end") {
+      return false;
     }
     return true;
   }
@@ -801,7 +812,7 @@ export function Canvas() {
 
     if (hit?.type === "text") {
       startEditingText(hit, false);
-    } else if (shape && isBoxElement(shape)) {
+    } else if (shape && isLabeledElement(shape)) {
       startEditingLabel(shape);
     } else if (!hit) {
       const text = createText(world);
@@ -840,6 +851,7 @@ export function Canvas() {
           color={editing.element.style.strokeColor}
           layout={editorLayout(editing)}
           viewport={viewport}
+          onChange={setEditingText}
           onSubmit={finishEditing}
         />
       )}

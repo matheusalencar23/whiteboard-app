@@ -15,6 +15,7 @@ Marque os itens com `[x]` conforme forem concluídos.
 - Estado em uma store do zustand. `elements`, `viewport` e as preferências da grade são salvos sozinhos no `localStorage` (`src/lib/persistence.ts`). Durante o desenvolvimento, o formato salvo não tem versão nem migração: se mudar, o board antigo é descartado.
 - Setas ligadas às formas: acompanham quando a forma é movida ou redimensionada, e as pontas podem ser arrastadas para ligar, desligar ou trocar de forma. Toda ponta ligada sai de um ponto de conexão (meio dos lados ou vértices do losango). Soltar sobre um ponto prende a ponta nele. Soltar no corpo da forma deixa a ponta automática: ela sai pelo ponto virado para a outra ponta e troca de lado quando as formas se movem. As duas pontas podem se ligar à mesma forma, formando um laço.
 - Texto dentro das formas: duplo clique num retângulo, elipse ou losango edita um rótulo centralizado, que quebra linha na largura da forma.
+- Texto nas setas: duplo clique numa seta edita um texto no meio do caminho dela, que interrompe a linha e acompanha a seta quando ela é recalculada.
 - Três tipos de seta, escolhidos no painel lateral: reta, curva e ortogonal. Na reta e na curva, a alça no meio de cada trecho cria um ponto que pode ser arrastado, como no Excalidraw. A ortogonal tem rota automática, que sai perpendicular ao lado da forma e contorna as formas das pontas.
 - Painel de estilo ao lado da toolbar, que aparece com a ferramenta de seta ou com setas selecionadas. Por enquanto, só tem o tipo da seta.
 - Grade de fundo em pontos ou linhas, à escolha do usuário. Fica ligada por padrão e é só visual (sem encaixe).
@@ -69,7 +70,7 @@ Esta é a ordem recomendada de trabalho a partir de agora. Ela não segue a nume
 
 ### 3. Etapa 3, na ordem descrita na seção dela
 
-- [ ] Os itens 3.1 (setas ligadas), 3.2 (pontos de conexão) 3.3 (texto dentro das formas), 3.5 (setas ortogonais) e 3.6 (setas curvas, com pontos ajustáveis) estão feitos. O 3.4 (snap e guias) foi descartado, e só a grade de fundo (4.1) ficou. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Do 3.1 ao 3.6, cada item depende do anterior. O 3.7 (texto nas setas) e o 3.8 (formato das pontas) não dependem dos outros e podem ser adiantados. Só a interface do 3.8 espera o painel de estilo (4.3). O 3.9 (lado de saída da seta e laços) corrige problemas das setas ligadas e pode entrar antes do 3.7 e do 3.8. O 3.9 está feito. A ordem combinada segue com o 3.7 e depois o 3.8.
+- [ ] Os itens 3.1 (setas ligadas), 3.2 (pontos de conexão) 3.3 (texto dentro das formas), 3.5 (setas ortogonais) e 3.6 (setas curvas, com pontos ajustáveis) estão feitos. O 3.4 (snap e guias) foi descartado, e só a grade de fundo (4.1) ficou. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Do 3.1 ao 3.6, cada item depende do anterior. O 3.7 (texto nas setas) e o 3.8 (formato das pontas) não dependem dos outros e podem ser adiantados. Só a interface do 3.8 espera o painel de estilo (4.3). O 3.9 (lado de saída da seta e laços) corrige problemas das setas ligadas e pode entrar antes do 3.7 e do 3.8. O 3.9 e o 3.7 estão feitos. A ordem combinada segue com o 3.8.
 
 As outras pendências da etapa 2 (duplicar e copiar/colar) ficam para quando fizerem falta no uso. Nenhuma bloqueia a etapa 3.
 
@@ -192,7 +193,15 @@ A parte que diferencia o projeto de um Excalidraw. Os itens estão na ordem de i
 
 ### 3.7 Texto nas setas
 
-- [ ] **O quê:** duplo clique numa seta abre a edição de um texto que fica no meio dela, como os rótulos de fluxograma ("sim", "não", "envia pedido"). O texto acompanha a seta quando ela muda, inclusive quando é recalculada por estar ligada a formas.
+- [x] **Feito.** Detalhes da implementação:
+  - `ArrowElement` ganhou o `label` opcional das formas. `LabeledElement` e `isLabeledElement` (`types.ts`) juntam formas de caixa e setas onde o rótulo é tratado, e a persistência valida o `label` da seta.
+  - A seta implementa `getLabelArea` como uma faixa de altura zero centrada no meio do caminho (`getPathMidpoint` em `src/lib/geometry/path.ts`, sobre o `getArrowPath`, que já amostra as três rotas). Com isso, `getLabelLayout`, o hit test do texto e o `TextEditor` no modo rótulo funcionam sem caso especial: o texto quebra em 200 unidades (a faixa tem 216, menos a folga de 8 de cada lado) e fica centrado verticalmente no ponto.
+  - A linha é interrompida com `ctx.clip("evenodd")` (um retângulo em volta da seta menos a caixa do texto com 4 de folga), em `renderElement`. Foi escolhido em vez do retângulo com a cor de fundo porque este cobriria a grade.
+  - `getElementBounds` junta a caixa do texto à da seta, então a seleção e a seleção por caixa incluem o texto. Nas formas de caixa isso não é feito, para um rótulo que transborda não mexer na rota ortogonal nem no quadro da seleção múltipla.
+  - Durante a edição, o `TextEditor` avisa cada mudança (`onChange`), e o Canvas desenha a cena com o texto digitado, mas sem desenhá-lo (`hiddenLabelId` no `renderScene`). Assim o recorte da linha acompanha o texto enquanto ele é digitado. Durante a edição, o `getLabelLayout` recebe `keepEmpty` e devolve o layout mesmo com o texto vazio (uma linha de largura zero), para o recorte já existir quando a edição abre e o cursor não sumir atrás de uma seta vertical.
+  - Numa seta selecionada, a alça do meio (ou de um trecho ortogonal não fixado) fica embaixo do texto. O duplo clique nela abre a edição do texto em vez de ser engolido pela alça. Arrastar ali continua criando um ponto, como no Excalidraw.
+  - Ainda falta o opcional de arrastar o texto ao longo da seta.
+- **O quê:** duplo clique numa seta abre a edição de um texto que fica no meio dela, como os rótulos de fluxograma ("sim", "não", "envia pedido"). O texto acompanha a seta quando ela muda, inclusive quando é recalculada por estar ligada a formas.
 - **Como:**
   - `ArrowElement` ganha o mesmo campo opcional `label: { text, fontSize }` das formas (item 3.3), reaproveitando `ShapeLabel`, `wrapText` e o `TextEditor` no modo rótulo.
   - **Posição:** o centro do texto fica no ponto do meio do comprimento da seta, medido ao longo do caminho, não no centro da caixa. Assim continua certo com setas de vários pontos, ortogonais (3.5) e curvas (3.6). Uma função `getPointAtLength` em `src/lib/geometry/` serve às três rotas.

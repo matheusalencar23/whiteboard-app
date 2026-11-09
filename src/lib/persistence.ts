@@ -137,7 +137,8 @@ function isValidElement(value: unknown): value is BoardElement {
         (value.routing === "straight" || value.routing === "elbow" || value.routing === "curved") &&
         isValidSegments(value.fixedSegments) &&
         isValidBinding(value.startBinding) &&
-        isValidBinding(value.endBinding)
+        isValidBinding(value.endBinding) &&
+        isValidLabel(value.label)
       );
     case "freedraw":
       return isValidPoints(value.points);

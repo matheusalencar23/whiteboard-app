@@ -1,11 +1,19 @@
 import type { RoughCanvas } from "roughjs/bin/canvas";
 import type { Point } from "../types";
-import { containsPoint, expandBounds, getBounds, getCenter, getCorners, type Bounds } from "../geometry/bounds";
+import {
+  containsPoint,
+  expandBounds,
+  getBounds,
+  getCenter,
+  getCorners,
+  unionBounds,
+  type Bounds,
+} from "../geometry/bounds";
 import { distance, rotatePoint } from "../geometry/distance";
 import { LINE_HEIGHT, fontString, layoutText } from "../text";
 import { baseFields, type ShapeUtil } from "./shapeUtil";
 import {
-  isBoxElement,
+  isLabeledElement,
   type BoardElement,
   type BoxElementType,
   type ElementOfType,
@@ -41,7 +49,9 @@ export function getElementBox(element: BoardElement): Bounds {
 }
 
 export function getElementBounds(element: BoardElement): Bounds {
-  const box = getShapeUtil(element).getBounds?.(element) ?? getElementBox(element);
+  const shapeBox = getShapeUtil(element).getBounds?.(element) ?? getElementBox(element);
+  const label = element.type === "arrow" ? getLabelLayout(element) : null;
+  const box = label ? unionBounds([shapeBox, label.box]) : shapeBox;
   if (element.rotation === 0) return box;
   const center = getCenter(element);
   return getBounds(getCorners(box).map((p) => rotatePoint(p, center, element.rotation)));
@@ -64,6 +74,8 @@ export function getBorderPoint(element: BoardElement, direction: Point): Point {
 }
 
 const LABEL_PADDING = 8;
+const ARROW_LABEL_GAP = 4;
+const ARROW_CLIP_MARGIN = 50;
 
 export interface LabelLayout {
   lines: string[];
@@ -82,8 +94,9 @@ export function getLabelArea(element: BoardElement): Bounds | null {
   return { x: center.x - width / 2, y: center.y - height / 2, width, height };
 }
 
-export function getLabelLayout(element: BoardElement): LabelLayout | null {
-  if (!isBoxElement(element) || !element.label || element.label.text === "") return null;
+export function getLabelLayout(element: BoardElement, keepEmpty = false): LabelLayout | null {
+  if (!isLabeledElement(element) || !element.label) return null;
+  if (element.label.text === "" && !keepEmpty) return null;
   const area = getLabelArea(element);
   if (!area) return null;
 
@@ -110,10 +123,29 @@ function drawLabel(element: BoardElement, ctx: CanvasRenderingContext2D) {
   ctx.restore();
 }
 
+function clipOutsideArrowLabel(
+  element: BoardElement,
+  ctx: CanvasRenderingContext2D,
+  isEditing: boolean,
+): boolean {
+  if (element.type !== "arrow") return false;
+  const label = getLabelLayout(element, isEditing);
+  if (!label) return false;
+  const outer = expandBounds(getElementBounds(element), ARROW_CLIP_MARGIN + element.style.strokeWidth);
+  const gap = expandBounds(label.box, ARROW_LABEL_GAP);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(outer.x, outer.y, outer.width, outer.height);
+  ctx.rect(gap.x, gap.y, gap.width, gap.height);
+  ctx.clip("evenodd");
+  return true;
+}
+
 export function renderElement(
   element: BoardElement,
   rc: RoughCanvas,
   ctx: CanvasRenderingContext2D,
+  showLabel = true,
 ) {
   const util = getShapeUtil(element);
   const rotated = element.rotation !== 0;
@@ -124,8 +156,10 @@ export function renderElement(
     ctx.rotate(element.rotation);
     ctx.translate(-center.x, -center.y);
   }
+  const clipped = clipOutsideArrowLabel(element, ctx, !showLabel);
   util.draw(element, rc, ctx);
-  drawLabel(element, ctx);
+  if (clipped) ctx.restore();
+  if (showLabel) drawLabel(element, ctx);
   if (rotated) ctx.restore();
 }
 

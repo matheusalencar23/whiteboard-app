@@ -5,6 +5,7 @@ import { IconButton } from "../../../ui/IconButton/IconButton";
 import { Tooltip } from "../../../ui/Tooltip/Tooltip";
 import { useBoardStore } from "../../../store/boardStore";
 import { MAX_ZOOM, MIN_ZOOM } from "../../../lib/viewport";
+import { SHORTCUTS, formatShortcut } from "../shortcuts";
 
 export function ZoomIndicator() {
   const zoom = useBoardStore((s) => s.viewport.zoom);
@@ -21,7 +22,7 @@ export function ZoomIndicator() {
       <IconButton
         icon={LuMinus}
         label="Diminuir zoom"
-        shortcut="Ctrl −"
+        shortcut={formatShortcut(SHORTCUTS.zoomOut.keys)}
         size="sm"
         tooltipSide="top"
         disabled={zoom <= MIN_ZOOM}
@@ -42,11 +43,11 @@ export function ZoomIndicator() {
       >
         {Math.round(zoom * 100)}%
       </button>
-      {anchor && <Tooltip anchor={anchor} side="top" label="Voltar a 100%" shortcut="Ctrl 0" />}
+      {anchor && <Tooltip anchor={anchor} side="top" label="Voltar a 100%" shortcut={formatShortcut(SHORTCUTS.zoomReset.keys)} />}
       <IconButton
         icon={LuPlus}
         label="Aumentar zoom"
-        shortcut="Ctrl +"
+        shortcut={formatShortcut(SHORTCUTS.zoomIn.keys)}
         size="sm"
         tooltipSide="top"
         disabled={zoom >= MAX_ZOOM}

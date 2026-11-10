@@ -25,6 +25,7 @@ import { AUTO_COLOR, ColorField, type Swatch } from "./ColorField";
 import { selectTextScope, styleSelectors, textSelectors } from "./selectors";
 import { OpacityField, OptionGroup, type Option } from "./StyleControls";
 import { useStylePreview } from "./useStylePreview";
+import { SHORTCUTS, formatShortcut } from "../shortcuts";
 
 const { palette } = theme;
 
@@ -155,7 +156,7 @@ export function TextControls() {
           <IconButton
             icon={LuBold}
             label="Negrito"
-            shortcut="Ctrl+B"
+            shortcut={formatShortcut(SHORTCUTS.bold.keys)}
             size="sm"
             tooltipSide="bottom"
             active={bold === true}
@@ -164,7 +165,7 @@ export function TextControls() {
           <IconButton
             icon={LuItalic}
             label="Itálico"
-            shortcut="Ctrl+I"
+            shortcut={formatShortcut(SHORTCUTS.italic.keys)}
             size="sm"
             tooltipSide="bottom"
             active={italic === true}

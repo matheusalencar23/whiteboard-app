@@ -23,6 +23,7 @@ Marque os itens com `[x]` conforme forem concluídos.
 - Pontas das setas escolhidas de forma independente no início e no fim, com 16 formatos inspirados no draw.io: básicas (nenhuma, seta aberta, barra, X), UML (triângulo, losango e círculo, cheios ou vazados) e a notação pé de galinha do diagrama entidade-relacionamento.
 - Barra de estilo flutuante acima da seleção (ou no topo, com uma ferramenta de desenho ativa), com submenus para o contorno (cor, espessura, estilo do traço, esboço, opacidade), o preenchimento (cor, hachura ou sólido, esboço, opacidade) e, nas setas, o tipo e as pontas. O estilo escolhido vale para os próximos elementos.
 - Grade de fundo em pontos ou linhas, à escolha do usuário. Fica ligada por padrão e é só visual (sem encaixe).
+- Ajuda pelo botão de interrogação no canto inferior direito (ou `?`): passo a passo das ferramentas, diagramas, texto, estilo e navegação, e a lista de atalhos.
 - Identidade visual própria ("caderno técnico"): branco, cinzas e destaque azul suave, com todos os valores em `src/lib/theme.ts`.
 
 ### Atalhos
@@ -39,6 +40,7 @@ Marque os itens com `[x]` conforme forem concluídos.
 | Negrito / itálico no texto selecionado | `Ctrl+B` / `Ctrl+I` |
 | Aumentar / diminuir o texto selecionado | `Ctrl+Shift+>` / `Ctrl+Shift+<` |
 | Mostrar / esconder a grade | `G` |
+| Abrir / fechar a ajuda | `?` |
 | Alternar a grade entre pontos e linhas | `Shift+G` |
 | Manter proporção / quadrado / seta em 45° | Segurar `Shift` ao redimensionar ou desenhar |
 | Girar em passos de 15° | Segurar `Shift` ao girar |
@@ -77,13 +79,13 @@ Esta é a ordem recomendada de trabalho a partir de agora. Ela não segue a nume
 
 ### 3. Etapa 3, na ordem descrita na seção dela
 
-- [x] Os itens 3.1 (setas ligadas), 3.2 (pontos de conexão) 3.3 (texto dentro das formas), 3.5 (setas ortogonais) e 3.6 (setas curvas, com pontos ajustáveis) estão feitos. O 3.4 (snap e guias) foi descartado, e só a grade de fundo (4.1) ficou. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Do 3.1 ao 3.6, cada item depende do anterior. O 3.7 (texto nas setas) e o 3.8 (formato das pontas) não dependem dos outros e podem ser adiantados. Só a interface do 3.8 espera o painel de estilo (4.3). O 3.9 (lado de saída da seta e laços) corrige problemas das setas ligadas e pode entrar antes do 3.7 e do 3.8. O 3.9, o 3.7 e o 3.8 estão feitos, e a etapa 3 está completa.
+- [ ] Os itens 3.1 (setas ligadas), 3.2 (pontos de conexão) 3.3 (texto dentro das formas), 3.5 (setas ortogonais) e 3.6 (setas curvas, com pontos ajustáveis) estão feitos. O 3.4 (snap e guias) foi descartado, e só a grade de fundo (4.1) ficou. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Do 3.1 ao 3.6, cada item depende do anterior. O 3.7 (texto nas setas) e o 3.8 (formato das pontas) não dependem dos outros e podem ser adiantados. Só a interface do 3.8 espera o painel de estilo (4.3). O 3.9 (lado de saída da seta e laços) corrige problemas das setas ligadas e pode entrar antes do 3.7 e do 3.8. O 3.9, o 3.7 e o 3.8 estão feitos. Falta o 3.10 (biblioteca de formas prontas), acrescentado depois, que é grande e pode ser dividido por grupo (fluxograma primeiro, depois ER e UML).
 
 As outras pendências da etapa 2 (duplicar e copiar/colar) ficam para quando fizerem falta no uso. Nenhuma bloqueia a etapa 3.
 
 ### 4. Etapa 4, na ordem da seção dela
 
-- [ ] Os itens 4.1 a 4.6 estão feitos. Falta o 4.7 (ajuda com o passo a passo e os atalhos), que é o próximo. Depois dele, a etapa 5 (exportar e importar).
+- [x] Os itens 4.1 a 4.7 estão feitos, e a etapa 4 está completa.
 
 ## 1. Fundação
 
@@ -283,6 +285,22 @@ Dois pontos, que podem ser feitos separados. Os dois mexem em `bindings.ts` e na
   - Mover a forma move o laço inteiro junto. Isso já sai do `updateBoundArrows`, mas a seta precisa mover os pontos do meio também, e não só as pontas. Conferir.
 - **Por quê:** laços são comuns em fluxogramas (repetições, estados que voltam para si mesmos), e hoje não há como fazer um sem deixar uma ponta solta.
 
+### 3.10 Biblioteca de formas prontas
+
+- [ ] **O quê:** um painel com formas prontas agrupadas por tipo de diagrama, como as bibliotecas do draw.io. O usuário arrasta (ou clica) uma forma do painel para o quadro, e ela já vem com o desenho, o tamanho, os pontos de conexão e os campos de texto certos. Grupos iniciais:
+  - **Fluxograma:** processo (retângulo), decisão (losango), início/fim (terminal arredondado), entrada/saída (paralelogramo), documento, banco de dados (cilindro), subprocesso, conector (círculo pequeno) e nota.
+  - **UML:** classe (nome, atributos e métodos em compartimentos), interface, ator (boneco), caso de uso (elipse), pacote, nota com canto dobrado, e os elementos de sequência (participante com linha de vida e ativação).
+  - **Entidade-relacionamento:** entidade (título e lista de atributos, com marcação de chave), entidade fraca, relacionamento (losango) e atributo (elipse). Combina com as pontas pé de galinha do item 3.8.
+  - **Outros (decidir na hora):** formas básicas extras (triângulo, hexágono, estrela, nuvem, seta grossa) e contêineres (raia, grupo com título).
+- **Como:**
+  - **Formas novas no modelo:** cada desenho novo vira um tipo na união `BoardElement` com o seu `ShapeUtil` (`draw`, `hitTest`, `resize`, `getBorderOffset`, `getConnectionPoints` e `getLabelArea`), como as formas atuais. Para não multiplicar módulos, avaliar um tipo genérico (por exemplo, `shape` com um campo `kind`) cujo contorno vem de uma função de caminho por formato, desenhado com o `roughjs` (`rc.path` ou `rc.polygon`), para manter o traço de esboço e a ligação das setas.
+  - **Formas com compartimentos** (classe UML, entidade ER): precisam de mais de um campo de texto. O rótulo atual (`label`) é um só, então o modelo ganha uma lista de seções (`compartments`, cada uma com texto e altura) e o duplo clique edita a seção sob o cursor. A altura de cada seção cresce com o texto.
+  - **Modelos compostos:** o que for melhor como um conjunto de elementos simples (por exemplo, uma linha de vida da sequência, ou um ator com o nome embaixo) entra como um modelo que cria vários elementos de uma vez. Depende de agrupar elementos, que ainda não existe; até lá, preferir formas de um elemento só.
+  - **Painel:** uma barra lateral recolhível (ou um botão na toolbar que abre um `Popover` grande) com busca e os grupos em seções recolhíveis. Cada item mostra uma prévia desenhada com o mesmo `draw` do canvas num `<canvas>` pequeno, ou um SVG gerado da mesma geometria, como os ícones das pontas das setas. O visual segue a identidade própria (item 4.2).
+  - **Inserção:** arrastar do painel e soltar no quadro (convertendo o ponto com `screenToWorld`), ou clicar para inserir no centro da tela. A forma nova usa o `currentStyle` e fica selecionada, como as criadas pelas ferramentas.
+  - **Registro:** um catálogo único (`src/lib/elements/library.ts`) com id, nome, grupo, palavras de busca e a função que cria o elemento, para o painel e a busca lerem do mesmo lugar.
+- **Por quê:** é a parte do draw.io que mais acelera montar diagramas. Hoje um fluxograma ou um diagrama ER precisa ser montado com retângulos, losangos e elipses soltos, e formas como cilindro, documento, classe UML ou ator não existem.
+
 ## 4. Visual
 
 O traço de esboço vem do Excalidraw, mas a interface tem identidade própria (veja as [decisões tomadas](#decisões-tomadas)).
@@ -382,15 +400,12 @@ O traço de esboço vem do Excalidraw, mas a interface tem identidade própria (
 
 ### 4.7 Ajuda: como usar e atalhos
 
-- [ ] **O quê:** um botão com ícone de interrogação (`LuCircleHelp`) no canto inferior direito, ao lado do indicador de zoom, que abre um modal com um passo a passo de uso da aplicação: o que cada ferramenta faz, como ligar setas às formas, editar texto, usar a barra de estilo, navegar pelo board, e a lista de atalhos.
-- **Como:**
-  - **Primitivo novo `Modal`** em `src/ui/`: renderizado num portal, com fundo escurecido, título, botão de fechar, fechamento por `Esc` e por clique fora (com `stopPropagation` no `Esc`, como o `Popover`, para não limpar a seleção), foco preso dentro dele enquanto aberto e devolvido ao botão ao fechar, `role="dialog"` e `aria-modal`. Cores, raios e sombras vêm do tema.
-  - **Componente `HelpDialog`** em `src/components/Board/`, aberto pelo botão. O conteúdo é dividido em seções curtas (por exemplo: "Primeiros passos", "Ferramentas", "Diagramas", "Texto", "Estilo", "Navegação" e "Atalhos"), com abas ou uma coluna lateral de seções se o texto ficar longo.
-  - **Fonte única dos atalhos:** a lista de ferramentas e teclas vem de `TOOLS` (`tools.ts`), como na toolbar, para a ajuda não ficar desatualizada. Os demais atalhos (desfazer, grade, zoom, texto) passam para uma lista de definições compartilhada entre o `useShortcuts`, os tooltips e a ajuda, em vez de ficarem escritos em três lugares.
-  - **Atalho:** `?` (`Shift+/`) abre e fecha a ajuda, ignorado quando se está digitando (`isTypingTarget`).
-  - **Primeira visita (decidir na hora):** abrir a ajuda sozinha no primeiro acesso, guardando no `localStorage` que ela já foi vista, ou só destacar o botão.
-  - O botão usa o `IconButton`, com tooltip para cima, e fica na mesma superfície do indicador de zoom ou numa superfície própria logo ao lado.
-- **Por quê:** a aplicação já tem bastante coisa que não aparece sozinha (duplo clique para texto, pontos de conexão, Shift para proporção e ângulos, atalhos da grade e do texto). Hoje isso só é descoberto pelos tooltips ou lendo este roadmap.
+- [x] **Feito.** Detalhes da implementação:
+  - **Botão:** `HelpButton` (`src/components/Board/Help/`), com `LuCircleHelp`, numa superfície própria ao lado do indicador de zoom. Abre o `HelpDialog`. O estado `helpOpen` fica na store (não é salvo), para o atalho `?` do `useShortcuts` abrir e fechar a ajuda.
+  - **Primitivo `Modal`** (`src/ui/Modal/`): portal com fundo escurecido (token `color.backdrop`), título, botão de fechar, `role="dialog"` e `aria-modal`. Fecha com `Esc` (ou as teclas de `closeKeys`; a ajuda também fecha com `?`) e com clique no fundo. O foco vai para o diálogo ao abrir, fica preso nele com Tab e volta ao elemento anterior ao fechar. O `onKeyDown` do diálogo faz `stopPropagation` de toda tecla, então os atalhos do board (`Delete`, Espaço, ferramentas) não agem por trás do modal.
+  - **Conteúdo** (`helpSections.tsx`): sete seções numa coluna lateral de abas: Primeiros passos, Ferramentas, Diagramas, Texto, Estilo, Navegação e Atalhos. A altura do modal é fixa para não pular ao trocar de seção. Em telas estreitas, a coluna mostra só os ícones.
+  - **Fonte única dos atalhos:** `src/components/Board/shortcuts.ts` lista os atalhos (nome e teclas) e `formatShortcut` monta o texto dos tooltips (com `+` de junção, ou espaço quando uma das teclas é `+` ou `−`). Toolbar, indicador de zoom, barra de texto e ajuda leem dessa lista. As ferramentas continuam vindo de `TOOLS`, e a descrição de cada uma fica num `Record<Tool, string>`, que faz o TypeScript reclamar se uma ferramenta nova ficar sem texto. O tratamento das teclas no `useShortcuts` continua escrito à mão, porque cada atalho testa o evento de um jeito (`e.key`, `e.code`, modificadores); ao mudar um atalho, mudar os dois.
+  - **Primeira visita:** a ajuda não abre sozinha. O botão fica sempre à vista no canto, e o tooltip mostra o atalho.
 
 ## 5. Persistência
 

@@ -6,6 +6,7 @@ import { Divider } from "../../../ui/Divider/Divider";
 import { IconButton } from "../../../ui/IconButton/IconButton";
 import { useBoardStore } from "../../../store/boardStore";
 import type { GridStyle } from "../../../lib/render/grid";
+import { SHORTCUTS, formatShortcut } from "../shortcuts";
 
 const GRID_OPTIONS: { style: GridStyle; label: string; icon: IconType }[] = [
   { style: "dots", label: "Grade em pontos", icon: LuGrip },
@@ -47,12 +48,12 @@ export function Toolbar() {
 
       <Divider />
 
-      <IconButton icon={LuUndo2} label="Desfazer" shortcut="Ctrl+Z" disabled={!canUndo} onClick={undo} />
-      <IconButton icon={LuRedo2} label="Refazer" shortcut="Ctrl+Shift+Z" disabled={!canRedo} onClick={redo} />
+      <IconButton icon={LuUndo2} label="Desfazer" shortcut={formatShortcut(SHORTCUTS.undo.keys)} disabled={!canUndo} onClick={undo} />
+      <IconButton icon={LuRedo2} label="Refazer" shortcut={formatShortcut(SHORTCUTS.redo.keys)} disabled={!canRedo} onClick={redo} />
       <IconButton
         icon={LuTrash2}
         label="Apagar seleção"
-        shortcut="Delete"
+        shortcut={formatShortcut(SHORTCUTS.delete.keys)}
         disabled={!hasSelection}
         onClick={() => deleteElements(useBoardStore.getState().selectedIds)}
       />
@@ -66,7 +67,7 @@ export function Toolbar() {
             key={style}
             icon={icon}
             label={label}
-            shortcut={gridStyle === style ? "G" : "Shift+G"}
+            shortcut={formatShortcut((gridStyle === style ? SHORTCUTS.toggleGrid : SHORTCUTS.cycleGrid).keys)}
             active={active}
             activeMarker
             onClick={() => (active ? toggleGrid() : setGridStyle(style))}

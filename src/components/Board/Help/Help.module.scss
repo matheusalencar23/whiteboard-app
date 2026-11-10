@@ -1,0 +1,230 @@
+.button {
+    padding: 4px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-panel);
+}
+
+.dialog {
+    height: min(600px, 100%);
+}
+
+.nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex-shrink: 0;
+    width: 196px;
+    padding: 10px;
+    border-right: 1px solid var(--color-border);
+    background: var(--color-surface-sunken);
+    overflow-y: auto;
+}
+
+.tab {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 13px;
+    font-weight: 500;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+
+    svg {
+        flex-shrink: 0;
+        font-size: 16px;
+    }
+
+    &:hover {
+        background: var(--color-surface-hover);
+        color: var(--color-text);
+    }
+
+    &[aria-selected="true"] {
+        background: var(--color-accent-soft);
+        color: var(--color-accent);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--color-accent);
+        outline-offset: -2px;
+    }
+}
+
+.panel {
+    flex: 1;
+    min-width: 0;
+    padding: 18px 22px 22px;
+    overflow-y: auto;
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.panelTitle {
+    margin-bottom: 12px;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.steps,
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-left: 20px;
+
+    li::marker {
+        color: var(--color-text-muted);
+    }
+
+    strong {
+        font-weight: 600;
+    }
+}
+
+.note {
+    margin-top: 16px;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    background: var(--color-accent-soft);
+    color: var(--color-text);
+    font-size: 13px;
+}
+
+.tools {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    list-style: none;
+}
+
+.tool {
+    display: flex;
+    gap: 12px;
+}
+
+.toolIcon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: 16px;
+}
+
+.toolText {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    color: var(--color-text-muted);
+}
+
+.toolName {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-text);
+    font-weight: 600;
+}
+
+.groups {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.groupTitle {
+    margin-bottom: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--color-border);
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    dt {
+        font-size: 13px;
+    }
+
+    dd {
+        flex-shrink: 0;
+    }
+}
+
+.keys {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    vertical-align: middle;
+}
+
+.combo {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.or {
+    margin-right: 3px;
+    color: var(--color-text-muted);
+    font-size: 12px;
+}
+
+.key {
+    display: inline-block;
+    min-width: 22px;
+    padding: 1px 6px;
+    border: 1px solid var(--color-border-strong);
+    border-bottom-width: 2px;
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 18px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+@media (max-width: 620px) {
+    .nav {
+        width: 52px;
+        padding: 8px 6px;
+    }
+
+    .tab {
+        justify-content: center;
+        padding: 8px;
+        font-size: 0;
+    }
+
+    .row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+}

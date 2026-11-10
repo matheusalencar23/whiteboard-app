@@ -43,6 +43,12 @@ export function useShortcuts() {
 
       if (e.altKey) return;
 
+      if (e.key === "?") {
+        store.setHelpOpen(!store.helpOpen);
+        e.preventDefault();
+        return;
+      }
+
       if (key === "delete" || key === "backspace") {
         store.deleteElements(store.selectedIds);
       } else if (key === "escape") {

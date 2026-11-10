@@ -12,6 +12,7 @@ export interface Theme {
     accent: string;
     accentSoft: string;
     accentContrast: string;
+    backdrop: string;
   };
   canvas: {
     selection: string;
@@ -37,6 +38,7 @@ export interface Theme {
   shadow: {
     panel: string;
     tooltip: string;
+    modal: string;
   };
   palette: {
     ink: string;
@@ -67,6 +69,7 @@ export const notebookTheme: Theme = {
     accent,
     accentSoft: "#e8eefa",
     accentContrast: "#ffffff",
+    backdrop: "rgba(30, 35, 45, 0.28)",
   },
   canvas: {
     selection: accent,
@@ -92,6 +95,7 @@ export const notebookTheme: Theme = {
   shadow: {
     panel: "0 1px 0 rgba(30, 35, 45, 0.04), 0 8px 20px -12px rgba(30, 35, 45, 0.25)",
     tooltip: "0 4px 12px -4px rgba(30, 35, 45, 0.35)",
+    modal: "0 2px 0 rgba(30, 35, 45, 0.04), 0 24px 48px -16px rgba(30, 35, 45, 0.35)",
   },
   palette: {
     ink: "#1f2328",

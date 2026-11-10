@@ -41,6 +41,7 @@ export interface BoardState {
   currentTextStyle: TextStyle;
   showGrid: boolean;
   gridStyle: GridStyle;
+  helpOpen: boolean;
   past: BoardElement[][];
   future: BoardElement[][];
 
@@ -65,6 +66,7 @@ export interface BoardState {
   toggleGrid: () => void;
   setGridStyle: (style: GridStyle) => void;
   cycleGridStyle: () => void;
+  setHelpOpen: (open: boolean) => void;
   panBy: (dx: number, dy: number) => void;
   zoomAt: (screenPoint: Point, factor: number) => void;
   stepZoom: (direction: 1 | -1) => void;
@@ -99,6 +101,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
   currentTextStyle: DEFAULT_TEXT_STYLE,
   showGrid: saved?.showGrid ?? DEFAULT_PREFERENCES.showGrid,
   gridStyle: saved?.gridStyle ?? DEFAULT_PREFERENCES.gridStyle,
+  helpOpen: false,
   past: [],
   future: [],
 
@@ -269,6 +272,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
       const index = GRID_STYLES.indexOf(state.gridStyle);
       return { gridStyle: GRID_STYLES[(index + 1) % GRID_STYLES.length], showGrid: true };
     }),
+  setHelpOpen: (helpOpen) => set({ helpOpen }),
   panBy: (dx, dy) => set((state) => ({ viewport: panBy(state.viewport, dx, dy) })),
   zoomAt: (screenPoint, factor) =>
     set((state) => ({ viewport: zoomAt(state.viewport, screenPoint, factor) })),

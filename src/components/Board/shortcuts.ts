@@ -21,6 +21,7 @@ export const SHORTCUTS = {
   confirmText: { label: "Terminar a edição do texto", keys: ["Ctrl", "Enter"] },
   saveFile: { label: "Salvar em arquivo", keys: ["Ctrl", "S"] },
   openFile: { label: "Abrir arquivo", keys: ["Ctrl", "O"] },
+  exportImage: { label: "Exportar imagem", keys: ["Ctrl", "Shift", "E"] },
   help: { label: "Ajuda", keys: ["?"] },
 } satisfies Record<string, Shortcut>;
 

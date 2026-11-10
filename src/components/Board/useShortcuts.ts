@@ -33,6 +33,7 @@ export function useShortcuts() {
         else if (key === "-" || key === "_") store.stepZoom(-1);
         else if (key === "0") store.resetZoom();
         else if (key === "s" && !e.shiftKey) exportBoard();
+        else if (key === "e" && e.shiftKey) store.setExportOpen(true);
         else if (key === "o" && !e.shiftKey) void importBoard();
         else if (key === "z" && !e.shiftKey) store.undo();
         else if ((key === "z" && e.shiftKey) || key === "y") store.redo();

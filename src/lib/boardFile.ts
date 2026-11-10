@@ -13,9 +13,18 @@ function isAllowedFileChar(char: string): boolean {
   return char.charCodeAt(0) >= 32 && !FORBIDDEN_FILE_CHARS.has(char);
 }
 
-export function boardFileName(name: string): string {
+export function safeFileName(name: string, extension: string): string {
   const safe = Array.from(name).filter(isAllowedFileChar).join("").replace(/^[\s.]+|[\s.]+$/g, "");
-  return `${safe || DEFAULT_BOARD_NAME}${BOARD_FILE_EXTENSION}`;
+  return `${safe || DEFAULT_BOARD_NAME}${extension}`;
+}
+
+export function downloadBlob(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 function nameFromFileName(fileName: string): string {
@@ -27,12 +36,7 @@ function nameFromFileName(fileName: string): string {
 
 export function downloadBoardFile(board: BoardFile): void {
   const blob = new Blob([serializeBoardFile(board)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = boardFileName(board.name);
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 0);
+  downloadBlob(blob, safeFileName(board.name, BOARD_FILE_EXTENSION));
 }
 
 export function pickBoardFile(): Promise<File | null> {

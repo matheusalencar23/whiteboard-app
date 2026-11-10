@@ -33,7 +33,8 @@ export const HELP_SECTIONS: HelpSection[] = [
           nele permite renomear. Para levar o board a outro lugar, use{" "}
           <Keys combos={[["Ctrl", "S"]]} /> para salvar um arquivo <code>.whiteboard.json</code> com esse nome e{" "}
           <Keys combos={[["Ctrl", "O"]]} /> (ou arraste o arquivo para o quadro) para abri-lo. Abrir um arquivo troca o
-          board atual, e <Keys combos={[["Ctrl", "Z"]]} /> volta ao anterior.
+          board atual, e <Keys combos={[["Ctrl", "Z"]]} /> volta ao anterior. Para uma imagem PNG ou SVG, use o botão de
+          exportar imagem ou <Keys combos={[["Ctrl", "Shift", "E"]]} />.
         </p>
       </>
     ),

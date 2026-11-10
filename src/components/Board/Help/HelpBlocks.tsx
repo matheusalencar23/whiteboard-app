@@ -35,7 +35,7 @@ const SHORTCUT_GROUPS: { title: string; rows: ShortcutRow[] }[] = [
   },
   {
     title: "Arquivo",
-    rows: [SHORTCUTS.saveFile, SHORTCUTS.openFile].map(fromShortcut),
+    rows: [SHORTCUTS.saveFile, SHORTCUTS.openFile, SHORTCUTS.exportImage].map(fromShortcut),
   },
   {
     title: "Texto",

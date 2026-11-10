@@ -26,6 +26,7 @@ export interface Theme {
     gridLineMajor: string;
     measurementFill: string;
     measurementText: string;
+    exportBackground: string;
   };
   font: {
     ui: string;
@@ -85,6 +86,7 @@ export const notebookTheme: Theme = {
     gridLineMajor: "rgba(60, 70, 90, 0.12)",
     measurementFill: accent,
     measurementText: "#ffffff",
+    exportBackground: "#ffffff",
   },
   font: {
     ui: '"IBM Plex Sans", system-ui, sans-serif',

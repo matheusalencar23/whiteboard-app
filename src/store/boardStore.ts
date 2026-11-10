@@ -49,6 +49,7 @@ export interface BoardState {
   showGrid: boolean;
   gridStyle: GridStyle;
   helpOpen: boolean;
+  exportOpen: boolean;
   notice: Notice | null;
   past: BoardElement[][];
   future: BoardElement[][];
@@ -77,6 +78,7 @@ export interface BoardState {
   setGridStyle: (style: GridStyle) => void;
   cycleGridStyle: () => void;
   setHelpOpen: (open: boolean) => void;
+  setExportOpen: (open: boolean) => void;
   showNotice: (message: string, tone?: Notice["tone"]) => void;
   dismissNotice: (id: number) => void;
   panBy: (dx: number, dy: number) => void;
@@ -117,6 +119,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
   showGrid: saved?.showGrid ?? DEFAULT_PREFERENCES.showGrid,
   gridStyle: saved?.gridStyle ?? DEFAULT_PREFERENCES.gridStyle,
   helpOpen: false,
+  exportOpen: false,
   notice: null,
   past: [],
   future: [],
@@ -302,6 +305,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
       return { gridStyle: GRID_STYLES[(index + 1) % GRID_STYLES.length], showGrid: true };
     }),
   setHelpOpen: (helpOpen) => set({ helpOpen }),
+  setExportOpen: (exportOpen) => set({ exportOpen }),
   showNotice: (message, tone = "info") => set({ notice: { id: ++noticeCount, message, tone } }),
   dismissNotice: (id) => set((state) => (state.notice?.id === id ? { notice: null } : {})),
   panBy: (dx, dy) => set((state) => ({ viewport: panBy(state.viewport, dx, dy) })),

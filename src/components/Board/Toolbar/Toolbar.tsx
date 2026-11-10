@@ -1,5 +1,5 @@
 import type { IconType } from "react-icons";
-import { LuDownload, LuFolderOpen, LuGrid3X3, LuGrip, LuRedo2, LuTrash2, LuUndo2 } from "react-icons/lu";
+import { LuDownload, LuFolderOpen, LuImageDown, LuGrid3X3, LuGrip, LuRedo2, LuTrash2, LuUndo2 } from "react-icons/lu";
 import styles from "./Toolbar.module.scss";
 import { TOOLS } from "./tools";
 import { Divider } from "../../../ui/Divider/Divider";
@@ -8,6 +8,7 @@ import { useBoardStore } from "../../../store/boardStore";
 import type { GridStyle } from "../../../lib/render/grid";
 import { SHORTCUTS, formatShortcut } from "../shortcuts";
 import { exportBoard, importBoard } from "../boardFileActions";
+import { ExportDialog } from "../Export/ExportDialog";
 
 const GRID_OPTIONS: { style: GridStyle; label: string; icon: IconType }[] = [
   { style: "dots", label: "Grade em pontos", icon: LuGrip },
@@ -31,6 +32,8 @@ export function Toolbar() {
   const gridStyle = useBoardStore((s) => s.gridStyle);
   const toggleGrid = useBoardStore((s) => s.toggleGrid);
   const setGridStyle = useBoardStore((s) => s.setGridStyle);
+  const exportOpen = useBoardStore((s) => s.exportOpen);
+  const setExportOpen = useBoardStore((s) => s.setExportOpen);
 
   return (
     <nav className={styles.toolbar} aria-label="Ferramentas">
@@ -90,6 +93,15 @@ export function Toolbar() {
         shortcut={formatShortcut(SHORTCUTS.saveFile.keys)}
         onClick={exportBoard}
       />
+      <IconButton
+        icon={LuImageDown}
+        label={SHORTCUTS.exportImage.label}
+        shortcut={formatShortcut(SHORTCUTS.exportImage.keys)}
+        hasPopup
+        active={exportOpen}
+        onClick={() => setExportOpen(!exportOpen)}
+      />
+      {exportOpen && <ExportDialog onClose={() => setExportOpen(false)} />}
     </nav>
   );
 }

@@ -10,7 +10,7 @@ import {
   type Bounds,
 } from "../geometry/bounds";
 import { distance, rotatePoint } from "../geometry/distance";
-import { LINE_HEIGHT, fontString, layoutText } from "../text";
+import { alignedX, fontString, layoutText, lineHeight } from "../text";
 import { baseFields, type ShapeUtil } from "./shapeUtil";
 import {
   isLabeledElement,
@@ -18,13 +18,15 @@ import {
   type BoxElementType,
   type ElementOfType,
   type ElementType,
+  type LabeledElement,
+  type TextStyle,
 } from "./types";
 import { rectangleUtil } from "./shapes/rectangle";
 import { ellipseUtil } from "./shapes/ellipse";
 import { diamondUtil } from "./shapes/diamond";
 import { arrowUtil } from "./shapes/arrow";
 import { freedrawUtil } from "./shapes/freedraw";
-import { textUtil } from "./shapes/text";
+import { resolveTextColor, textUtil } from "./shapes/text";
 
 const shapeUtils: { [K in ElementType]: ShapeUtil<ElementOfType<K>> } = {
   rectangle: rectangleUtil,
@@ -79,9 +81,30 @@ const ARROW_CLIP_MARGIN = 50;
 
 export interface LabelLayout {
   lines: string[];
-  fontSize: number;
+  textStyle: TextStyle;
   area: Bounds;
   box: Bounds;
+}
+
+export function getLabelTextStyle(element: LabeledElement, textStyle: TextStyle): TextStyle {
+  if (element.type !== "arrow") return textStyle;
+  return { ...textStyle, align: "center", verticalAlign: "middle" };
+}
+
+function alignInArea(area: Bounds, size: { width: number; height: number }, style: TextStyle): Bounds {
+  const x =
+    style.align === "left"
+      ? area.x
+      : style.align === "right"
+        ? area.x + area.width - size.width
+        : area.x + (area.width - size.width) / 2;
+  const y =
+    style.verticalAlign === "top"
+      ? area.y
+      : style.verticalAlign === "bottom"
+        ? area.y + area.height - size.height
+        : area.y + (area.height - size.height) / 2;
+  return { x, y, ...size };
 }
 
 export function getLabelArea(element: BoardElement): Bounds | null {
@@ -100,26 +123,25 @@ export function getLabelLayout(element: BoardElement, keepEmpty = false): LabelL
   const area = getLabelArea(element);
   if (!area) return null;
 
-  const { text, fontSize } = element.label;
-  const { lines, width, height } = layoutText(text, fontSize, area.width);
-  const center = getCenter(area);
-  const box = { x: center.x - width / 2, y: center.y - height / 2, width, height };
-  return { lines, fontSize, area, box };
+  const textStyle = getLabelTextStyle(element, element.label.textStyle);
+  const { lines, width, height } = layoutText(element.label.text, textStyle, area.width);
+  const box = alignInArea(area, { width, height }, textStyle);
+  return { lines, textStyle, area, box };
 }
 
 function drawLabel(element: BoardElement, ctx: CanvasRenderingContext2D) {
   const layout = getLabelLayout(element);
   if (!layout) return;
-  const { lines, fontSize, box } = layout;
-  const centerX = box.x + box.width / 2;
-  const lineHeight = fontSize * LINE_HEIGHT;
+  const { lines, textStyle, box } = layout;
+  const x = alignedX(textStyle.align, box.x, box.width);
+  const step = lineHeight(textStyle);
 
   ctx.save();
-  ctx.font = fontString(fontSize);
-  ctx.fillStyle = element.style.strokeColor;
-  ctx.textAlign = "center";
+  ctx.font = fontString(textStyle);
+  ctx.fillStyle = resolveTextColor(textStyle, element);
+  ctx.textAlign = textStyle.align;
   ctx.textBaseline = "middle";
-  lines.forEach((line, i) => ctx.fillText(line, centerX, box.y + lineHeight * (i + 0.5)));
+  lines.forEach((line, i) => ctx.fillText(line, x, box.y + step * (i + 0.5)));
   ctx.restore();
 }
 

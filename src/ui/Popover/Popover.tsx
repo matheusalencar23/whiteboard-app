@@ -70,7 +70,9 @@ export function Popover({ anchor, side = "bottom", boundary = null, onClose, chi
       if (!inside) onClose();
     }
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      onClose();
     }
     document.addEventListener("pointerdown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);

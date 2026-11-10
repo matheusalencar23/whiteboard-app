@@ -8,17 +8,21 @@ import { Panel, PanelSection } from "../../../ui/Panel/Panel";
 import { Popover } from "../../../ui/Popover/Popover";
 import { ColorPicker } from "./ColorPicker";
 
+export const AUTO_COLOR = "auto";
+
 export interface Swatch {
   color: string;
   label: string;
 }
 
 function Swatch({ color }: { color: string }) {
+  const special = color === TRANSPARENT || color === AUTO_COLOR;
   return (
     <span
       className={styles.swatch}
       data-transparent={color === TRANSPARENT}
-      style={color === TRANSPARENT ? undefined : { background: color }}
+      data-auto={color === AUTO_COLOR}
+      style={special ? undefined : { background: color }}
     />
   );
 }
@@ -82,7 +86,7 @@ export function ColorField({ title, value, swatches, onChange, onPreview, onPrev
           <Panel label={title}>
             <PanelSection title={title}>
               <ColorPicker
-                color={value === "mixed" || value === TRANSPARENT ? undefined : value}
+                color={value === "mixed" || value === TRANSPARENT || value === AUTO_COLOR ? undefined : value}
                 onChange={(color) => onPreview(color.hex)}
               />
             </PanelSection>

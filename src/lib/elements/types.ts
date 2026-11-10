@@ -34,9 +34,41 @@ interface BaseElement {
   seed: number;
 }
 
+export const FONT_FAMILIES = ["hand", "sans", "mono"] as const;
+
+export type FontFamily = (typeof FONT_FAMILIES)[number];
+
+export const TEXT_ALIGNS = ["left", "center", "right"] as const;
+
+export type TextAlign = (typeof TEXT_ALIGNS)[number];
+
+export const VERTICAL_ALIGNS = ["top", "middle", "bottom"] as const;
+
+export type VerticalAlign = (typeof VERTICAL_ALIGNS)[number];
+
+export interface TextStyle {
+  fontFamily: FontFamily;
+  fontSize: number;
+  color: string | null;
+  bold: boolean;
+  italic: boolean;
+  align: TextAlign;
+  verticalAlign: VerticalAlign;
+}
+
+export const DEFAULT_TEXT_STYLE: TextStyle = {
+  fontFamily: "hand",
+  fontSize: 24,
+  color: null,
+  bold: false,
+  italic: false,
+  align: "left",
+  verticalAlign: "middle",
+};
+
 export interface ShapeLabel {
   text: string;
-  fontSize: number;
+  textStyle: TextStyle;
 }
 
 interface BoxBaseElement extends BaseElement {
@@ -116,7 +148,7 @@ export interface FreedrawElement extends BaseElement {
 export interface TextElement extends BaseElement {
   type: "text";
   text: string;
-  fontSize: number;
+  textStyle: TextStyle;
 }
 
 export type BoardElement =

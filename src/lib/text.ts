@@ -1,34 +1,53 @@
-export const FONT_FAMILY = '"Caveat", cursive';
-export const DEFAULT_FONT_SIZE = 28;
-export const LINE_HEIGHT = 1.25;
-export const LABEL_FONT_SIZE = 20;
+import { theme } from "./theme";
+import type { FontFamily, TextStyle } from "./elements/types";
 
-export function fontString(fontSize: number): string {
-  return `${fontSize}px ${FONT_FAMILY}`;
+export const LINE_HEIGHT = 1.25;
+
+export const FONT_SIZE_PRESETS = [16, 24, 32, 48] as const;
+
+export const FONT_STACKS: Record<FontFamily, string> = {
+  hand: theme.font.hand,
+  sans: theme.font.ui,
+  mono: theme.font.mono,
+};
+
+export type FontSpec = Pick<TextStyle, "fontFamily" | "fontSize" | "bold" | "italic">;
+
+export function fontString(font: FontSpec): string {
+  const style = font.italic ? "italic" : "normal";
+  const weight = font.bold ? 700 : 400;
+  return `${style} ${weight} ${font.fontSize}px ${FONT_STACKS[font.fontFamily]}`;
+}
+
+export function lineHeight(font: FontSpec): number {
+  return font.fontSize * LINE_HEIGHT;
 }
 
 let measureCtx: CanvasRenderingContext2D | null = null;
 
-function lineMeasurer(fontSize: number): (line: string) => number {
+function lineMeasurer(font: FontSpec): (line: string) => number {
   measureCtx ??= document.createElement("canvas").getContext("2d");
   const ctx = measureCtx;
   if (!ctx) return () => 0;
-  ctx.font = fontString(fontSize);
+  ctx.font = fontString(font);
   return (line) => ctx.measureText(line).width;
 }
 
-function measureLines(lines: string[], fontSize: number) {
-  const measure = lineMeasurer(fontSize);
-  const width = Math.max(0, ...lines.map(measure));
-  return { width, height: lines.length * fontSize * LINE_HEIGHT };
+export function measureLineWidths(lines: string[], font: FontSpec): number[] {
+  return lines.map(lineMeasurer(font));
 }
 
-export function measureText(text: string, fontSize: number) {
-  return measureLines(text.split("\n"), fontSize);
+function measureLines(lines: string[], font: FontSpec) {
+  const width = Math.max(0, ...measureLineWidths(lines, font));
+  return { width, height: lines.length * lineHeight(font) };
 }
 
-export function wrapText(text: string, fontSize: number, maxWidth: number): string[] {
-  const measure = lineMeasurer(fontSize);
+export function measureText(text: string, font: FontSpec) {
+  return measureLines(text.split("\n"), font);
+}
+
+export function wrapText(text: string, font: FontSpec, maxWidth: number): string[] {
+  const measure = lineMeasurer(font);
   const lines: string[] = [];
 
   for (const paragraph of text.split("\n")) {
@@ -54,7 +73,13 @@ export function wrapText(text: string, fontSize: number, maxWidth: number): stri
   return lines;
 }
 
-export function layoutText(text: string, fontSize: number, maxWidth: number) {
-  const lines = wrapText(text, fontSize, maxWidth);
-  return { lines, ...measureLines(lines, fontSize) };
+export function layoutText(text: string, font: FontSpec, maxWidth: number) {
+  const lines = wrapText(text, font, maxWidth);
+  return { lines, ...measureLines(lines, font) };
+}
+
+export function alignedX(align: TextStyle["align"], left: number, width: number): number {
+  if (align === "center") return left + width / 2;
+  if (align === "right") return left + width;
+  return left;
 }

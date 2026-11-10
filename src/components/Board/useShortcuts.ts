@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useBoardStore } from "../../store/boardStore";
 import { TOOLS } from "./Toolbar/tools";
+import { selectTextScope, textSelectors } from "./StyleBar/selectors";
 
 export function isTypingTarget(target: EventTarget | null): boolean {
   return (
@@ -20,7 +21,14 @@ export function useShortcuts() {
       const mod = e.ctrlKey || e.metaKey;
 
       if (mod) {
-        if (key === "z" && !e.shiftKey) store.undo();
+        const hasText = selectTextScope(store) !== "";
+        if (hasText && key === "b" && !e.shiftKey) {
+          store.setTextStyle({ bold: textSelectors.bold(store) !== true });
+        } else if (hasText && key === "i" && !e.shiftKey) {
+          store.setTextStyle({ italic: textSelectors.italic(store) !== true });
+        } else if (hasText && e.shiftKey && (e.code === "Period" || e.code === "Comma")) {
+          store.stepTextSize(e.code === "Period" ? 1 : -1);
+        } else if (key === "z" && !e.shiftKey) store.undo();
         else if ((key === "z" && e.shiftKey) || key === "y") store.redo();
         else if (key === "a") {
           store.setTool("selection");

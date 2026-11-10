@@ -1,7 +1,10 @@
 import {
   ARROWHEADS,
   FILL_STYLES,
+  FONT_FAMILIES,
   STROKE_STYLES,
+  TEXT_ALIGNS,
+  VERTICAL_ALIGNS,
   type BoardElement,
   type ElementType,
 } from "./elements/types";
@@ -156,7 +159,7 @@ function isValidElement(value: unknown): value is BoardElement {
     case "freedraw":
       return isValidPoints(value.points);
     case "text":
-      return typeof value.text === "string" && isNumber(value.fontSize);
+      return typeof value.text === "string" && isValidTextStyle(value.textStyle);
     case "rectangle":
     case "ellipse":
     case "diamond":
@@ -174,7 +177,20 @@ function isArrowhead(value: unknown): boolean {
 
 function isValidLabel(value: unknown): boolean {
   if (value === undefined) return true;
-  return isObject(value) && typeof value.text === "string" && isNumber(value.fontSize);
+  return isObject(value) && typeof value.text === "string" && isValidTextStyle(value.textStyle);
+}
+
+function isValidTextStyle(value: unknown): boolean {
+  return (
+    isObject(value) &&
+    isOneOf(FONT_FAMILIES, value.fontFamily) &&
+    isNumber(value.fontSize) &&
+    (value.color === null || typeof value.color === "string") &&
+    typeof value.bold === "boolean" &&
+    typeof value.italic === "boolean" &&
+    isOneOf(TEXT_ALIGNS, value.align) &&
+    isOneOf(VERTICAL_ALIGNS, value.verticalAlign)
+  );
 }
 
 export function debounce<A extends unknown[]>(fn: (...args: A) => void, delay: number) {

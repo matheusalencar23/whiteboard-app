@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import styles from "./TextEditor.module.scss";
 import type { Point } from "../../../lib/types";
 import type { Bounds } from "../../../lib/geometry/bounds";
-import { FONT_FAMILY, LINE_HEIGHT, layoutText, measureText } from "../../../lib/text";
+import type { TextStyle } from "../../../lib/elements/types";
+import { FONT_STACKS, LINE_HEIGHT, layoutText, measureText } from "../../../lib/text";
 import { worldToScreen, type Viewport } from "../../../lib/viewport";
 
 export type TextEditorLayout =
@@ -11,7 +12,7 @@ export type TextEditorLayout =
 
 interface TextEditorProps {
   initialText: string;
-  fontSize: number;
+  textStyle: TextStyle;
   color: string;
   layout: TextEditorLayout;
   viewport: Viewport;
@@ -21,7 +22,7 @@ interface TextEditorProps {
 
 export function TextEditor({
   initialText,
-  fontSize,
+  textStyle,
   color,
   layout,
   viewport,
@@ -53,14 +54,23 @@ export function TextEditor({
   }
 
   const { zoom } = viewport;
+  const { fontSize } = textStyle;
   let box: Bounds;
   if (layout.kind === "free") {
-    const size = measureText(text, fontSize);
-    box = { ...layout.position, width: size.width + fontSize / 2, height: size.height };
+    const size = measureText(text, textStyle);
+    const caretRoom = fontSize / 2;
+    const shift = textStyle.align === "center" ? caretRoom / 2 : textStyle.align === "right" ? caretRoom : 0;
+    box = { x: layout.position.x - shift, y: layout.position.y, width: size.width + caretRoom, height: size.height };
   } else {
     const { area } = layout;
-    const { height } = layoutText(text, fontSize, area.width);
-    box = { x: area.x, y: area.y + (area.height - height) / 2, width: area.width, height };
+    const { height } = layoutText(text, textStyle, area.width);
+    const offset =
+      textStyle.verticalAlign === "top"
+        ? 0
+        : textStyle.verticalAlign === "bottom"
+          ? area.height - height
+          : (area.height - height) / 2;
+    box = { x: area.x, y: area.y + offset, width: area.width, height };
   }
   const position = worldToScreen(box, viewport);
 
@@ -84,7 +94,10 @@ export function TextEditor({
         width: box.width * zoom,
         height: box.height * zoom,
         fontSize: fontSize * zoom,
-        fontFamily: FONT_FAMILY,
+        fontFamily: FONT_STACKS[textStyle.fontFamily],
+        fontWeight: textStyle.bold ? 700 : 400,
+        fontStyle: textStyle.italic ? "italic" : "normal",
+        textAlign: textStyle.align,
         lineHeight: LINE_HEIGHT,
         color,
         transform: layout.rotation === 0 ? undefined : `rotate(${layout.rotation}rad)`,

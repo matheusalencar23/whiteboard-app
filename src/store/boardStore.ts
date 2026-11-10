@@ -1,9 +1,12 @@
 import { create } from "zustand";
 import { applyStyle } from "../lib/elements/style";
+import { applyTextStyle, getTextStyle, stepFontSize } from "../lib/elements/textStyle";
 import {
   DEFAULT_ARROWHEADS,
   DEFAULT_STYLE,
+  DEFAULT_TEXT_STYLE,
   type ElementStyle,
+  type TextStyle,
   type Arrowhead,
   type ArrowheadPair,
   type ArrowRouting,
@@ -35,6 +38,7 @@ export interface BoardState {
   arrowRouting: ArrowRouting;
   arrowheads: ArrowheadPair;
   currentStyle: ElementStyle;
+  currentTextStyle: TextStyle;
   showGrid: boolean;
   gridStyle: GridStyle;
   past: BoardElement[][];
@@ -56,6 +60,8 @@ export interface BoardState {
   setArrowhead: (end: ArrowEnd, arrowhead: Arrowhead) => void;
   swapArrowheads: () => void;
   setStyle: (patch: Partial<ElementStyle>, options?: { record?: boolean }) => void;
+  setTextStyle: (patch: Partial<TextStyle>, options?: { record?: boolean }) => void;
+  stepTextSize: (direction: 1 | -1) => void;
   toggleGrid: () => void;
   setGridStyle: (style: GridStyle) => void;
   cycleGridStyle: () => void;
@@ -84,6 +90,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
   arrowRouting: "straight",
   arrowheads: DEFAULT_ARROWHEADS,
   currentStyle: DEFAULT_STYLE,
+  currentTextStyle: DEFAULT_TEXT_STYLE,
   showGrid: saved?.showGrid ?? DEFAULT_PREFERENCES.showGrid,
   gridStyle: saved?.gridStyle ?? DEFAULT_PREFERENCES.gridStyle,
   past: [],
@@ -187,6 +194,39 @@ export const useBoardStore = create<BoardState>()((set) => ({
       });
       if (!changed) return { arrowheads };
       return { arrowheads, elements, past: pushPast(state.past, state.elements), future: [] };
+    }),
+  stepTextSize: (direction) =>
+    set((state) => {
+      const currentTextStyle = {
+        ...state.currentTextStyle,
+        fontSize: stepFontSize(state.currentTextStyle.fontSize, direction),
+      };
+      const ids = new Set(state.selectedIds);
+      let changed = false;
+      const elements = state.elements.map((el) => {
+        const textStyle = ids.has(el.id) ? getTextStyle(el) : null;
+        if (!textStyle) return el;
+        const styled = applyTextStyle(el, { fontSize: stepFontSize(textStyle.fontSize, direction) });
+        if (styled !== el) changed = true;
+        return styled;
+      });
+      if (!changed) return { currentTextStyle };
+      return { currentTextStyle, elements, past: pushPast(state.past, state.elements), future: [] };
+    }),
+  setTextStyle: (patch, options) =>
+    set((state) => {
+      const currentTextStyle = { ...state.currentTextStyle, ...patch };
+      const ids = new Set(state.selectedIds);
+      let changed = false;
+      const elements = state.elements.map((el) => {
+        if (!ids.has(el.id)) return el;
+        const styled = applyTextStyle(el, patch);
+        if (styled !== el) changed = true;
+        return styled;
+      });
+      if (!changed) return { currentTextStyle };
+      if (options?.record === false) return { currentTextStyle, elements };
+      return { currentTextStyle, elements, past: pushPast(state.past, state.elements), future: [] };
     }),
   setStyle: (patch, options) =>
     set((state) => {

@@ -25,7 +25,7 @@ const STYLE_PROPERTIES: Record<ElementType, readonly StyleProperty[]> = {
   diamond: SHAPE_PROPERTIES,
   arrow: STROKE_PROPERTIES,
   freedraw: ["strokeColor", "strokeWidth", "strokeOpacity"],
-  text: ["strokeColor", "strokeOpacity"],
+  text: ["strokeOpacity"],
 };
 
 export function supportsStyle(type: ElementType, property: StyleProperty): boolean {

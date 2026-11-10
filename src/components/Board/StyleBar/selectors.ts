@@ -1,4 +1,5 @@
-import type { ArrowElement, ElementStyle, ElementType } from "../../../lib/elements/types";
+import type { ArrowElement, BoardElement, ElementStyle, ElementType, TextStyle } from "../../../lib/elements/types";
+import { getTextStyle } from "../../../lib/elements/textStyle";
 import { supportsStyle, type StyleProperty } from "../../../lib/elements/style";
 import type { BoardState } from "../../../store/boardStore";
 
@@ -68,4 +69,47 @@ export const arrowSelectors = {
   routing: selectArrowField("routing"),
   startArrowhead: selectArrowField("startArrowhead"),
   endArrowhead: selectArrowField("endArrowhead"),
+};
+
+export function selectTextScope(state: BoardState): string {
+  const kinds = new Set<string>();
+  if (state.selectedIds.length > 0) {
+    const ids = new Set(state.selectedIds);
+    for (const el of state.elements) {
+      if (!ids.has(el.id) || !getTextStyle(el)) continue;
+      kinds.add(el.type === "text" ? "free" : el.type === "arrow" ? "arrow" : "box");
+    }
+  } else if (state.tool === "text") {
+    kinds.add("free");
+  }
+  return [...kinds].sort().join(",");
+}
+
+function selectTextField<K extends keyof TextStyle>(key: K, accepts: (el: BoardElement) => boolean = () => true) {
+  return (state: BoardState): TextStyle[K] | "mixed" => {
+    const ids = new Set(state.selectedIds);
+    let found = false;
+    let value: TextStyle[K] | undefined;
+    for (const el of state.elements) {
+      const textStyle = ids.has(el.id) && accepts(el) ? getTextStyle(el) : null;
+      if (!textStyle) continue;
+      if (!found) {
+        found = true;
+        value = textStyle[key];
+      } else if (value !== textStyle[key]) {
+        return "mixed";
+      }
+    }
+    return found ? (value as TextStyle[K]) : state.currentTextStyle[key];
+  };
+}
+
+export const textSelectors = {
+  fontFamily: selectTextField("fontFamily"),
+  fontSize: selectTextField("fontSize"),
+  color: selectTextField("color"),
+  bold: selectTextField("bold"),
+  italic: selectTextField("italic"),
+  align: selectTextField("align", (el) => el.type !== "arrow"),
+  verticalAlign: selectTextField("verticalAlign", (el) => el.type !== "arrow" && el.type !== "text"),
 };

@@ -37,7 +37,7 @@ const FILL_SWATCHES: Swatch[] = [
   { color: palette.amberLight, label: "Âmbar claro" },
 ];
 
-interface Option<T> {
+export interface Option<T> {
   value: T;
   label: string;
   icon: IconType;
@@ -79,7 +79,7 @@ const ROUGHNESS_OPTIONS: Option<number>[] = [
   { value: 2, label: "Esboço forte", icon: () => <RoughnessIcon roughness={2} /> },
 ];
 
-function OptionGroup<T extends string | number>({
+export function OptionGroup<T extends string | number>({
   options,
   value,
   onChange,
@@ -105,7 +105,7 @@ function OptionGroup<T extends string | number>({
   );
 }
 
-function OpacityField({
+export function OpacityField({
   value,
   onPreview,
   onCommit,

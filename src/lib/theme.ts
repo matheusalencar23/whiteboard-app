@@ -25,6 +25,7 @@ export interface Theme {
   font: {
     ui: string;
     mono: string;
+    hand: string;
   };
   radius: {
     sm: string;
@@ -77,6 +78,7 @@ export const notebookTheme: Theme = {
   font: {
     ui: '"IBM Plex Sans", system-ui, sans-serif',
     mono: '"IBM Plex Mono", ui-monospace, monospace',
+    hand: '"Caveat", cursive',
   },
   radius: {
     sm: "4px",

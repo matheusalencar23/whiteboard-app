@@ -10,8 +10,9 @@ import type {
   BoxElementType,
   LabeledElement,
   TextElement,
+  TextStyle,
 } from "../../../lib/elements/types";
-import { isLabeledElement } from "../../../lib/elements/types";
+import { FONT_FAMILIES, isLabeledElement } from "../../../lib/elements/types";
 import {
   containsBounds,
   getBounds,
@@ -24,6 +25,7 @@ import {
   createBoxElement,
   getElementAtPoint,
   getLabelArea,
+  getLabelTextStyle,
   getLabelTargetAt,
   getElementBounds,
   resizeElement,
@@ -45,7 +47,7 @@ import {
   type ArrowEnd,
 } from "../../../lib/elements/bindings";
 import { createFreedraw, setFreedrawPoints } from "../../../lib/elements/shapes/freedraw";
-import { createText, setText } from "../../../lib/elements/shapes/text";
+import { createText, resolveTextColor, setText } from "../../../lib/elements/shapes/text";
 import {
   ROTATION_HANDLE_DISTANCE,
   ROTATION_HANDLE_RADIUS,
@@ -68,7 +70,7 @@ import {
 import { renderScene } from "../../../lib/render/renderScene";
 import { GRID_SIZE } from "../../../lib/render/grid";
 import { screenToWorld, worldToScreen } from "../../../lib/viewport";
-import { FONT_FAMILY, LABEL_FONT_SIZE, LINE_HEIGHT } from "../../../lib/text";
+import { fontString, lineHeight } from "../../../lib/text";
 import { useBoardStore } from "../../../store/boardStore";
 import { TextEditor, type TextEditorLayout } from "../TextEditor/TextEditor";
 import { StyleBar, type StyleBarPlacement } from "../StyleBar/StyleBar";
@@ -181,6 +183,27 @@ function withCurrentStyle<T extends BoardElement>(element: T): T {
   return { ...element, style: { ...useBoardStore.getState().currentStyle } };
 }
 
+function createStyledText(position: Point): TextElement {
+  const { currentStyle, currentTextStyle } = useBoardStore.getState();
+  const textStyle = { ...currentTextStyle, color: currentTextStyle.color ?? currentStyle.strokeColor };
+  return withCurrentStyle(createText(position, textStyle));
+}
+
+function labelTextStyle(element: LabeledElement): TextStyle {
+  return (
+    element.label?.textStyle ?? {
+      ...useBoardStore.getState().currentTextStyle,
+      align: "center",
+      verticalAlign: "middle",
+    }
+  );
+}
+
+function editorTextStyle(editing: Editing): TextStyle {
+  if (editing.kind === "text") return editing.element.textStyle;
+  return getLabelTextStyle(editing.element, labelTextStyle(editing.element));
+}
+
 function hasSize(element: BoardElement): boolean {
   if (element.type === "arrow") return element.width > 0 || element.height > 0;
   return element.width > 0 && element.height > 0;
@@ -241,10 +264,17 @@ export function Canvas() {
   }, []);
 
   useEffect(() => {
-    document.fonts
-      .load(`16px ${FONT_FAMILY}`)
-      .then(() => setFontsLoaded((n) => n + 1))
-      .catch(() => {});
+    const redraw = () => setFontsLoaded((n) => n + 1);
+    document.fonts.addEventListener("loadingdone", redraw);
+    const variants = FONT_FAMILIES.flatMap((fontFamily) =>
+      [false, true].flatMap((bold) =>
+        [false, true].map((italic) => fontString({ fontFamily, fontSize: 16, bold, italic })),
+      ),
+    );
+    Promise.all(variants.map((font) => document.fonts.load(font)))
+      .then(redraw)
+      .catch(redraw);
+    return () => document.fonts.removeEventListener("loadingdone", redraw);
   }, []);
 
   useEffect(() => {
@@ -303,10 +333,10 @@ export function Canvas() {
     if (editing?.kind === "text") {
       visible = elements.filter((el) => el.id !== editing.element.id);
     } else if (editing?.kind === "label") {
-      const fontSize = editing.element.label?.fontSize ?? LABEL_FONT_SIZE;
+      const textStyle = labelTextStyle(editing.element);
       visible = elements.map((el) =>
         el.id === editing.element.id && isLabeledElement(el)
-          ? { ...el, label: { text: editingText, fontSize } }
+          ? { ...el, label: { text: editingText, textStyle } }
           : el,
       );
     }
@@ -399,8 +429,7 @@ export function Canvas() {
       if (isEmpty && shape.label) {
         store.replaceElement({ ...shape, label: undefined });
       } else if (!isEmpty && text !== shape.label?.text) {
-        const fontSize = shape.label?.fontSize ?? LABEL_FONT_SIZE;
-        store.replaceElement({ ...shape, label: { text, fontSize } });
+        store.replaceElement({ ...shape, label: { text, textStyle: labelTextStyle(shape) } });
       }
       store.setSelection([id]);
     }
@@ -549,7 +578,7 @@ export function Canvas() {
     const world = screenToWorld(screen, store.viewport);
 
     if (!wantsPan && store.tool === "text") {
-      startEditingText(withCurrentStyle(createText(world)), true);
+      startEditingText(createStyledText(world), true);
       return;
     }
 
@@ -826,8 +855,8 @@ export function Canvas() {
     } else if (shape && isLabeledElement(shape)) {
       startEditingLabel(shape);
     } else if (!hit) {
-      const text = withCurrentStyle(createText(world));
-      startEditingText({ ...text, y: world.y - (text.fontSize * LINE_HEIGHT) / 2 }, true);
+      const text = createStyledText(world);
+      startEditingText({ ...text, y: world.y - lineHeight(text.textStyle) / 2 }, true);
     }
   }
 
@@ -868,12 +897,8 @@ export function Canvas() {
         <TextEditor
           key={editing.element.id}
           initialText={editing.kind === "text" ? editing.element.text : (editing.element.label?.text ?? "")}
-          fontSize={
-            editing.kind === "text"
-              ? editing.element.fontSize
-              : (editing.element.label?.fontSize ?? LABEL_FONT_SIZE)
-          }
-          color={editing.element.style.strokeColor}
+          textStyle={editorTextStyle(editing)}
+          color={resolveTextColor(editorTextStyle(editing), editing.element)}
           layout={editorLayout(editing)}
           viewport={viewport}
           onChange={setEditingText}

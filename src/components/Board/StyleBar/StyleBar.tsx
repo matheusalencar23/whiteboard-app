@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import type { IconType } from "react-icons";
-import { LuEllipsis } from "react-icons/lu";
+import { LuEllipsis, LuType } from "react-icons/lu";
 import styles from "./StyleBar.module.scss";
 import { TRANSPARENT } from "../../../lib/elements/types";
 import type { Bounds } from "../../../lib/geometry/bounds";
@@ -9,8 +9,9 @@ import { IconButton } from "../../../ui/IconButton/IconButton";
 import { Panel } from "../../../ui/Panel/Panel";
 import { Popover } from "../../../ui/Popover/Popover";
 import { ROUTING_OPTIONS } from "./routing";
-import { arrowSelectors, scopeSupports, selectScope, styleSelectors } from "./selectors";
+import { arrowSelectors, scopeSupports, selectScope, selectTextScope, styleSelectors } from "./selectors";
 import { ArrowControls, FillControls, StrokeControls } from "./StyleControls";
+import { TextControls } from "./TextControls";
 
 const BAR_GAP = 12;
 const VIEWPORT_MARGIN = 8;
@@ -80,11 +81,17 @@ function barPosition(placement: StyleBarPlacement, size: { width: number; height
 
 export function StyleBar(props: StyleBarProps) {
   const scope = useBoardStore(selectScope);
-  if (scope === "") return null;
-  return <StyleBarContent {...props} scope={scope} />;
+  const textScope = useBoardStore(selectTextScope);
+  if (scope === "" && textScope === "") return null;
+  return <StyleBarContent {...props} scope={scope} textScope={textScope} />;
 }
 
-function StyleBarContent({ placement, viewportWidth, scope }: StyleBarProps & { scope: string }) {
+function StyleBarContent({
+  placement,
+  viewportWidth,
+  scope,
+  textScope,
+}: StyleBarProps & { scope: string; textScope: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const strokeColor = useBoardStore(styleSelectors.strokeColor);
@@ -116,12 +123,19 @@ function StyleBarContent({ placement, viewportWidth, scope }: StyleBarProps & { 
       aria-label="Estilo"
       style={barPosition(placement, size, viewportWidth)}
     >
-      <StyleGroup label="Contorno" icon={strokeIcon}>
-        <StrokeControls />
-      </StyleGroup>
+      {scopeSupports(scope, "strokeColor") && (
+        <StyleGroup label="Contorno" icon={strokeIcon}>
+          <StrokeControls />
+        </StyleGroup>
+      )}
       {scopeSupports(scope, "fillColor") && (
         <StyleGroup label="Preenchimento" icon={fillIcon}>
           <FillControls />
+        </StyleGroup>
+      )}
+      {textScope !== "" && (
+        <StyleGroup label="Texto" icon={LuType}>
+          <TextControls />
         </StyleGroup>
       )}
       {scope.split(",").includes("arrow") && (

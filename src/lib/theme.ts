@@ -12,6 +12,8 @@ export interface Theme {
     accent: string;
     accentSoft: string;
     accentContrast: string;
+    danger: string;
+    dangerSoft: string;
     backdrop: string;
   };
   canvas: {
@@ -69,6 +71,8 @@ export const notebookTheme: Theme = {
     accent,
     accentSoft: "#e8eefa",
     accentContrast: "#ffffff",
+    danger: "#c9463d",
+    dangerSoft: "#fbeceb",
     backdrop: "rgba(30, 35, 45, 0.28)",
   },
   canvas: {

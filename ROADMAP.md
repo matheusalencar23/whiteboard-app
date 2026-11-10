@@ -12,6 +12,8 @@ Marque os itens com `[x]` conforme forem concluídos.
 - Rotação pela alça acima da seleção, de um elemento ou de vários juntos (Shift prende em 15°).
 - Durante a rotação, um rótulo junto do cursor mostra o ângulo. Durante o redimensionamento, um rótulo abaixo da seleção mostra largura × altura.
 - Shift mantém a proporção ao redimensionar e, ao desenhar, força quadrado, círculo ou seta em ângulos de 45°.
+- Nome do board no canto superior esquerdo ("Board sem título" por padrão), editável com duplo clique. É salvo junto com o board e dá nome ao arquivo exportado.
+- Exportar e importar o board como arquivo `.whiteboard.json`, pelos botões do fim da toolbar, por `Ctrl+S` / `Ctrl+O` ou arrastando o arquivo para o quadro. Abrir um arquivo troca o board atual, e `Ctrl+Z` volta ao anterior.
 - Câmera com pan (roda do mouse, Shift + roda, botão do meio ou Espaço + arrastar) e zoom (Ctrl/Cmd + roda ou pinça no trackpad, centrado no cursor).
 - Indicador de zoom no canto inferior direito, com botões de diminuir e aumentar por níveis fixos e clique na porcentagem para voltar a 100%.
 - Estado em uma store do zustand. `elements`, `viewport` e as preferências da grade são salvos sozinhos no `localStorage` (`src/lib/persistence.ts`). Durante o desenvolvimento, o formato salvo não tem versão nem migração: se mudar, o board antigo é descartado.
@@ -33,6 +35,7 @@ Marque os itens com `[x]` conforme forem concluídos.
 | Ferramentas | `H` mão, `V`/`1` seleção, `R`/`2` retângulo, `D`/`3` losango, `O`/`4` elipse, `A`/`5` seta, `P`/`6` lápis, `T`/`7` texto |
 | Desfazer / refazer | `Ctrl+Z` / `Ctrl+Shift+Z` ou `Ctrl+Y` |
 | Selecionar tudo | `Ctrl+A` |
+| Salvar em arquivo / abrir arquivo | `Ctrl+S` / `Ctrl+O` |
 | Apagar seleção | `Delete` ou `Backspace` |
 | Limpar seleção | `Esc` |
 | Aumentar / diminuir o zoom | `Ctrl` com `+` / `Ctrl` com `-` |
@@ -410,6 +413,13 @@ O traço de esboço vem do Excalidraw, mas a interface tem identidade própria (
 ## 5. Persistência
 
 - [x] Salvamento automático no `localStorage` (adiantado: é o passo 2 dos [próximos passos](#próximos-passos-em-ordem)).
-- [ ] Exportar e importar JSON.
+- [x] Exportar e importar JSON. Detalhes da implementação:
+  - **Formato:** `{ "type": "whiteboard", "name": "...", "elements": [...], "viewport": {...} }`, com indentação para ser legível e comparável num diff. O campo `type` separa um arquivo do board de qualquer outro JSON. Sem número de versão, pela mesma decisão do `localStorage`. As preferências da grade não vão no arquivo, porque são do usuário, e não do desenho. A extensão é `.whiteboard.json`, e o arquivo baixado leva o nome do board (`boardFileName` tira os caracteres proibidos em nomes de arquivo).
+  - **Validação:** `serializeBoardFile` e `parseBoardFile` ficam em `src/lib/persistence.ts` e usam a mesma validação do salvamento automático (`readBoardContent`). Um arquivo importado também é recusado se tiver IDs repetidos, já que pode ter sido editado à mão. As setas ligadas são recalculadas na leitura (`updateBoundArrows`).
+  - **Arquivos no navegador:** `src/lib/boardFile.ts` baixa o arquivo com um `Blob` e um `<a download>`, e abre com um `<input type="file">` criado na hora. Funciona em todos os navegadores, sem a File System Access API. Como consequência, "salvar" sempre baixa um arquivo novo, em vez de sobrescrever o que foi aberto.
+  - **Store:** a ação `openBoard` troca `elements` e `viewport`, limpa a seleção, volta para a ferramenta de seleção e registra um passo no histórico, então `Ctrl+Z` desfaz a importação (o viewport não volta). Por isso não há confirmação antes de trocar o board.
+  - **Interface:** botões "Abrir arquivo" e "Salvar em arquivo" num grupo novo no fim da toolbar, atalhos `Ctrl+O` e `Ctrl+S` (o `preventDefault` impede o "salvar página" do navegador) e arrastar um arquivo para o quadro, que mostra uma moldura tracejada enquanto o arquivo está por cima. As ações ficam em `src/components/Board/boardFileActions.ts`, usadas pelos três caminhos.
+  - **Nome do board:** campo `name` na store (`setBoardName`), salvo no `localStorage` e no arquivo. `normalizeBoardName` junta espaços, corta em 80 caracteres e troca o vazio por "Board sem título" (`DEFAULT_BOARD_NAME`). O `BoardTitle` (`src/components/Board/BoardTitle/`) mostra o nome numa pílula no canto superior esquerdo. Duplo clique troca por um `<input>`: `Enter` ou sair do campo confirmam, `Esc` cancela. Como é um campo de texto, os atalhos do board ficam desligados enquanto ele está em edição. Renomear não entra no histórico. Ao importar, vale o `name` do arquivo; sem ele, o nome do arquivo sem a extensão.
+  - **Avisos:** primitivo novo `Toast` (`src/ui/Toast/`), mostrado embaixo, no centro, pelo `BoardNotice`. A mensagem fica no `notice` da store (`showNotice`/`dismissNotice`) e some sozinha depois de 4 s. Abrir um arquivo confirma e lembra do `Ctrl+Z`. Um arquivo inválido mostra um erro, com os tokens novos `color.danger` e `color.dangerSoft`.
 - [ ] Exportar PNG e SVG.
 - [ ] `Home` vira a lista de boards, e a rota passa a ser `/board/:id`.

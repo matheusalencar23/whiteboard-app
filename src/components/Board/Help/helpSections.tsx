@@ -28,7 +28,13 @@ export const HELP_SECTIONS: HelpSection[] = [
           <li>Dê duplo clique numa forma ou numa seta para escrever dentro dela.</li>
           <li>Mude cores, traços e texto na barra que aparece acima da seleção.</li>
         </ol>
-        <p className={styles.note}>Tudo é salvo sozinho neste navegador.</p>
+        <p className={styles.note}>
+          Tudo é salvo sozinho neste navegador. O nome do board fica no canto superior esquerdo, e um duplo clique
+          nele permite renomear. Para levar o board a outro lugar, use{" "}
+          <Keys combos={[["Ctrl", "S"]]} /> para salvar um arquivo <code>.whiteboard.json</code> com esse nome e{" "}
+          <Keys combos={[["Ctrl", "O"]]} /> (ou arraste o arquivo para o quadro) para abri-lo. Abrir um arquivo troca o
+          board atual, e <Keys combos={[["Ctrl", "Z"]]} /> volta ao anterior.
+        </p>
       </>
     ),
   },

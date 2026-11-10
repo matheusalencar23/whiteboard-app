@@ -19,6 +19,8 @@ export const SHORTCUTS = {
   textBigger: { label: "Aumentar o texto", keys: ["Ctrl", "Shift", ">"] },
   textSmaller: { label: "Diminuir o texto", keys: ["Ctrl", "Shift", "<"] },
   confirmText: { label: "Terminar a edição do texto", keys: ["Ctrl", "Enter"] },
+  saveFile: { label: "Salvar em arquivo", keys: ["Ctrl", "S"] },
+  openFile: { label: "Abrir arquivo", keys: ["Ctrl", "O"] },
   help: { label: "Ajuda", keys: ["?"] },
 } satisfies Record<string, Shortcut>;
 

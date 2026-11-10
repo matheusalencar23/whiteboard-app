@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useBoardStore } from "../../store/boardStore";
 import { TOOLS } from "./Toolbar/tools";
 import { selectTextScope, textSelectors } from "./StyleBar/selectors";
+import { exportBoard, importBoard } from "./boardFileActions";
 
 export function isTypingTarget(target: EventTarget | null): boolean {
   return (
@@ -31,6 +32,8 @@ export function useShortcuts() {
         } else if (key === "=" || key === "+") store.stepZoom(1);
         else if (key === "-" || key === "_") store.stepZoom(-1);
         else if (key === "0") store.resetZoom();
+        else if (key === "s" && !e.shiftKey) exportBoard();
+        else if (key === "o" && !e.shiftKey) void importBoard();
         else if (key === "z" && !e.shiftKey) store.undo();
         else if ((key === "z" && e.shiftKey) || key === "y") store.redo();
         else if (key === "a") {

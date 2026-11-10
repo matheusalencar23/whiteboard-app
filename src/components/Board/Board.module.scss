@@ -4,6 +4,13 @@
     height: 100vh;
 }
 
+.title {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 10;
+}
+
 .dock {
     position: absolute;
     top: 50%;
@@ -28,4 +35,23 @@
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+.board[data-dropping="true"]::after {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    z-index: 20;
+    border: 2px dashed var(--color-accent);
+    border-radius: var(--radius-lg);
+    background: var(--canvas-selection-fill);
+    pointer-events: none;
+}
+
+.notice {
+    position: absolute;
+    left: 50%;
+    bottom: 16px;
+    z-index: 30;
+    transform: translateX(-50%);
 }

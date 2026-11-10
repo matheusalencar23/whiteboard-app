@@ -14,7 +14,7 @@ import {
 } from "../lib/elements/types";
 import { setArrowRouting, updateBoundArrows, type ArrowEnd } from "../lib/elements/bindings";
 import type { Point } from "../lib/types";
-import { DEFAULT_PREFERENCES, debounce, loadBoard, saveBoard } from "../lib/persistence";
+import { DEFAULT_BOARD_NAME, DEFAULT_PREFERENCES, debounce, normalizeBoardName, loadBoard, saveBoard, type BoardFile } from "../lib/persistence";
 import { GRID_STYLES, type GridStyle } from "../lib/render/grid";
 import { INITIAL_VIEWPORT, nextZoomStep, panBy, zoomAt, zoomTo, type Viewport } from "../lib/viewport";
 
@@ -30,7 +30,14 @@ export type Tool =
 
 const HISTORY_LIMIT = 100;
 
+export interface Notice {
+  id: number;
+  message: string;
+  tone: "info" | "error";
+}
+
 export interface BoardState {
+  name: string;
   elements: BoardElement[];
   selectedIds: string[];
   tool: Tool;
@@ -42,12 +49,15 @@ export interface BoardState {
   showGrid: boolean;
   gridStyle: GridStyle;
   helpOpen: boolean;
+  notice: Notice | null;
   past: BoardElement[][];
   future: BoardElement[][];
 
   addElement: (element: BoardElement, options?: { select?: boolean }) => void;
   replaceElement: (element: BoardElement) => void;
   deleteElements: (ids: string[]) => void;
+  openBoard: (board: BoardFile) => void;
+  setBoardName: (name: string) => void;
 
   updateElements: (updated: BoardElement[]) => void;
   commitHistory: (before: BoardElement[]) => void;
@@ -67,6 +77,8 @@ export interface BoardState {
   setGridStyle: (style: GridStyle) => void;
   cycleGridStyle: () => void;
   setHelpOpen: (open: boolean) => void;
+  showNotice: (message: string, tone?: Notice["tone"]) => void;
+  dismissNotice: (id: number) => void;
   panBy: (dx: number, dy: number) => void;
   zoomAt: (screenPoint: Point, factor: number) => void;
   stepZoom: (direction: 1 | -1) => void;
@@ -90,7 +102,10 @@ function screenCenter(): Point {
 
 const saved = loadBoard();
 
+let noticeCount = 0;
+
 export const useBoardStore = create<BoardState>()((set) => ({
+  name: saved?.name ?? DEFAULT_BOARD_NAME,
   elements: saved?.elements ?? [],
   selectedIds: [],
   tool: "selection",
@@ -102,6 +117,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
   showGrid: saved?.showGrid ?? DEFAULT_PREFERENCES.showGrid,
   gridStyle: saved?.gridStyle ?? DEFAULT_PREFERENCES.gridStyle,
   helpOpen: false,
+  notice: null,
   past: [],
   future: [],
 
@@ -137,6 +153,19 @@ export const useBoardStore = create<BoardState>()((set) => ({
         future: [],
       };
     }),
+
+  openBoard: (board) =>
+    set((state) => ({
+      name: board.name,
+      elements: board.elements,
+      viewport: board.viewport,
+      selectedIds: [],
+      tool: "selection",
+      past: pushPast(state.past, state.elements),
+      future: [],
+    })),
+
+  setBoardName: (value) => set({ name: normalizeBoardName(value) ?? DEFAULT_BOARD_NAME }),
 
   updateElements: (updated) =>
     set((state) => {
@@ -273,6 +302,8 @@ export const useBoardStore = create<BoardState>()((set) => ({
       return { gridStyle: GRID_STYLES[(index + 1) % GRID_STYLES.length], showGrid: true };
     }),
   setHelpOpen: (helpOpen) => set({ helpOpen }),
+  showNotice: (message, tone = "info") => set({ notice: { id: ++noticeCount, message, tone } }),
+  dismissNotice: (id) => set((state) => (state.notice?.id === id ? { notice: null } : {})),
   panBy: (dx, dy) => set((state) => ({ viewport: panBy(state.viewport, dx, dy) })),
   zoomAt: (screenPoint, factor) =>
     set((state) => ({ viewport: zoomAt(state.viewport, screenPoint, factor) })),
@@ -287,13 +318,14 @@ const scheduleSave = debounce(saveBoard, SAVE_DELAY);
 
 const unsubscribe = useBoardStore.subscribe((state, prev) => {
   const changed =
+    state.name !== prev.name ||
     state.elements !== prev.elements ||
     state.viewport !== prev.viewport ||
     state.showGrid !== prev.showGrid ||
     state.gridStyle !== prev.gridStyle;
   if (!changed) return;
-  const { elements, viewport, showGrid, gridStyle } = state;
-  scheduleSave({ elements, viewport, showGrid, gridStyle });
+  const { name, elements, viewport, showGrid, gridStyle } = state;
+  scheduleSave({ name, elements, viewport, showGrid, gridStyle });
 });
 
 const flushSave = () => scheduleSave.flush();

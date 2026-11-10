@@ -1,5 +1,5 @@
 import type { IconType } from "react-icons";
-import { LuGrid3X3, LuGrip, LuRedo2, LuTrash2, LuUndo2 } from "react-icons/lu";
+import { LuDownload, LuFolderOpen, LuGrid3X3, LuGrip, LuRedo2, LuTrash2, LuUndo2 } from "react-icons/lu";
 import styles from "./Toolbar.module.scss";
 import { TOOLS } from "./tools";
 import { Divider } from "../../../ui/Divider/Divider";
@@ -7,6 +7,7 @@ import { IconButton } from "../../../ui/IconButton/IconButton";
 import { useBoardStore } from "../../../store/boardStore";
 import type { GridStyle } from "../../../lib/render/grid";
 import { SHORTCUTS, formatShortcut } from "../shortcuts";
+import { exportBoard, importBoard } from "../boardFileActions";
 
 const GRID_OPTIONS: { style: GridStyle; label: string; icon: IconType }[] = [
   { style: "dots", label: "Grade em pontos", icon: LuGrip },
@@ -74,6 +75,21 @@ export function Toolbar() {
           />
         );
       })}
+
+      <Divider />
+
+      <IconButton
+        icon={LuFolderOpen}
+        label={SHORTCUTS.openFile.label}
+        shortcut={formatShortcut(SHORTCUTS.openFile.keys)}
+        onClick={() => void importBoard()}
+      />
+      <IconButton
+        icon={LuDownload}
+        label={SHORTCUTS.saveFile.label}
+        shortcut={formatShortcut(SHORTCUTS.saveFile.keys)}
+        onClick={exportBoard}
+      />
     </nav>
   );
 }

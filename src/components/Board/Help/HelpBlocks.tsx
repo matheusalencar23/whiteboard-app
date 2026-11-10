@@ -34,6 +34,10 @@ const SHORTCUT_GROUPS: { title: string; rows: ShortcutRow[] }[] = [
     rows: [SHORTCUTS.undo, SHORTCUTS.redo, SHORTCUTS.selectAll, SHORTCUTS.delete, SHORTCUTS.deselect].map(fromShortcut),
   },
   {
+    title: "Arquivo",
+    rows: [SHORTCUTS.saveFile, SHORTCUTS.openFile].map(fromShortcut),
+  },
+  {
     title: "Texto",
     rows: [
       SHORTCUTS.bold,

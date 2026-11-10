@@ -15,10 +15,24 @@ import { GRID_STYLES, type GridStyle } from "./render/grid";
 const STORAGE_KEY = "whiteboard:board";
 
 export interface SavedBoard {
+  name: string;
   elements: BoardElement[];
   viewport: Viewport;
   showGrid: boolean;
   gridStyle: GridStyle;
+}
+
+export type BoardFile = Pick<SavedBoard, "name" | "elements" | "viewport">;
+
+const FILE_TYPE = "whiteboard";
+
+export const DEFAULT_BOARD_NAME = "Board sem título";
+export const MAX_BOARD_NAME_LENGTH = 80;
+
+export function normalizeBoardName(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const name = value.replace(/\s+/g, " ").trim().slice(0, MAX_BOARD_NAME_LENGTH);
+  return name === "" ? null : name;
 }
 
 export const DEFAULT_PREFERENCES: Pick<SavedBoard, "showGrid" | "gridStyle"> = {
@@ -58,25 +72,50 @@ export function loadBoard(): SavedBoard | null {
   return null;
 }
 
-function parseBoard(raw: string): SavedBoard | null {
+export function serializeBoardFile({ name, elements, viewport }: BoardFile): string {
+  return JSON.stringify({ type: FILE_TYPE, name, elements, viewport }, null, 2);
+}
+
+export function parseBoardFile(raw: string, fallbackName: string): BoardFile | null {
+  const data = parseJson(raw);
+  if (!isObject(data) || data.type !== FILE_TYPE) return null;
+  const content = readBoardContent(data);
+  if (!content) return null;
+  return { ...content, name: normalizeBoardName(data.name) ?? normalizeBoardName(fallbackName) ?? DEFAULT_BOARD_NAME };
+}
+
+function parseJson(raw: string): unknown {
   try {
-    return readBoard(JSON.parse(raw));
+    return JSON.parse(raw);
   } catch {
     return null;
   }
 }
 
-function readBoard(data: unknown): SavedBoard | null {
-  if (!isObject(data)) return null;
+function parseBoard(raw: string): SavedBoard | null {
+  return readBoard(parseJson(raw));
+}
+
+function readBoardContent(data: Record<string, unknown>): Omit<BoardFile, "name"> | null {
   const { elements, viewport } = data;
   if (!Array.isArray(elements) || !elements.every(isValidElement)) return null;
   if (!isValidViewport(viewport)) return null;
+  if (new Set(elements.map((el) => el.id)).size !== elements.length) return null;
+  return { elements: updateBoundArrows(elements, []), viewport };
+}
+
+function readBoard(data: unknown): SavedBoard | null {
+  if (!isObject(data)) return null;
+  const content = readBoardContent(data);
+  if (!content) return null;
   const showGrid =
     typeof data.showGrid === "boolean" ? data.showGrid : DEFAULT_PREFERENCES.showGrid;
 
   const gridStyle = GRID_STYLES.find((style) => style === data.gridStyle) ?? DEFAULT_PREFERENCES.gridStyle;
 
-  return { elements: updateBoundArrows(elements, []), viewport, showGrid, gridStyle };
+  const name = normalizeBoardName(data.name) ?? DEFAULT_BOARD_NAME;
+
+  return { ...content, name, showGrid, gridStyle };
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

@@ -20,6 +20,7 @@ import {
 import type { Viewport } from "../viewport";
 import { drawGrid, type GridStyle } from "./grid";
 import { theme } from "../theme";
+import { renderMeasurement, type Measurement } from "./measurement";
 
 export interface SceneOverlay {
   selected: BoardElement[];
@@ -30,6 +31,7 @@ export interface SceneOverlay {
   bindingFixed: boolean;
   frameOverride: SelectionFrame | null;
   hiddenLabelId: string | null;
+  measurement: Measurement | null;
 }
 
 const CONNECTION_POINT_RADIUS = 4;
@@ -191,6 +193,8 @@ function renderOverlay(ctx: CanvasRenderingContext2D, overlay: SceneOverlay, zoo
     ctx.setLineDash([5 / zoom, 3 / zoom]);
     strokeFrame(ctx, b);
   }
+
+  if (overlay.measurement) renderMeasurement(ctx, overlay.measurement, frame, zoom);
 
   ctx.restore();
 }

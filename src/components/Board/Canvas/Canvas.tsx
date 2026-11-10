@@ -28,6 +28,7 @@ import {
   getLabelTextStyle,
   getLabelTargetAt,
   getElementBounds,
+  getElementBox,
   resizeElement,
   translateElement,
 } from "../../../lib/elements/registry";
@@ -68,6 +69,7 @@ import {
   type SelectionFrame,
 } from "../../../lib/selection";
 import { renderScene } from "../../../lib/render/renderScene";
+import { toDegrees, type Measurement } from "../../../lib/render/measurement";
 import { GRID_SIZE } from "../../../lib/render/grid";
 import { screenToWorld, worldToScreen } from "../../../lib/viewport";
 import { fontString, lineHeight } from "../../../lib/text";
@@ -134,6 +136,18 @@ type Interaction =
       before: BoardElement[];
     }
   | { kind: "boxSelecting"; start: Point; initialSelection: string[] };
+
+type Measuring = { kind: "size" } | { kind: "angle"; groupAngle: number; at: Point };
+
+function getMeasurement(measuring: Measuring | null, selected: BoardElement[]): Measurement | null {
+  if (!measuring || selected.length === 0) return null;
+  if (measuring.kind === "angle") {
+    const radians = selected.length === 1 ? selected[0].rotation : measuring.groupAngle;
+    return { kind: "angle", degrees: toDegrees(radians), at: measuring.at };
+  }
+  const box = selected.length === 1 ? getElementBox(selected[0]) : getSelectionBounds(selected);
+  return box && { kind: "size", width: box.width, height: box.height };
+}
 
 type Editing =
   | {
@@ -226,6 +240,7 @@ export function Canvas() {
   const [draft, setDraftState] = useState<BoardElement | null>(null);
   const [selectionBox, setSelectionBox] = useState<Bounds | null>(null);
   const [frameOverride, setFrameOverride] = useState<SelectionFrame | null>(null);
+  const [measuring, setMeasuring] = useState<Measuring | null>(null);
   const [editing, setEditing] = useState<Editing | null>(null);
   const [editingText, setEditingText] = useState("");
   const [isInteracting, setIsInteracting] = useState(false);
@@ -381,6 +396,7 @@ export function Canvas() {
         bindingFixed: bindingHint?.fixed ?? false,
         frameOverride,
         hiddenLabelId: editing?.kind === "label" ? editing.element.id : null,
+        measurement: getMeasurement(measuring, selected),
       },
       viewport,
       dpr,
@@ -391,6 +407,7 @@ export function Canvas() {
     selected,
     selectionBox,
     frameOverride,
+    measuring,
     editing,
     showGrid,
     gridStyle,
@@ -730,11 +747,13 @@ export function Canvas() {
         const { originals, handle, bounds } = interaction;
         if (originals.length === 1) {
           store.updateElements([resizeSingleElement(originals[0], handle, delta, shiftKey)]);
+          setMeasuring({ kind: "size" });
           break;
         }
         const next = resizeBounds(bounds, handle, delta.x, delta.y, shiftKey);
         const resized = resizeElementsToBounds(originals, bounds, next);
         store.updateElements(detachFromStaying(resized));
+        setMeasuring({ kind: "size" });
         break;
       }
 
@@ -745,6 +764,7 @@ export function Canvas() {
         if (shiftKey) angle = snapAngleValue(frame.rotation + angle, ROTATION_SNAP) - frame.rotation;
         store.updateElements(detachFromStaying(rotateElements(originals, center, angle)));
         if (originals.length > 1) setFrameOverride({ box: frame.box, rotation: angle });
+        setMeasuring({ kind: "angle", groupAngle: angle, at: world });
         break;
       }
 
@@ -770,6 +790,7 @@ export function Canvas() {
     setDraft(null);
     setSelectionBox(null);
     setFrameOverride(null);
+    setMeasuring(null);
     setIsInteracting(false);
     setIsPanning(false);
     setBindingHint(null);

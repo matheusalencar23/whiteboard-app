@@ -21,7 +21,7 @@ export function ZoomIndicator() {
       <IconButton
         icon={LuMinus}
         label="Diminuir zoom"
-        shortcut="Ctrl+-"
+        shortcut="Ctrl −"
         size="sm"
         tooltipSide="top"
         disabled={zoom <= MIN_ZOOM}
@@ -42,11 +42,11 @@ export function ZoomIndicator() {
       >
         {Math.round(zoom * 100)}%
       </button>
-      {anchor && <Tooltip anchor={anchor} side="top" label="Voltar a 100%" shortcut="Ctrl+0" />}
+      {anchor && <Tooltip anchor={anchor} side="top" label="Voltar a 100%" shortcut="Ctrl 0" />}
       <IconButton
         icon={LuPlus}
         label="Aumentar zoom"
-        shortcut="Ctrl+="
+        shortcut="Ctrl +"
         size="sm"
         tooltipSide="top"
         disabled={zoom >= MAX_ZOOM}

@@ -10,6 +10,7 @@ Marque os itens com `[x]` conforme forem concluídos.
 - Toolbar vertical na lateral esquerda com as ferramentas mão, seleção, retângulo, losango, elipse, seta, lápis e texto, além de desfazer, refazer, apagar e a grade. Cada botão tem um tooltip com o nome e o atalho.
 - Seleção por clique, Shift + clique e caixa. Mover, redimensionar pelas 8 alças, apagar, e desfazer/refazer.
 - Rotação pela alça acima da seleção, de um elemento ou de vários juntos (Shift prende em 15°).
+- Durante a rotação, um rótulo junto do cursor mostra o ângulo. Durante o redimensionamento, um rótulo abaixo da seleção mostra largura × altura.
 - Shift mantém a proporção ao redimensionar e, ao desenhar, força quadrado, círculo ou seta em ângulos de 45°.
 - Câmera com pan (roda do mouse, Shift + roda, botão do meio ou Espaço + arrastar) e zoom (Ctrl/Cmd + roda ou pinça no trackpad, centrado no cursor).
 - Indicador de zoom no canto inferior direito, com botões de diminuir e aumentar por níveis fixos e clique na porcentagem para voltar a 100%.
@@ -33,8 +34,8 @@ Marque os itens com `[x]` conforme forem concluídos.
 | Selecionar tudo | `Ctrl+A` |
 | Apagar seleção | `Delete` ou `Backspace` |
 | Limpar seleção | `Esc` |
-| Aumentar / diminuir o zoom | `Ctrl+=` / `Ctrl+-` |
-| Voltar o zoom a 100% | `Ctrl+0` |
+| Aumentar / diminuir o zoom | `Ctrl` com `+` / `Ctrl` com `-` |
+| Voltar o zoom a 100% | `Ctrl` com `0` |
 | Negrito / itálico no texto selecionado | `Ctrl+B` / `Ctrl+I` |
 | Aumentar / diminuir o texto selecionado | `Ctrl+Shift+>` / `Ctrl+Shift+<` |
 | Mostrar / esconder a grade | `G` |
@@ -82,7 +83,7 @@ As outras pendências da etapa 2 (duplicar e copiar/colar) ficam para quando fiz
 
 ### 4. Etapa 4, na ordem da seção dela
 
-- [ ] Os itens 4.1 a 4.5 estão feitos. Faltam o 4.6 (ângulo e dimensões durante o arraste), que é o próximo, e o 4.7 (ajuda com o passo a passo e os atalhos). O 4.7 não depende do 4.6 e pode ser adiantado. Depois deles, a etapa 5 (exportar e importar).
+- [ ] Os itens 4.1 a 4.6 estão feitos. Falta o 4.7 (ajuda com o passo a passo e os atalhos), que é o próximo. Depois dele, a etapa 5 (exportar e importar).
 
 ## 1. Fundação
 
@@ -367,19 +368,17 @@ O traço de esboço vem do Excalidraw, mas a interface tem identidade própria (
   - O `ZoomIndicator` (`src/components/Board/ZoomIndicator/`) fica no canto inferior direito, com a mesma superfície da toolbar: botão de diminuir, a porcentagem e botão de aumentar. O seletor lê só `viewport.zoom`, então o pan não re-renderiza o indicador.
   - Clicar na porcentagem volta a 100%. Os botões andam por níveis fixos (`ZOOM_STEPS` em `src/lib/viewport.ts`: 10%, 25%, 50%, 75%, 100%, 125%, 150%, 200%, 300%, 400%, 600%, 800% e 1000%) em vez de multiplicar por um fator. Assim, depois de um zoom livre pela roda (96%, por exemplo), o próximo clique cai num valor redondo. Os botões ficam desabilitados em `MIN_ZOOM` e `MAX_ZOOM`.
   - Os três usam ações novas da store, `stepZoom(direction)` e `resetZoom()`, que dão zoom centrado no meio da janela (o canvas ocupa a tela toda) por meio do `zoomTo` do viewport.
-  - Atalhos `Ctrl+=` (ou `Ctrl++`), `Ctrl+-` e `Ctrl+0`, no `useShortcuts`. O `preventDefault` impede o zoom do próprio navegador.
+  - Atalhos `Ctrl` com `+` (a tecla `=` também vale, por ser a mesma no teclado americano), `Ctrl` com `-` e `Ctrl` com `0`, no `useShortcuts`. O `preventDefault` impede o zoom do próprio navegador. Nos tooltips eles aparecem como "Ctrl +", "Ctrl −" e "Ctrl 0", sem o `+` de junção, que se confundiria com a tecla.
   - A porcentagem usa a IBM Plex Mono com algarismos tabulares, para a largura não pular enquanto o zoom muda.
 
 ### 4.6 Indicadores de ângulo e dimensões
 
-- [ ] **O quê:** durante a rotação, um rótulo com o ângulo em graus. Durante o redimensionamento, um rótulo com a largura e a altura ("240 × 120"). Os dois só aparecem enquanto o arraste acontece e somem ao soltar o mouse.
-- **Como:**
-  - **Onde desenhar:** na camada de seleção do `renderScene`, como as alças, com tamanho fixo na tela (dividido pelo `zoom`) e numa fonte da interface, não na Caveat. Assim o rótulo acompanha o pan e o zoom sem um componente React a mais. O `SceneOverlay` ganha um campo `measurement` (`{ kind: "angle"; degrees } | { kind: "size"; width; height }` ou `null`).
-  - **Quem preenche:** o Canvas, a partir da `Interaction` ativa (`rotating` ou `resizing`), como estado transitório local, igual ao `frameOverride` e à caixa de seleção. Sem interação, o campo é `null`.
-  - **Ângulo:** com um elemento, a `rotation` dele em graus, de 0 a 359. Com vários, o quanto o grupo já girou desde o início do arraste. Com Shift, mostra os passos de 15°. Posição: perto da alça de rotação ou do cursor.
-  - **Dimensões:** com um elemento, o tamanho da caixa sem rotação (`getElementBox`), que é o tamanho "real" da forma mesmo girada. Com vários, o tamanho do quadro da seleção. Valores em unidades de mundo, arredondados para inteiro, para não mudar com o zoom. Posição: abaixo do quadro, centralizado, girando junto com o quadro de um elemento só ou ficando sempre na horizontal (decidir pela legibilidade).
-  - O rótulo tem fundo próprio (uma pílula com a cor de destaque), para continuar legível sobre formas e sobre a grade.
-- **Por quê:** girar e redimensionar a olho é impreciso. Com o número na tela, dá para deixar formas do mesmo tamanho ou no ângulo exato, o que importa nos diagramas da etapa 3. Mostrar só durante o arraste evita poluir a tela no resto do tempo.
+- [x] **Feito.** Detalhes da implementação:
+  - O rótulo é desenhado no canvas, na camada da seleção, por `renderMeasurement` (`src/lib/render/measurement.ts`). O `SceneOverlay` ganhou o campo `measurement` (`{ kind: "angle"; degrees; at }` ou `{ kind: "size"; width; height }`). É uma pílula com a cor de destaque (tokens `canvas.measurementFill` e `canvas.measurementText`), em IBM Plex Mono 500, com tamanho fixo na tela (dividido pelo `zoom`).
+  - O Canvas guarda o estado transitório `measuring` (`{ kind: "size" }` ou `{ kind: "angle"; groupAngle; at }`), preenchido no `updateInteraction` de `resizing` e `rotating` e limpo no `endInteraction`, como o `frameOverride`. Os números saem dos elementos já atualizados da seleção (`getMeasurement`), então sempre batem com o que está desenhado.
+  - **Ângulo:** com um elemento, a `rotation` dele; com vários, o quanto o grupo girou desde o início do arraste. Os dois vão de 0° a 359° (`toDegrees`). Com Shift, aparecem os passos de 15°. A pílula fica junto do cursor, e não da alça, porque a alça gira junto e o rótulo acabaria sobre a forma.
+  - **Dimensões:** com um elemento, o tamanho da caixa sem rotação (`getElementBox`); com vários, o do quadro da seleção. Valores em unidades de mundo, arredondados, no formato "240 × 120". A pílula fica centralizada abaixo do ponto mais baixo do quadro, sempre na horizontal para ser legível com a forma girada.
+  - Setas sozinhas não têm quadro de redimensionar nem alça de rotação, então não mostram rótulo.
 
 ### 4.7 Ajuda: como usar e atalhos
 

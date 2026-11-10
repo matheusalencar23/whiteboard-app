@@ -33,23 +33,48 @@ const OPPOSITE: Record<TooltipSide, TooltipSide> = {
   right: "left",
 };
 
-function fitsInViewport(rect: DOMRect): boolean {
-  return rect.top >= 0 && rect.left >= 0 && rect.bottom <= window.innerHeight && rect.right <= window.innerWidth;
+const VIEWPORT_MARGIN = 8;
+
+function isVertical(side: TooltipSide): boolean {
+  return side === "top" || side === "bottom";
+}
+
+function fitsOnSide(rect: DOMRect, side: TooltipSide): boolean {
+  if (isVertical(side)) return rect.top >= 0 && rect.bottom <= window.innerHeight;
+  return rect.left >= 0 && rect.right <= window.innerWidth;
+}
+
+function overflowShift(start: number, end: number, limit: number): number {
+  if (start < VIEWPORT_MARGIN) return VIEWPORT_MARGIN - start;
+  if (end > limit - VIEWPORT_MARGIN) return limit - VIEWPORT_MARGIN - end;
+  return 0;
+}
+
+function crossAxisShift(rect: DOMRect, side: TooltipSide): { x: number; y: number } {
+  if (isVertical(side)) return { x: overflowShift(rect.left, rect.right, window.innerWidth), y: 0 };
+  return { x: 0, y: overflowShift(rect.top, rect.bottom, window.innerHeight) };
 }
 
 export function Tooltip({ anchor, side, label, shortcut }: TooltipProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [placedSide, setPlacedSide] = useState(side);
+  const [shift, setShift] = useState<{ x: number; y: number } | null>(null);
 
   useLayoutEffect(() => {
     const el = ref.current;
-    if (el && placedSide === side && !fitsInViewport(el.getBoundingClientRect())) {
+    if (!el || shift) return;
+    const rect = el.getBoundingClientRect();
+    if (placedSide === side && !fitsOnSide(rect, side)) {
       setPlacedSide(OPPOSITE[side]);
+      return;
     }
-  }, [placedSide, side]);
+    setShift(crossAxisShift(rect, placedSide));
+  }, [placedSide, side, shift]);
+
+  const style = { ...position(anchor, placedSide), marginLeft: shift?.x, marginTop: shift?.y };
 
   return createPortal(
-    <div ref={ref} className={styles.tooltip} role="tooltip" style={position(anchor, placedSide)}>
+    <div ref={ref} className={styles.tooltip} role="tooltip" style={style}>
       <span>{label}</span>
       {shortcut && <kbd className={styles.shortcut}>{shortcut}</kbd>}
     </div>,

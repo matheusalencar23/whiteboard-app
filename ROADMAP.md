@@ -12,6 +12,7 @@ Marque os itens com `[x]` conforme forem concluídos.
 - Rotação pela alça acima da seleção, de um elemento ou de vários juntos (Shift prende em 15°).
 - Shift mantém a proporção ao redimensionar e, ao desenhar, força quadrado, círculo ou seta em ângulos de 45°.
 - Câmera com pan (roda do mouse, Shift + roda, botão do meio ou Espaço + arrastar) e zoom (Ctrl/Cmd + roda ou pinça no trackpad, centrado no cursor).
+- Indicador de zoom no canto inferior direito, com botões de diminuir e aumentar por níveis fixos e clique na porcentagem para voltar a 100%.
 - Estado em uma store do zustand. `elements`, `viewport` e as preferências da grade são salvos sozinhos no `localStorage` (`src/lib/persistence.ts`). Durante o desenvolvimento, o formato salvo não tem versão nem migração: se mudar, o board antigo é descartado.
 - Setas ligadas às formas: acompanham quando a forma é movida ou redimensionada, e as pontas podem ser arrastadas para ligar, desligar ou trocar de forma. Toda ponta ligada sai de um ponto de conexão (meio dos lados ou vértices do losango). Soltar sobre um ponto prende a ponta nele. Soltar no corpo da forma deixa a ponta automática: ela sai pelo ponto virado para a outra ponta e troca de lado quando as formas se movem. As duas pontas podem se ligar à mesma forma, formando um laço.
 - Texto dentro das formas: duplo clique num retângulo, elipse ou losango edita um rótulo centralizado, que quebra linha na largura da forma.
@@ -32,6 +33,10 @@ Marque os itens com `[x]` conforme forem concluídos.
 | Selecionar tudo | `Ctrl+A` |
 | Apagar seleção | `Delete` ou `Backspace` |
 | Limpar seleção | `Esc` |
+| Aumentar / diminuir o zoom | `Ctrl+=` / `Ctrl+-` |
+| Voltar o zoom a 100% | `Ctrl+0` |
+| Negrito / itálico no texto selecionado | `Ctrl+B` / `Ctrl+I` |
+| Aumentar / diminuir o texto selecionado | `Ctrl+Shift+>` / `Ctrl+Shift+<` |
 | Mostrar / esconder a grade | `G` |
 | Alternar a grade entre pontos e linhas | `Shift+G` |
 | Manter proporção / quadrado / seta em 45° | Segurar `Shift` ao redimensionar ou desenhar |
@@ -71,9 +76,13 @@ Esta é a ordem recomendada de trabalho a partir de agora. Ela não segue a nume
 
 ### 3. Etapa 3, na ordem descrita na seção dela
 
-- [ ] Os itens 3.1 (setas ligadas), 3.2 (pontos de conexão) 3.3 (texto dentro das formas), 3.5 (setas ortogonais) e 3.6 (setas curvas, com pontos ajustáveis) estão feitos. O 3.4 (snap e guias) foi descartado, e só a grade de fundo (4.1) ficou. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Do 3.1 ao 3.6, cada item depende do anterior. O 3.7 (texto nas setas) e o 3.8 (formato das pontas) não dependem dos outros e podem ser adiantados. Só a interface do 3.8 espera o painel de estilo (4.3). O 3.9 (lado de saída da seta e laços) corrige problemas das setas ligadas e pode entrar antes do 3.7 e do 3.8. O 3.9, o 3.7 e o 3.8 estão feitos, e a etapa 3 está completa.
+- [x] Os itens 3.1 (setas ligadas), 3.2 (pontos de conexão) 3.3 (texto dentro das formas), 3.5 (setas ortogonais) e 3.6 (setas curvas, com pontos ajustáveis) estão feitos. O 3.4 (snap e guias) foi descartado, e só a grade de fundo (4.1) ficou. Seguir a ordem dos itens da [etapa 3](#3-diagramas-a-parte-drawio). Do 3.1 ao 3.6, cada item depende do anterior. O 3.7 (texto nas setas) e o 3.8 (formato das pontas) não dependem dos outros e podem ser adiantados. Só a interface do 3.8 espera o painel de estilo (4.3). O 3.9 (lado de saída da seta e laços) corrige problemas das setas ligadas e pode entrar antes do 3.7 e do 3.8. O 3.9, o 3.7 e o 3.8 estão feitos, e a etapa 3 está completa.
 
 As outras pendências da etapa 2 (duplicar e copiar/colar) ficam para quando fizerem falta no uso. Nenhuma bloqueia a etapa 3.
+
+### 4. Etapa 4, na ordem da seção dela
+
+- [ ] Os itens 4.1 a 4.5 estão feitos. Faltam o 4.6 (ângulo e dimensões durante o arraste), que é o próximo, e o 4.7 (ajuda com o passo a passo e os atalhos). O 4.7 não depende do 4.6 e pode ser adiantado. Depois deles, a etapa 5 (exportar e importar).
 
 ## 1. Fundação
 
@@ -354,13 +363,12 @@ O traço de esboço vem do Excalidraw, mas a interface tem identidade própria (
 
 ### 4.5 Indicador de zoom
 
-- [ ] **O quê:** um indicador sempre visível com o zoom atual em porcentagem (por exemplo, "125%"), que acompanha o zoom pela roda, pela pinça e por qualquer mudança futura.
-- **Como:**
-  - Um componente `ZoomIndicator` em `src/components/Board/`, renderizado pelo `Board` por cima do canvas, num canto que não disputa espaço com a toolbar (lateral esquerda, centralizada na vertical) nem com o painel de estilo (ao lado da toolbar). O canto inferior direito é o candidato natural.
-  - Ele lê só `viewport.zoom` da store, com um seletor que devolve o número, para não re-renderizar a cada pan. Mostra `Math.round(zoom * 100)`.
-  - **Sugestão de extensão** (decidir na hora): botões de diminuir e aumentar ao lado do número, e clique no número para voltar a 100%. Os três usam o `zoomAt` da store centrado no meio da tela, respeitando `MIN_ZOOM` e `MAX_ZOOM`. Atalhos naturais: `Ctrl+-`, `Ctrl+=` e `Ctrl+0`, registrados no `useShortcuts`.
-  - O visual segue os tokens do item 4.2. Se for feito antes dele, usa o mesmo estilo de superfície da toolbar, para ser trocado junto.
-- **Por quê:** hoje não há como saber o zoom atual nem voltar exatamente a 100%, o que atrapalha alinhar coisas a olho e comparar tamanhos.
+- [x] **Feito**, já com a extensão sugerida. Detalhes da implementação:
+  - O `ZoomIndicator` (`src/components/Board/ZoomIndicator/`) fica no canto inferior direito, com a mesma superfície da toolbar: botão de diminuir, a porcentagem e botão de aumentar. O seletor lê só `viewport.zoom`, então o pan não re-renderiza o indicador.
+  - Clicar na porcentagem volta a 100%. Os botões andam por níveis fixos (`ZOOM_STEPS` em `src/lib/viewport.ts`: 10%, 25%, 50%, 75%, 100%, 125%, 150%, 200%, 300%, 400%, 600%, 800% e 1000%) em vez de multiplicar por um fator. Assim, depois de um zoom livre pela roda (96%, por exemplo), o próximo clique cai num valor redondo. Os botões ficam desabilitados em `MIN_ZOOM` e `MAX_ZOOM`.
+  - Os três usam ações novas da store, `stepZoom(direction)` e `resetZoom()`, que dão zoom centrado no meio da janela (o canvas ocupa a tela toda) por meio do `zoomTo` do viewport.
+  - Atalhos `Ctrl+=` (ou `Ctrl++`), `Ctrl+-` e `Ctrl+0`, no `useShortcuts`. O `preventDefault` impede o zoom do próprio navegador.
+  - A porcentagem usa a IBM Plex Mono com algarismos tabulares, para a largura não pular enquanto o zoom muda.
 
 ### 4.6 Indicadores de ângulo e dimensões
 
@@ -372,6 +380,18 @@ O traço de esboço vem do Excalidraw, mas a interface tem identidade própria (
   - **Dimensões:** com um elemento, o tamanho da caixa sem rotação (`getElementBox`), que é o tamanho "real" da forma mesmo girada. Com vários, o tamanho do quadro da seleção. Valores em unidades de mundo, arredondados para inteiro, para não mudar com o zoom. Posição: abaixo do quadro, centralizado, girando junto com o quadro de um elemento só ou ficando sempre na horizontal (decidir pela legibilidade).
   - O rótulo tem fundo próprio (uma pílula com a cor de destaque), para continuar legível sobre formas e sobre a grade.
 - **Por quê:** girar e redimensionar a olho é impreciso. Com o número na tela, dá para deixar formas do mesmo tamanho ou no ângulo exato, o que importa nos diagramas da etapa 3. Mostrar só durante o arraste evita poluir a tela no resto do tempo.
+
+### 4.7 Ajuda: como usar e atalhos
+
+- [ ] **O quê:** um botão com ícone de interrogação (`LuCircleHelp`) no canto inferior direito, ao lado do indicador de zoom, que abre um modal com um passo a passo de uso da aplicação: o que cada ferramenta faz, como ligar setas às formas, editar texto, usar a barra de estilo, navegar pelo board, e a lista de atalhos.
+- **Como:**
+  - **Primitivo novo `Modal`** em `src/ui/`: renderizado num portal, com fundo escurecido, título, botão de fechar, fechamento por `Esc` e por clique fora (com `stopPropagation` no `Esc`, como o `Popover`, para não limpar a seleção), foco preso dentro dele enquanto aberto e devolvido ao botão ao fechar, `role="dialog"` e `aria-modal`. Cores, raios e sombras vêm do tema.
+  - **Componente `HelpDialog`** em `src/components/Board/`, aberto pelo botão. O conteúdo é dividido em seções curtas (por exemplo: "Primeiros passos", "Ferramentas", "Diagramas", "Texto", "Estilo", "Navegação" e "Atalhos"), com abas ou uma coluna lateral de seções se o texto ficar longo.
+  - **Fonte única dos atalhos:** a lista de ferramentas e teclas vem de `TOOLS` (`tools.ts`), como na toolbar, para a ajuda não ficar desatualizada. Os demais atalhos (desfazer, grade, zoom, texto) passam para uma lista de definições compartilhada entre o `useShortcuts`, os tooltips e a ajuda, em vez de ficarem escritos em três lugares.
+  - **Atalho:** `?` (`Shift+/`) abre e fecha a ajuda, ignorado quando se está digitando (`isTypingTarget`).
+  - **Primeira visita (decidir na hora):** abrir a ajuda sozinha no primeiro acesso, guardando no `localStorage` que ela já foi vista, ou só destacar o botão.
+  - O botão usa o `IconButton`, com tooltip para cima, e fica na mesma superfície do indicador de zoom ou numa superfície própria logo ao lado.
+- **Por quê:** a aplicação já tem bastante coisa que não aparece sozinha (duplo clique para texto, pontos de conexão, Shift para proporção e ângulos, atalhos da grade e do texto). Hoje isso só é descoberto pelos tooltips ou lendo este roadmap.
 
 ## 5. Persistência
 

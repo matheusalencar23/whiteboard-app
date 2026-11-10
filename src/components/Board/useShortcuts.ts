@@ -28,7 +28,10 @@ export function useShortcuts() {
           store.setTextStyle({ italic: textSelectors.italic(store) !== true });
         } else if (hasText && e.shiftKey && (e.code === "Period" || e.code === "Comma")) {
           store.stepTextSize(e.code === "Period" ? 1 : -1);
-        } else if (key === "z" && !e.shiftKey) store.undo();
+        } else if (key === "=" || key === "+") store.stepZoom(1);
+        else if (key === "-" || key === "_") store.stepZoom(-1);
+        else if (key === "0") store.resetZoom();
+        else if (key === "z" && !e.shiftKey) store.undo();
         else if ((key === "z" && e.shiftKey) || key === "y") store.redo();
         else if (key === "a") {
           store.setTool("selection");

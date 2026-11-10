@@ -16,7 +16,7 @@ import { setArrowRouting, updateBoundArrows, type ArrowEnd } from "../lib/elemen
 import type { Point } from "../lib/types";
 import { DEFAULT_PREFERENCES, debounce, loadBoard, saveBoard } from "../lib/persistence";
 import { GRID_STYLES, type GridStyle } from "../lib/render/grid";
-import { INITIAL_VIEWPORT, panBy, zoomAt, type Viewport } from "../lib/viewport";
+import { INITIAL_VIEWPORT, nextZoomStep, panBy, zoomAt, zoomTo, type Viewport } from "../lib/viewport";
 
 export type Tool =
   | "selection"
@@ -67,6 +67,8 @@ export interface BoardState {
   cycleGridStyle: () => void;
   panBy: (dx: number, dy: number) => void;
   zoomAt: (screenPoint: Point, factor: number) => void;
+  stepZoom: (direction: 1 | -1) => void;
+  resetZoom: () => void;
 }
 
 function keepExisting(selectedIds: string[], elements: BoardElement[]) {
@@ -79,6 +81,10 @@ function pushPast(past: BoardElement[][], snapshot: BoardElement[]) {
 }
 
 const SAVE_DELAY = 300;
+
+function screenCenter(): Point {
+  return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+}
 
 const saved = loadBoard();
 
@@ -266,6 +272,11 @@ export const useBoardStore = create<BoardState>()((set) => ({
   panBy: (dx, dy) => set((state) => ({ viewport: panBy(state.viewport, dx, dy) })),
   zoomAt: (screenPoint, factor) =>
     set((state) => ({ viewport: zoomAt(state.viewport, screenPoint, factor) })),
+  stepZoom: (direction) =>
+    set((state) => ({
+      viewport: zoomTo(state.viewport, screenCenter(), nextZoomStep(state.viewport.zoom, direction)),
+    })),
+  resetZoom: () => set((state) => ({ viewport: zoomTo(state.viewport, screenCenter(), 1) })),
 }));
 
 const scheduleSave = debounce(saveBoard, SAVE_DELAY);

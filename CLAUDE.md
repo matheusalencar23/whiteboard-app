@@ -8,7 +8,7 @@ Um quadro branco que mistura Excalidraw e draw.io: o desenho livre e o visual de
 
 As funcionalidades podem seguir o Excalidraw, mas o visual da interface (toolbar, painéis, cores, seleção e alças) deve ser próprio, sem copiar o Excalidraw. O traço de esboço do `roughjs` nas formas continua.
 
-O plano de desenvolvimento fica em [ROADMAP.md](ROADMAP.md). Consulte-o antes de começar uma funcionalidade nova e marque os itens concluídos.
+O plano de desenvolvimento fica em [ROADMAP.md](ROADMAP.md), que guarda só o que falta fazer e as decisões que valem para todo item novo. Consulte-o antes de começar uma funcionalidade nova. Ao concluir um item, remova-o do ROADMAP e leve os detalhes de implementação para a mensagem de commit; se a mudança alterar a arquitetura ou uma convenção, atualize este arquivo.
 
 ## Comandos
 
@@ -58,6 +58,6 @@ Estilos: os componentes usam arquivos `*.module.scss` na mesma pasta. Os estilos
 
 ## Convenções
 
-- **Não escreva comentários no código**, nem de linha, nem de bloco, nem JSDoc, em `.ts`, `.tsx` e `.scss`. O código deve se explicar pelos nomes. O motivo das decisões fica no [ROADMAP.md](ROADMAP.md) (nos detalhes de implementação de cada item) e nas mensagens de commit. Se um bloco só fazia sentido com um comentário (por exemplo, um `catch` vazio), reescreva o código para não precisar dele.
+- **Não escreva comentários no código**, nem de linha, nem de bloco, nem JSDoc, em `.ts`, `.tsx` e `.scss`. O código deve se explicar pelos nomes. O motivo das decisões fica nas mensagens de commit (com os detalhes de implementação) e, quando a decisão orienta o trabalho futuro, na seção "Decisões tomadas" do [ROADMAP.md](ROADMAP.md). Se um bloco só fazia sentido com um comentário (por exemplo, um `catch` vazio), reescreva o código para não precisar dele.
 - Mensagens de commit e alguns identificadores são escritos em português (pt-BR).
 - Componentes usam named exports (`export function Board()`). A exceção é `App`, que é export default.

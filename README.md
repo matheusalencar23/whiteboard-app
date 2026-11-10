@@ -76,4 +76,4 @@ Os detalhes da arquitetura e as convenções do código estão no [CLAUDE.md](CL
 
 ## Roadmap
 
-O plano de desenvolvimento, o que já foi feito e o motivo de cada decisão ficam no [ROADMAP.md](ROADMAP.md). Entre os próximos itens estão a biblioteca de formas prontas (fluxograma, ER e UML), o tema escuro e um menu do board para encurtar a toolbar. A troca do `localStorage` pelo IndexedDB e a sincronização entre abas estão registradas para decidir depois.
+O que falta fazer e as decisões que orientam o projeto ficam no [ROADMAP.md](ROADMAP.md). Entre os próximos itens estão a biblioteca de formas prontas (fluxograma, ER e UML), o tema escuro e um menu do board para encurtar a toolbar. A troca do `localStorage` pelo IndexedDB e a sincronização entre abas estão registradas para decidir depois.

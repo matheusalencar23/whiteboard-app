@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import rough from "roughjs";
+import { useFontsVersion } from "../../useFontsVersion";
 import type { RoughCanvas } from "roughjs/bin/canvas";
 import styles from "./Canvas.module.scss";
 import type { Point } from "../../../lib/types";
@@ -12,7 +13,7 @@ import type {
   TextElement,
   TextStyle,
 } from "../../../lib/elements/types";
-import { FONT_FAMILIES, isLabeledElement } from "../../../lib/elements/types";
+import { isLabeledElement } from "../../../lib/elements/types";
 import {
   containsBounds,
   getBounds,
@@ -72,7 +73,7 @@ import { renderScene } from "../../../lib/render/renderScene";
 import { toDegrees, type Measurement } from "../../../lib/render/measurement";
 import { GRID_SIZE } from "../../../lib/render/grid";
 import { screenToWorld, worldToScreen } from "../../../lib/viewport";
-import { fontString, lineHeight } from "../../../lib/text";
+import { lineHeight } from "../../../lib/text";
 import { useBoardStore } from "../../../store/boardStore";
 import { TextEditor, type TextEditorLayout } from "../TextEditor/TextEditor";
 import { StyleBar, type StyleBarPlacement } from "../StyleBar/StyleBar";
@@ -249,7 +250,7 @@ export function Canvas() {
   const [hoverCursor, setHoverCursor] = useState("default");
   const [bindingHint, setBindingHintState] = useState<ArrowBinding | null>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
-  const [fontsLoaded, setFontsLoaded] = useState(0);
+  const fontsLoaded = useFontsVersion();
 
   function setBindingHint(next: ArrowBinding | null) {
     setBindingHintState((current) => (sameBinding(current, next) ? current : next));
@@ -276,20 +277,6 @@ export function Canvas() {
     observer.observe(canvas);
 
     return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const redraw = () => setFontsLoaded((n) => n + 1);
-    document.fonts.addEventListener("loadingdone", redraw);
-    const variants = FONT_FAMILIES.flatMap((fontFamily) =>
-      [false, true].flatMap((bold) =>
-        [false, true].map((italic) => fontString({ fontFamily, fontSize: 16, bold, italic })),
-      ),
-    );
-    Promise.all(variants.map((font) => document.fonts.load(font)))
-      .then(redraw)
-      .catch(redraw);
-    return () => document.fonts.removeEventListener("loadingdone", redraw);
   }, []);
 
   useEffect(() => {

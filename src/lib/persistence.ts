@@ -9,20 +9,31 @@ import {
   type ElementType,
 } from "./elements/types";
 import { updateBoundArrows } from "./elements/bindings";
-import { MAX_ZOOM, MIN_ZOOM, type Viewport } from "./viewport";
+import { nanoid } from "nanoid";
+import { INITIAL_VIEWPORT, MAX_ZOOM, MIN_ZOOM, type Viewport } from "./viewport";
 import { GRID_STYLES, type GridStyle } from "./render/grid";
 
-const STORAGE_KEY = "whiteboard:board";
+const INDEX_KEY = "whiteboard:boards";
+const BOARD_KEY_PREFIX = "whiteboard:board:";
+const PREFERENCES_KEY = "whiteboard:preferences";
 
-export interface SavedBoard {
+export interface BoardContent {
   name: string;
   elements: BoardElement[];
   viewport: Viewport;
+}
+
+export interface BoardSummary {
+  id: string;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Preferences {
   showGrid: boolean;
   gridStyle: GridStyle;
 }
-
-export type BoardFile = Pick<SavedBoard, "name" | "elements" | "viewport">;
 
 const FILE_TYPE = "whiteboard";
 
@@ -35,7 +46,7 @@ export function normalizeBoardName(value: unknown): string | null {
   return name === "" ? null : name;
 }
 
-export const DEFAULT_PREFERENCES: Pick<SavedBoard, "showGrid" | "gridStyle"> = {
+export const DEFAULT_PREFERENCES: Preferences = {
   showGrid: true,
   gridStyle: "dots",
 };
@@ -49,34 +60,124 @@ const ELEMENT_TYPES: Record<ElementType, true> = {
   text: true,
 };
 
-export function saveBoard(board: SavedBoard): void {
+function readItem(key: string): unknown {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(board));
-  } catch (error) {
-    console.warn("Não foi possível salvar o board.", error);
-  }
-}
-
-export function loadBoard(): SavedBoard | null {
-  let raw: string | null;
-  try {
-    raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(key);
+    return raw === null ? null : parseJson(raw);
   } catch {
     return null;
   }
-  if (raw === null) return null;
-
-  const board = parseBoard(raw);
-  if (board) return board;
-  console.warn("Board salvo inválido, abrindo um board vazio.");
-  return null;
 }
 
-export function serializeBoardFile({ name, elements, viewport }: BoardFile): string {
+function writeItem(key: string, value: unknown): boolean {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (error) {
+    console.warn(`Não foi possível salvar "${key}".`, error);
+    return false;
+  }
+}
+
+function removeItem(key: string): void {
+  try {
+    localStorage.removeItem(key);
+  } catch (error) {
+    console.warn(`Não foi possível apagar "${key}".`, error);
+  }
+}
+
+function boardKey(id: string): string {
+  return BOARD_KEY_PREFIX + id;
+}
+
+function isValidSummary(value: unknown): value is BoardSummary {
+  return (
+    isObject(value) &&
+    typeof value.id === "string" &&
+    typeof value.name === "string" &&
+    isNumber(value.createdAt) &&
+    isNumber(value.updatedAt)
+  );
+}
+
+function readIndex(): BoardSummary[] {
+  const data = readItem(INDEX_KEY);
+  return Array.isArray(data) ? data.filter(isValidSummary) : [];
+}
+
+export function listBoards(): BoardSummary[] {
+  return readIndex().sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+export function loadStoredBoard(id: string): BoardContent | null {
+  const data = readItem(boardKey(id));
+  if (!isObject(data)) return null;
+  const content = readBoardContent(data);
+  if (!content) {
+    console.warn(`Board "${id}" salvo inválido.`);
+    return null;
+  }
+  return { ...content, name: normalizeBoardName(data.name) ?? DEFAULT_BOARD_NAME };
+}
+
+export function saveStoredBoard(id: string, { name, elements, viewport }: BoardContent): boolean {
+  if (!writeItem(boardKey(id), { name, elements, viewport })) return false;
+  const now = Date.now();
+  const index = readIndex();
+  const existing = index.find((summary) => summary.id === id);
+  const summary = { id, name, createdAt: existing?.createdAt ?? now, updatedAt: now };
+  return writeItem(INDEX_KEY, existing ? index.map((s) => (s.id === id ? summary : s)) : [...index, summary]);
+}
+
+export function createStoredBoard(content: Partial<BoardContent> = {}): string | null {
+  const id = nanoid(10);
+  const board: BoardContent = {
+    name: content.name ?? DEFAULT_BOARD_NAME,
+    elements: content.elements ?? [],
+    viewport: content.viewport ?? INITIAL_VIEWPORT,
+  };
+  return saveStoredBoard(id, board) ? id : null;
+}
+
+export function duplicateStoredBoard(id: string): string | null {
+  const board = loadStoredBoard(id);
+  if (!board) return null;
+  return createStoredBoard({ ...board, name: `${board.name} (cópia)`.slice(0, MAX_BOARD_NAME_LENGTH) });
+}
+
+export function renameStoredBoard(id: string, name: string): boolean {
+  const board = loadStoredBoard(id);
+  if (!board) return false;
+  return saveStoredBoard(id, { ...board, name: normalizeBoardName(name) ?? DEFAULT_BOARD_NAME });
+}
+
+export function deleteStoredBoard(id: string): void {
+  removeItem(boardKey(id));
+  writeItem(
+    INDEX_KEY,
+    readIndex().filter((summary) => summary.id !== id),
+  );
+}
+
+export function loadPreferences(): Preferences {
+  const data = readItem(PREFERENCES_KEY);
+  if (!isObject(data)) return DEFAULT_PREFERENCES;
+  return {
+    showGrid: typeof data.showGrid === "boolean" ? data.showGrid : DEFAULT_PREFERENCES.showGrid,
+    gridStyle: GRID_STYLES.find((style) => style === data.gridStyle) ?? DEFAULT_PREFERENCES.gridStyle,
+  };
+}
+
+export function savePreferences(preferences: Preferences): void {
+  writeItem(PREFERENCES_KEY, preferences);
+}
+
+export function serializeBoardFile({ name, elements, viewport }: BoardContent): string {
   return JSON.stringify({ type: FILE_TYPE, name, elements, viewport }, null, 2);
 }
 
-export function parseBoardFile(raw: string, fallbackName: string): BoardFile | null {
+export function parseBoardFile(raw: string, fallbackName: string): BoardContent | null {
   const data = parseJson(raw);
   if (!isObject(data) || data.type !== FILE_TYPE) return null;
   const content = readBoardContent(data);
@@ -92,30 +193,12 @@ function parseJson(raw: string): unknown {
   }
 }
 
-function parseBoard(raw: string): SavedBoard | null {
-  return readBoard(parseJson(raw));
-}
-
-function readBoardContent(data: Record<string, unknown>): Omit<BoardFile, "name"> | null {
+function readBoardContent(data: Record<string, unknown>): Omit<BoardContent, "name"> | null {
   const { elements, viewport } = data;
   if (!Array.isArray(elements) || !elements.every(isValidElement)) return null;
   if (!isValidViewport(viewport)) return null;
   if (new Set(elements.map((el) => el.id)).size !== elements.length) return null;
   return { elements: updateBoundArrows(elements, []), viewport };
-}
-
-function readBoard(data: unknown): SavedBoard | null {
-  if (!isObject(data)) return null;
-  const content = readBoardContent(data);
-  if (!content) return null;
-  const showGrid =
-    typeof data.showGrid === "boolean" ? data.showGrid : DEFAULT_PREFERENCES.showGrid;
-
-  const gridStyle = GRID_STYLES.find((style) => style === data.gridStyle) ?? DEFAULT_PREFERENCES.gridStyle;
-
-  const name = normalizeBoardName(data.name) ?? DEFAULT_BOARD_NAME;
-
-  return { ...content, name, showGrid, gridStyle };
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

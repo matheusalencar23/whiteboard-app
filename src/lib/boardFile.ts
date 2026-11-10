@@ -1,10 +1,10 @@
-import { DEFAULT_BOARD_NAME, parseBoardFile, serializeBoardFile, type BoardFile } from "./persistence";
+import { DEFAULT_BOARD_NAME, parseBoardFile, serializeBoardFile, type BoardContent } from "./persistence";
 
 export const BOARD_FILE_EXTENSION = ".whiteboard.json";
 const BOARD_FILE_ACCEPT = `${BOARD_FILE_EXTENSION},.json,application/json`;
 
 export type OpenResult =
-  | { ok: true; board: BoardFile; name: string }
+  | { ok: true; board: BoardContent; name: string }
   | { ok: false; name: string };
 
 const FORBIDDEN_FILE_CHARS = new Set('<>:"/\\|?*');
@@ -34,7 +34,7 @@ function nameFromFileName(fileName: string): string {
   return fileName;
 }
 
-export function downloadBoardFile(board: BoardFile): void {
+export function downloadBoardFile(board: BoardContent): void {
   const blob = new Blob([serializeBoardFile(board)], { type: "application/json" });
   downloadBlob(blob, safeFileName(board.name, BOARD_FILE_EXTENSION));
 }

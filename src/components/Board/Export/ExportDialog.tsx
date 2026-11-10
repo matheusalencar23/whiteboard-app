@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { LuCopy, LuDownload } from "react-icons/lu";
 import styles from "./Export.module.scss";
 import { Modal } from "../../../ui/Modal/Modal";
+import { Button } from "../../../ui/Button/Button";
 import { useBoardStore } from "../../../store/boardStore";
 import { getExportBounds, getPngSize, renderToCanvas, type ExportOptions } from "../../../lib/export/exportScene";
 import { canCopyImage, copyPng, downloadPng, downloadSvg } from "./exportActions";
@@ -136,32 +137,21 @@ export function ExportDialog({ onClose }: ExportDialogProps) {
           </span>
           <div className={styles.actions}>
             {canCopyImage() && (
-              <button
-                type="button"
-                className={styles.action}
-                disabled={disabled}
-                onClick={() => run(() => copyPng(elements, options), "PNG copiado.")}
-              >
-                <LuCopy /> Copiar PNG
-              </button>
+              <Button icon={LuCopy} disabled={disabled} onClick={() => run(() => copyPng(elements, options), "PNG copiado.")}>
+                Copiar PNG
+              </Button>
             )}
-            <button
-              type="button"
-              className={styles.action}
-              disabled={disabled}
-              onClick={() => run(() => downloadSvg(elements, options, name))}
-            >
-              <LuDownload /> SVG
-            </button>
-            <button
-              type="button"
-              className={styles.action}
-              data-primary
+            <Button icon={LuDownload} disabled={disabled} onClick={() => run(() => downloadSvg(elements, options, name))}>
+              SVG
+            </Button>
+            <Button
+              icon={LuDownload}
+              variant="primary"
               disabled={disabled}
               onClick={() => run(() => downloadPng(elements, options, name))}
             >
-              <LuDownload /> PNG
-            </button>
+              PNG
+            </Button>
           </div>
         </footer>
       </div>

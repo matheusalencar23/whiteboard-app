@@ -14,7 +14,16 @@ import {
 } from "../lib/elements/types";
 import { setArrowRouting, updateBoundArrows, type ArrowEnd } from "../lib/elements/bindings";
 import type { Point } from "../lib/types";
-import { DEFAULT_BOARD_NAME, DEFAULT_PREFERENCES, debounce, normalizeBoardName, loadBoard, saveBoard, type BoardFile } from "../lib/persistence";
+import {
+  DEFAULT_BOARD_NAME,
+  debounce,
+  loadPreferences,
+  loadStoredBoard,
+  normalizeBoardName,
+  savePreferences,
+  saveStoredBoard,
+  type BoardContent,
+} from "../lib/persistence";
 import { GRID_STYLES, type GridStyle } from "../lib/render/grid";
 import { INITIAL_VIEWPORT, nextZoomStep, panBy, zoomAt, zoomTo, type Viewport } from "../lib/viewport";
 
@@ -37,6 +46,7 @@ export interface Notice {
 }
 
 export interface BoardState {
+  boardId: string | null;
   name: string;
   elements: BoardElement[];
   selectedIds: string[];
@@ -57,7 +67,8 @@ export interface BoardState {
   addElement: (element: BoardElement, options?: { select?: boolean }) => void;
   replaceElement: (element: BoardElement) => void;
   deleteElements: (ids: string[]) => void;
-  openBoard: (board: BoardFile) => void;
+  loadStoredBoard: (id: string) => boolean;
+  openBoard: (board: BoardContent) => void;
   setBoardName: (name: string) => void;
 
   updateElements: (updated: BoardElement[]) => void;
@@ -102,22 +113,23 @@ function screenCenter(): Point {
   return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 }
 
-const saved = loadBoard();
+const preferences = loadPreferences();
 
 let noticeCount = 0;
 
 export const useBoardStore = create<BoardState>()((set) => ({
-  name: saved?.name ?? DEFAULT_BOARD_NAME,
-  elements: saved?.elements ?? [],
+  boardId: null,
+  name: DEFAULT_BOARD_NAME,
+  elements: [],
   selectedIds: [],
   tool: "selection",
-  viewport: saved?.viewport ?? INITIAL_VIEWPORT,
+  viewport: INITIAL_VIEWPORT,
   arrowRouting: "straight",
   arrowheads: DEFAULT_ARROWHEADS,
   currentStyle: DEFAULT_STYLE,
   currentTextStyle: DEFAULT_TEXT_STYLE,
-  showGrid: saved?.showGrid ?? DEFAULT_PREFERENCES.showGrid,
-  gridStyle: saved?.gridStyle ?? DEFAULT_PREFERENCES.gridStyle,
+  showGrid: preferences.showGrid,
+  gridStyle: preferences.gridStyle,
   helpOpen: false,
   exportOpen: false,
   notice: null,
@@ -156,6 +168,26 @@ export const useBoardStore = create<BoardState>()((set) => ({
         future: [],
       };
     }),
+
+  loadStoredBoard: (id) => {
+    flushBoardSave();
+    const board = loadStoredBoard(id);
+    if (!board) return false;
+    set({
+      boardId: id,
+      name: board.name,
+      elements: board.elements,
+      viewport: board.viewport,
+      selectedIds: [],
+      tool: "selection",
+      helpOpen: false,
+      exportOpen: false,
+      notice: null,
+      past: [],
+      future: [],
+    });
+    return true;
+  },
 
   openBoard: (board) =>
     set((state) => ({
@@ -318,18 +350,34 @@ export const useBoardStore = create<BoardState>()((set) => ({
   resetZoom: () => set((state) => ({ viewport: zoomTo(state.viewport, screenCenter(), 1) })),
 }));
 
-const scheduleSave = debounce(saveBoard, SAVE_DELAY);
+let saveFailed = false;
+
+function persistBoard(id: string, content: BoardContent) {
+  const ok = saveStoredBoard(id, content);
+  if (!ok && !saveFailed) {
+    useBoardStore
+      .getState()
+      .showNotice("Não foi possível salvar: o armazenamento do navegador está cheio.", "error");
+  }
+  saveFailed = !ok;
+}
+
+const scheduleSave = debounce(persistBoard, SAVE_DELAY);
+
+export function flushBoardSave() {
+  scheduleSave.flush();
+}
 
 const unsubscribe = useBoardStore.subscribe((state, prev) => {
+  if (state.showGrid !== prev.showGrid || state.gridStyle !== prev.gridStyle) {
+    savePreferences({ showGrid: state.showGrid, gridStyle: state.gridStyle });
+  }
+  if (state.boardId === null || state.boardId !== prev.boardId) return;
   const changed =
-    state.name !== prev.name ||
-    state.elements !== prev.elements ||
-    state.viewport !== prev.viewport ||
-    state.showGrid !== prev.showGrid ||
-    state.gridStyle !== prev.gridStyle;
+    state.name !== prev.name || state.elements !== prev.elements || state.viewport !== prev.viewport;
   if (!changed) return;
-  const { name, elements, viewport, showGrid, gridStyle } = state;
-  scheduleSave({ name, elements, viewport, showGrid, gridStyle });
+  const { boardId, name, elements, viewport } = state;
+  scheduleSave(boardId, { name, elements, viewport });
 });
 
 const flushSave = () => scheduleSave.flush();

@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
+import { LuLayoutGrid } from "react-icons/lu";
 import { Canvas } from "./Canvas/Canvas";
 import { Toolbar } from "./Toolbar/Toolbar";
 import { useShortcuts } from "./useShortcuts";
@@ -8,6 +10,8 @@ import { BoardNotice } from "./BoardNotice";
 import { BoardTitle } from "./BoardTitle/BoardTitle";
 import { importBoard } from "./boardFileActions";
 import { isBoardFileCandidate } from "../../lib/boardFile";
+import { IconButton } from "../../ui/IconButton/IconButton";
+import { flushBoardSave, useBoardStore } from "../../store/boardStore";
 import styles from "./Board.module.scss";
 
 function hasFiles(e: React.DragEvent) {
@@ -16,7 +20,15 @@ function hasFiles(e: React.DragEvent) {
 
 export function Board() {
   useShortcuts();
+  const navigate = useNavigate();
+  const name = useBoardStore((s) => s.name);
   const [dropping, setDropping] = useState(false);
+
+  useEffect(() => flushBoardSave, []);
+
+  useEffect(() => {
+    document.title = `${name} · Whiteboard`;
+  }, [name]);
 
   function handleDragOver(e: React.DragEvent) {
     if (!hasFiles(e)) return;
@@ -47,6 +59,15 @@ export function Board() {
       onDrop={handleDrop}
     >
       <div className={styles.title}>
+        <div className={styles.back}>
+          <IconButton
+            icon={LuLayoutGrid}
+            label="Todos os boards"
+            size="sm"
+            tooltipSide="bottom"
+            onClick={() => navigate("/")}
+          />
+        </div>
         <BoardTitle />
       </div>
       <div className={styles.dock}>

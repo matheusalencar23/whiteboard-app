@@ -6,11 +6,10 @@ Os itens concluídos saem deste arquivo: o que o app já faz está no [README.md
 
 ## Ordem sugerida
 
-1. [Ajustes pequenos](#ajustes-pequenos): atalhos que fazem falta no uso.
-2. [Biblioteca de formas prontas](#biblioteca-de-formas-prontas): o maior item que falta, dividido por grupo.
-3. [Tema escuro](#tema-escuro).
-4. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
-5. Depois: [publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm).
+1. [Biblioteca de formas prontas](#biblioteca-de-formas-prontas): o maior item que falta, dividido por grupo.
+2. [Tema escuro](#tema-escuro).
+3. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
+4. Depois: [publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm).
 
 ## Decisões tomadas
 
@@ -34,12 +33,6 @@ Valem para todo item novo.
 - [ ] **O quê:** agrupar a seleção (`Ctrl+G`) para mover, redimensionar e girar como um bloco, e desagrupar (`Ctrl+Shift+G`).
 - **Como:** um `groupIds` nos elementos (como no Excalidraw), com o clique num elemento selecionando o grupo inteiro e o duplo clique entrando no grupo. A seleção, o quadro e as alças já tratam vários elementos.
 - **Por quê:** os modelos compostos da biblioteca de formas dependem disso, e é comum querer mover um pedaço do diagrama inteiro.
-
-### Ajustes pequenos
-
-- [ ] `Enter` numa forma ou seta selecionada abre a edição do rótulo, como no Excalidraw. Hoje só o duplo clique abre.
-- [ ] Arrastar as pontas ou os pontos de uma seta existente com Shift encaixa em ângulos de 45°, como já acontece ao desenhar.
-- [ ] Opcional: arrastar o texto de uma seta ao longo do caminho dela, em vez de ficar sempre no meio.
 
 ## Diagramas
 

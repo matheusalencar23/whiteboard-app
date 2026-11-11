@@ -289,7 +289,8 @@ function isValidElement(value: unknown): value is BoardElement {
         isValidSegments(value.fixedSegments) &&
         isValidBinding(value.startBinding) &&
         isValidBinding(value.endBinding) &&
-        isValidLabel(value.label)
+        isValidLabel(value.label) &&
+        isValidLabelPosition(value.labelPosition)
       );
     case "freedraw":
       return isValidPoints(value.points);
@@ -300,6 +301,10 @@ function isValidElement(value: unknown): value is BoardElement {
     case "diamond":
       return isValidLabel(value.label);
   }
+}
+
+function isValidLabelPosition(value: unknown): boolean {
+  return value === undefined || (isNumber(value) && value >= 0 && value <= 1);
 }
 
 function isOneOf(options: readonly string[], value: unknown): boolean {

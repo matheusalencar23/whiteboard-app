@@ -4,6 +4,7 @@ import type { ArrowElement, BoardElement } from "./elements/types";
 import {
   getElementBounds,
   getElementBox,
+  getLabelLayout,
   resizeElement,
   translateElement,
 } from "./elements/registry";
@@ -283,9 +284,12 @@ export function getArrowHandles(arrow: ArrowElement, zoom: number): ArrowHandle[
     { kind: "end", end: "start", position: points[0] },
     { kind: "end", end: "end", position: points[last] },
   ];
+  const labelBox = getLabelLayout(arrow)?.box;
+  const underLabel = (p: Point) => labelBox !== undefined && containsPoint(labelBox, p);
   if (arrow.routing === "elbow") {
     for (let i = 0; i < last; i++) {
       if (distance(points[i], points[i + 1]) * zoom < MIN_SEGMENT_FOR_MIDPOINT) continue;
+      if (underLabel(getSegmentMidpoint(arrow, i))) continue;
       const axis = Math.abs(points[i].y - points[i + 1].y) < 1e-6 ? "x" : "y";
       handles.push({ kind: "segment", index: i, axis, position: getSegmentMidpoint(arrow, i) });
     }
@@ -295,6 +299,7 @@ export function getArrowHandles(arrow: ArrowElement, zoom: number): ArrowHandle[
   for (let i = 1; i < last; i++) handles.push({ kind: "point", index: i, position: points[i] });
   for (let i = 0; i < last; i++) {
     if (distance(points[i], points[i + 1]) * zoom < MIN_SEGMENT_FOR_MIDPOINT) continue;
+    if (underLabel(getSegmentMidpoint(arrow, i))) continue;
     handles.push({ kind: "midpoint", index: i, position: getSegmentMidpoint(arrow, i) });
   }
   return handles;

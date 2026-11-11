@@ -127,7 +127,10 @@ export interface ArrowElement extends BaseElement {
   startBinding: ArrowBinding | null;
   endBinding: ArrowBinding | null;
   label?: ShapeLabel;
+  labelPosition?: number;
 }
+
+export const DEFAULT_LABEL_POSITION = 0.5;
 
 export interface ArrowSegment {
   start: Point;

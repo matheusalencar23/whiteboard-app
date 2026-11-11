@@ -25,7 +25,7 @@ export const HELP_SECTIONS: HelpSection[] = [
             use as alças dos cantos para redimensionar e a bolinha de cima para girar.
           </li>
           <li>Para ligar duas formas, use a seta: comece o arraste sobre uma forma e solte sobre a outra.</li>
-          <li>Dê duplo clique numa forma ou numa seta para escrever dentro dela.</li>
+          <li>Dê duplo clique numa forma ou numa seta (ou selecione e tecle Enter) para escrever dentro dela.</li>
           <li>Mude cores, traços e texto na barra que aparece acima da seleção.</li>
         </ol>
         <p className={styles.note}>

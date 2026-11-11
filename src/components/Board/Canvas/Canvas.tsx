@@ -16,6 +16,8 @@ import type {
 import { isLabeledElement } from "../../../lib/elements/types";
 import {
   containsBounds,
+  containsPoint,
+  expandBounds,
   getBounds,
   getCenter,
   type Bounds,
@@ -26,6 +28,7 @@ import {
   createBoxElement,
   getElementAtPoint,
   getLabelArea,
+  getLabelLayout,
   getLabelTextStyle,
   getLabelTargetAt,
   getElementBounds,
@@ -33,7 +36,7 @@ import {
   resizeElement,
   translateElement,
 } from "../../../lib/elements/registry";
-import { createArrow, getArrowPoints, setArrowPoints } from "../../../lib/elements/shapes/arrow";
+import { createArrow, getArrowPoints, getLabelPositionAt, setArrowPoints } from "../../../lib/elements/shapes/arrow";
 import {
   bindArrowEnd,
   findBinding,
@@ -132,6 +135,11 @@ type Interaction =
       before: BoardElement[];
     }
   | {
+      kind: "draggingLabel";
+      original: ArrowElement;
+      before: BoardElement[];
+    }
+  | {
       kind: "draggingEndpoint";
       end: ArrowEnd;
       original: ArrowElement;
@@ -178,6 +186,11 @@ function findBindingAt(world: Point) {
     BINDING_TOLERANCE / zoom,
     CONNECTION_SNAP_DISTANCE / zoom,
   );
+}
+
+function isOnArrowLabel(arrow: ArrowElement, point: Point, tolerance: number): boolean {
+  const box = getLabelLayout(arrow)?.box;
+  return box !== undefined && containsPoint(expandBounds(box, tolerance), point);
 }
 
 function detachFromStaying(moved: BoardElement[]): BoardElement[] {
@@ -266,6 +279,7 @@ export function Canvas() {
   const lastPointerRef = useRef<Point | null>(null);
   const hoverPointRef = useRef<Point | null>(null);
   const updateInteractionRef = useRef<(world: Point, shiftKey: boolean) => void>(() => {});
+  const editSelectionRef = useRef<() => boolean>(() => false);
 
   function setDraft(element: BoardElement | null) {
     draftRef.current = element;
@@ -319,7 +333,12 @@ export function Canvas() {
     }
     function handleKeyDown(e: KeyboardEvent) {
       reapplyShift(e);
-      if (e.code !== "Space" || e.repeat || isTypingTarget(e.target)) return;
+      if (isTypingTarget(e.target)) return;
+      if (e.key === "Enter" && !(e.target instanceof HTMLButtonElement) && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+        if (editSelectionRef.current()) e.preventDefault();
+        return;
+      }
+      if (e.code !== "Space" || e.repeat) return;
       e.preventDefault();
       spacePressedRef.current = true;
       setSpacePressed(true);
@@ -481,6 +500,10 @@ export function Canvas() {
     const singleArrow = getSingleArrow(selectedNow);
 
     const arrowHandle = singleArrow && getArrowHandleAt(singleArrow, world, zoom);
+    if (singleArrow && !arrowHandle && isOnArrowLabel(singleArrow, world, tolerance)) {
+      interactionRef.current = { kind: "draggingLabel", original: singleArrow, before: store.elements };
+      return;
+    }
     if (singleArrow && arrowHandle) {
       if (arrowHandle.kind === "end") {
         interactionRef.current = {
@@ -518,6 +541,7 @@ export function Canvas() {
       return;
     }
 
+    if (singleArrow && isOnArrowLabel(singleArrow, world, HIT_TOLERANCE / zoom)) return setHoverCursor("grab");
     const boxFrame = singleArrow ? null : frame;
     if (boxFrame && isOnRotationHandle(world, boxFrame, zoom)) {
       const center = getCenter(boxFrame.box);
@@ -704,8 +728,15 @@ export function Canvas() {
 
       case "draggingPoint": {
         const points = getArrowPoints(interaction.arrow);
-        points[interaction.index] = world;
+        const previous = points[interaction.index - 1];
+        points[interaction.index] = shiftKey ? snapToAngle(previous, world) : world;
         store.updateElements([setArrowPoints(interaction.arrow, points)]);
+        break;
+      }
+
+      case "draggingLabel": {
+        const { original } = interaction;
+        store.updateElements([{ ...original, labelPosition: getLabelPositionAt(original, world) }]);
         break;
       }
 
@@ -715,10 +746,12 @@ export function Canvas() {
 
       case "draggingEndpoint": {
         const { original, end } = interaction;
-        const binding = findBindingAt(world);
-
         const points = getArrowPoints(original);
-        points[end === "start" ? 0 : points.length - 1] = world;
+        const index = end === "start" ? 0 : points.length - 1;
+        const neighbor = points[end === "start" ? 1 : index - 1];
+        const target = shiftKey && original.routing !== "elbow" ? snapToAngle(neighbor, world) : world;
+        const binding = findBindingAt(target);
+        points[index] = target;
         const byId = new Map(store.elements.map((el) => [el.id, el]));
         const arrow = bindArrowEnd(setArrowPoints(original, points), end, binding);
         const refreshed = refreshArrow(arrow, byId);
@@ -784,8 +817,20 @@ export function Canvas() {
     }
   }
 
+  function editSelection(): boolean {
+    const store = useBoardStore.getState();
+    if (store.tool !== "selection" || editing || interactionRef.current) return false;
+    const [element, ...rest] = getSelectedElements();
+    if (!element || rest.length > 0) return false;
+    if (element.type === "text") startEditingText(element, false);
+    else if (isLabeledElement(element)) startEditingLabel(element);
+    else return false;
+    return true;
+  }
+
   useEffect(() => {
     updateInteractionRef.current = updateInteraction;
+    editSelectionRef.current = editSelection;
   });
 
   function endInteraction() {
@@ -825,6 +870,7 @@ export function Canvas() {
       case "draggingEndpoint":
       case "draggingPoint":
       case "draggingSegment":
+      case "draggingLabel":
         store.commitHistory(interaction.before);
         break;
     }
@@ -841,7 +887,8 @@ export function Canvas() {
     } else if (
       interaction?.kind === "draggingEndpoint" ||
       interaction?.kind === "draggingPoint" ||
-      interaction?.kind === "draggingSegment"
+      interaction?.kind === "draggingSegment" ||
+      interaction?.kind === "draggingLabel"
     ) {
       useBoardStore.getState().updateElements([interaction.original]);
     }

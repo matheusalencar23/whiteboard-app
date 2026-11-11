@@ -22,6 +22,25 @@ export function getPointAtLength(points: Point[], length: number): Point {
   return points[points.length - 1];
 }
 
-export function getPathMidpoint(points: Point[]): Point {
-  return getPointAtLength(points, getPathLength(points) / 2);
+export function getLengthAtClosestPoint(points: Point[], p: Point): number {
+  let best = Infinity;
+  let bestLength = 0;
+  let travelled = 0;
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1];
+    const b = points[i];
+    const segment = distance(a, b);
+    const t =
+      segment === 0
+        ? 0
+        : Math.max(0, Math.min(1, ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / (segment * segment)));
+    const closest = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+    const d = distance(p, closest);
+    if (d < best) {
+      best = d;
+      bestLength = travelled + segment * t;
+    }
+    travelled += segment;
+  }
+  return bestLength;
 }

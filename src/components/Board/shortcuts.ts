@@ -24,6 +24,7 @@ export const SHORTCUTS = {
   italic: { label: "Itálico", keys: ["Ctrl", "I"] },
   textBigger: { label: "Aumentar o texto", keys: ["Ctrl", "Shift", ">"] },
   textSmaller: { label: "Diminuir o texto", keys: ["Ctrl", "Shift", "<"] },
+  editText: { label: "Escrever no texto ou rótulo selecionado", keys: ["Enter"] },
   confirmText: { label: "Terminar a edição do texto", keys: ["Ctrl", "Enter"] },
   saveFile: { label: "Salvar em arquivo", keys: ["Ctrl", "S"] },
   openFile: { label: "Abrir arquivo", keys: ["Ctrl", "O"] },

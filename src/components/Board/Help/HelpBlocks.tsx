@@ -10,7 +10,7 @@ const TOOL_DESCRIPTIONS: Record<Tool, string> = {
   rectangle: "Arraste para desenhar. Com Shift, vira um quadrado.",
   diamond: "Arraste para desenhar. Com Shift, fica com os lados iguais.",
   ellipse: "Arraste para desenhar. Com Shift, vira um círculo.",
-  arrow: "Arraste de um ponto a outro. Começar ou terminar sobre uma forma liga a seta a ela. Com Shift, anda em ângulos de 45°.",
+  arrow: "Arraste de um ponto a outro. Começar ou terminar sobre uma forma liga a seta a ela. Com Shift, anda em ângulos de 45°, também ao arrastar as pontas e os pontos de uma seta pronta.",
   freedraw: "Desenho à mão livre. Continua ativo depois de cada traço.",
   text: "Clique no quadro para escrever um texto solto.",
 };
@@ -52,6 +52,7 @@ const SHORTCUT_GROUPS: { title: string; rows: ShortcutRow[] }[] = [
   {
     title: "Texto",
     rows: [
+      SHORTCUTS.editText,
       SHORTCUTS.bold,
       SHORTCUTS.italic,
       SHORTCUTS.textBigger,
@@ -74,10 +75,12 @@ const SHORTCUT_GROUPS: { title: string; rows: ShortcutRow[] }[] = [
     rows: [
       { label: "Manter a proporção ao desenhar ou redimensionar", combos: [["Shift", "arrastar"]] },
       { label: "Girar em passos de 15°", combos: [["Shift", "girar"]] },
+      { label: "Seta em ângulos de 45° ao desenhar ou arrastar as pontas e os pontos", combos: [["Shift", "arrastar"]] },
       { label: "Mover a tela", combos: [["Espaço", "arrastar"], ["botão do meio"], ["roda"]] },
       { label: "Mover a tela na horizontal", combos: [["Shift", "roda"]] },
       { label: "Zoom no cursor", combos: [["Ctrl", "roda"], ["pinça"]] },
       { label: "Escrever um texto ou rótulo", combos: [["duplo clique"]] },
+      { label: "Levar o texto da seta ao longo dela (com a seta selecionada)", combos: [["arrastar o texto"]] },
     ],
   },
 ];

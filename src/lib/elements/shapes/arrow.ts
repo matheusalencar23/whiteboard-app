@@ -1,7 +1,7 @@
 import type { Point } from "../../types";
 import { expandBounds, getBounds, unionBounds } from "../../geometry/bounds";
 import { distance, distanceToPolyline } from "../../geometry/distance";
-import { getPathMidpoint } from "../../geometry/path";
+import { getLengthAtClosestPoint, getPathLength, getPointAtLength } from "../../geometry/path";
 import type { Options } from "roughjs/bin/core";
 import type { ArrowEnd } from "../bindings";
 import {
@@ -13,6 +13,7 @@ import {
 import { baseFields, scalePoints, strokeOptions, type ShapeUtil } from "../shapeUtil";
 import {
   DEFAULT_ARROWHEADS,
+  DEFAULT_LABEL_POSITION,
   type ArrowElement,
   type ArrowheadPair,
   type ArrowRouting,
@@ -20,6 +21,12 @@ import {
 } from "../types";
 
 const LABEL_AREA_WIDTH = 216;
+
+export function getLabelPositionAt(el: ArrowElement, p: Point): number {
+  const path = getArrowPath(el);
+  const length = getPathLength(path);
+  return length === 0 ? DEFAULT_LABEL_POSITION : getLengthAtClosestPoint(path, p) / length;
+}
 
 export function getArrowPoints(el: ArrowElement): Point[] {
   return el.points.map((p) => ({ x: el.x + p.x, y: el.y + p.y }));
@@ -344,7 +351,8 @@ export const arrowUtil: ShapeUtil<ArrowElement> = {
   },
 
   getLabelArea(el) {
-    const center = getPathMidpoint(getArrowPath(el));
+    const path = getArrowPath(el);
+    const center = getPointAtLength(path, getPathLength(path) * (el.labelPosition ?? DEFAULT_LABEL_POSITION));
     return { x: center.x - LABEL_AREA_WIDTH / 2, y: center.y, width: LABEL_AREA_WIDTH, height: 0 };
   },
 };

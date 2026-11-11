@@ -12,6 +12,7 @@ interface IconButtonProps {
   shortcut?: string;
   badge?: string;
   hasPopup?: boolean;
+  popupRole?: "dialog" | "menu";
   size?: "md" | "sm";
   activeMarker?: boolean;
   tooltipSide?: TooltipSide;
@@ -26,6 +27,7 @@ export function IconButton({
   shortcut,
   badge,
   hasPopup = false,
+  popupRole = "dialog",
   size = "md",
   activeMarker = false,
   tooltipSide = "right",
@@ -50,7 +52,7 @@ export function IconButton({
         data-marker={activeMarker}
         aria-label={label}
         aria-pressed={hasPopup ? undefined : active}
-        aria-haspopup={hasPopup ? "dialog" : undefined}
+        aria-haspopup={hasPopup ? popupRole : undefined}
         aria-expanded={hasPopup ? active === true : undefined}
         disabled={disabled}
         onPointerEnter={showTooltip}

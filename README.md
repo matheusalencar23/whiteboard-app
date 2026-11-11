@@ -12,7 +12,7 @@ Tudo roda no navegador, sem servidor. Os boards ficam salvos no próprio navegad
 - **Estilo:** barra flutuante acima da seleção com cor, espessura e tipo do contorno, preenchimento (hachura, hachura cruzada ou sólido), opacidade e intensidade do esboço.
 - **Navegação:** pan e zoom pela roda, pelo trackpad ou pelo indicador de zoom, e grade de fundo em pontos ou linhas.
 - **Vários boards:** a página inicial lista os boards salvos, com miniatura, e permite criar, renomear, duplicar e apagar. Cada board tem um endereço próprio (`/board/:id`).
-- **Arquivos:** salvar e abrir o board como `.whiteboard.json` (`Ctrl+S` e `Ctrl+O`, ou arrastando o arquivo para o quadro).
+- **Arquivos:** salvar e abrir o board como `.whiteboard.json` pelo menu ao lado do nome do board (`Ctrl+S` e `Ctrl+O`, ou arrastando o arquivo para o quadro).
 - **Exportar imagem:** PNG ou SVG, do board inteiro ou só da seleção, com fundo branco ou transparente (`Ctrl+Shift+E`). O PNG também pode ser copiado para a área de transferência. O SVG leva as fontes embutidas e abre igual em qualquer lugar.
 - **Ajuda:** o botão `?` no canto inferior direito (ou a tecla `?`) explica as ferramentas e lista todos os atalhos.
 
@@ -76,4 +76,4 @@ Os detalhes da arquitetura e as convenções do código estão no [CLAUDE.md](CL
 
 ## Roadmap
 
-O que falta fazer e as decisões que orientam o projeto ficam no [ROADMAP.md](ROADMAP.md). Entre os próximos itens estão a biblioteca de formas prontas (fluxograma, ER e UML), o tema escuro e um menu do board para encurtar a toolbar. A troca do `localStorage` pelo IndexedDB e a sincronização entre abas estão registradas para decidir depois.
+O que falta fazer e as decisões que orientam o projeto ficam no [ROADMAP.md](ROADMAP.md). Entre os próximos itens estão a biblioteca de formas prontas (fluxograma, ER e UML), o tema escuro e atalhos de edição (duplicar, copiar e colar). A troca do `localStorage` pelo IndexedDB e a sincronização entre abas estão registradas para decidir depois.

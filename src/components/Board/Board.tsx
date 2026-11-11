@@ -8,6 +8,8 @@ import { ZoomIndicator } from "./ZoomIndicator/ZoomIndicator";
 import { HelpButton } from "./Help/HelpButton";
 import { BoardNotice } from "./BoardNotice";
 import { BoardTitle } from "./BoardTitle/BoardTitle";
+import { BoardMenu } from "./BoardMenu/BoardMenu";
+import { ExportDialog } from "./Export/ExportDialog";
 import { importBoard } from "./boardFileActions";
 import { isBoardFileCandidate } from "../../lib/boardFile";
 import { IconButton } from "../../ui/IconButton/IconButton";
@@ -22,7 +24,10 @@ export function Board() {
   useShortcuts();
   const navigate = useNavigate();
   const name = useBoardStore((s) => s.name);
+  const exportOpen = useBoardStore((s) => s.exportOpen);
+  const setExportOpen = useBoardStore((s) => s.setExportOpen);
   const [dropping, setDropping] = useState(false);
+  const [renaming, setRenaming] = useState(false);
 
   useEffect(() => flushBoardSave, []);
 
@@ -59,7 +64,7 @@ export function Board() {
       onDrop={handleDrop}
     >
       <div className={styles.title}>
-        <div className={styles.back}>
+        <div className={styles.actions}>
           <IconButton
             icon={LuLayoutGrid}
             label="Todos os boards"
@@ -67,8 +72,9 @@ export function Board() {
             tooltipSide="bottom"
             onClick={() => navigate("/")}
           />
+          <BoardMenu onRename={() => setRenaming(true)} />
         </div>
-        <BoardTitle />
+        <BoardTitle editing={renaming} onEditingChange={setRenaming} />
       </div>
       <div className={styles.dock}>
         <Toolbar />
@@ -81,6 +87,7 @@ export function Board() {
       <div className={styles.notice}>
         <BoardNotice />
       </div>
+      {exportOpen && <ExportDialog onClose={() => setExportOpen(false)} />}
     </div>
   );
 }

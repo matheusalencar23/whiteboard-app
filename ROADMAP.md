@@ -6,11 +6,10 @@ Os itens concluídos saem deste arquivo: o que o app já faz está no [README.md
 
 ## Ordem sugerida
 
-1. [Toolbar mais curta: menu do board](#toolbar-mais-curta-menu-do-board): pequeno, e corrige a toolbar saindo da tela em telas baixas.
-2. [Duplicar, copiar e colar, mover pelo teclado](#duplicar-copiar-e-colar-mover-pelo-teclado) e os [ajustes pequenos](#ajustes-pequenos): atalhos que fazem falta no uso.
-3. [Biblioteca de formas prontas](#biblioteca-de-formas-prontas): o maior item que falta, dividido por grupo.
-4. [Tema escuro](#tema-escuro).
-5. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
+1. [Duplicar, copiar e colar, mover pelo teclado](#duplicar-copiar-e-colar-mover-pelo-teclado) e os [ajustes pequenos](#ajustes-pequenos): atalhos que fazem falta no uso.
+2. [Biblioteca de formas prontas](#biblioteca-de-formas-prontas): o maior item que falta, dividido por grupo.
+3. [Tema escuro](#tema-escuro).
+4. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
 
 ## Decisões tomadas
 
@@ -66,17 +65,6 @@ Valem para todo item novo.
 - **Divisão sugerida:** é grande, então pode entrar por grupo: fluxograma primeiro (formas de um campo de texto só), depois ER e UML (que precisam dos compartimentos).
 
 ## Visual
-
-### Toolbar mais curta: menu do board
-
-- [ ] **O quê:** tirar da toolbar os botões de arquivo ("Abrir arquivo", "Salvar em arquivo" e "Exportar imagem") e juntá-los num menu do board, para a toolbar caber em telas baixas.
-- **Problema:** a toolbar vertical tem 8 ferramentas, desfazer, refazer, apagar, os 2 botões da grade e os 3 de arquivo, uns 650 px de altura. Ela é centralizada na vertical, então em telas com menos de uns 740 px de altura (notebooks de 768 px com a barra do navegador, por exemplo) sobe por cima do nome do board, no canto superior esquerdo, e pode sair da tela.
-- **Como:**
-  - Um botão de menu junto do nome do board (no grupo do botão de voltar para a lista), que abre um `Popover` com itens de texto e o atalho de cada um: abrir arquivo, salvar em arquivo, exportar imagem e, se fizer sentido, "Todos os boards" e renomear. O botão usa `hasPopup`. Os atalhos (`Ctrl+O`, `Ctrl+S`, `Ctrl+Shift+E`) continuam iguais, então `shortcuts.ts` e `useShortcuts` não mudam.
-  - O `Popover` hoje é usado pelos submenus da barra de estilo. Verificar se ele serve para uma lista de itens com navegação por teclado (setas, `Enter`, `Esc`) ou se vale um primitivo `Menu` em `src/ui/`.
-  - Depois disso, a toolbar fica com ferramentas, edição e grade, uns 530 px. Para garantir telas ainda menores, limitar a altura do `.dock` à janela e permitir rolagem, ou ancorar a toolbar abaixo do nome em vez de centralizar.
-  - Atualizar a ajuda, que cita os botões de arquivo da toolbar.
-- **Por quê:** os botões de arquivo foram entrando um a um na toolbar (arquivo JSON, imagem) e não são usados a todo momento, como as ferramentas. Um menu junto do nome do board também é onde se espera encontrar ações sobre o board inteiro.
 
 ### Tema escuro
 

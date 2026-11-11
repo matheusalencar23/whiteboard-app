@@ -31,7 +31,19 @@ const SHORTCUT_GROUPS: { title: string; rows: ShortcutRow[] }[] = [
   },
   {
     title: "Edição",
-    rows: [SHORTCUTS.undo, SHORTCUTS.redo, SHORTCUTS.selectAll, SHORTCUTS.delete, SHORTCUTS.deselect].map(fromShortcut),
+    rows: [
+      SHORTCUTS.undo,
+      SHORTCUTS.redo,
+      SHORTCUTS.selectAll,
+      SHORTCUTS.delete,
+      SHORTCUTS.deselect,
+      SHORTCUTS.duplicate,
+      SHORTCUTS.copy,
+      SHORTCUTS.cut,
+      SHORTCUTS.paste,
+      SHORTCUTS.nudge,
+      SHORTCUTS.nudgeFar,
+    ].map(fromShortcut),
   },
   {
     title: "Arquivo",

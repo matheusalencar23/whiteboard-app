@@ -12,7 +12,8 @@ import {
   type ArrowRouting,
   type BoardElement,
 } from "../lib/elements/types";
-import { setArrowRouting, updateBoundArrows, type ArrowEnd } from "../lib/elements/bindings";
+import { releaseBindings, setArrowRouting, updateBoundArrows, type ArrowEnd } from "../lib/elements/bindings";
+import { translateElement } from "../lib/elements/registry";
 import type { Point } from "../lib/types";
 import {
   DEFAULT_BOARD_NAME,
@@ -65,6 +66,8 @@ export interface BoardState {
   future: BoardElement[][];
 
   addElement: (element: BoardElement, options?: { select?: boolean }) => void;
+  insertElements: (inserted: BoardElement[]) => void;
+  translateElements: (ids: string[], dx: number, dy: number, options?: { record?: boolean }) => void;
   replaceElement: (element: BoardElement) => void;
   deleteElements: (ids: string[]) => void;
   loadStoredBoard: (id: string) => boolean;
@@ -143,6 +146,37 @@ export const useBoardStore = create<BoardState>()((set) => ({
       past: pushPast(state.past, state.elements),
       future: [],
     })),
+
+  insertElements: (inserted) =>
+    set((state) => {
+      if (inserted.length === 0) return {};
+      const ids = inserted.map((el) => el.id);
+      return {
+        elements: updateBoundArrows([...state.elements, ...inserted], ids),
+        selectedIds: ids,
+        tool: "selection",
+        past: pushPast(state.past, state.elements),
+        future: [],
+      };
+    }),
+
+  translateElements: (ids, dx, dy, options) =>
+    set((state) => {
+      const moving = new Set(ids);
+      const moved = releaseBindings(
+        state.elements.filter((el) => moving.has(el.id)).map((el) => translateElement(el, dx, dy)),
+        moving,
+      );
+      if (moved.length === 0) return {};
+      const byId = new Map(moved.map((el) => [el.id, el]));
+      const elements = updateBoundArrows(
+        state.elements.map((el) => byId.get(el.id) ?? el),
+        moving,
+        state.elements,
+      );
+      if (options?.record === false) return { elements };
+      return { elements, past: pushPast(state.past, state.elements), future: [] };
+    }),
 
   replaceElement: (element) =>
     set((state) => ({

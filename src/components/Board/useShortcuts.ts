@@ -3,6 +3,19 @@ import { useBoardStore } from "../../store/boardStore";
 import { TOOLS } from "./Toolbar/tools";
 import { selectTextScope, textSelectors } from "./StyleBar/selectors";
 import { exportBoard, importBoard } from "./boardFileActions";
+import { cloneElements } from "../../lib/elements/clone";
+import type { Point } from "../../lib/types";
+
+const DUPLICATE_OFFSET = 20;
+const NUDGE_STEP = 1;
+const NUDGE_STEP_FAR = 10;
+
+const NUDGE_DIRECTIONS: Record<string, Point> = {
+  arrowup: { x: 0, y: -1 },
+  arrowdown: { x: 0, y: 1 },
+  arrowleft: { x: -1, y: 0 },
+  arrowright: { x: 1, y: 0 },
+};
 
 export function isTypingTarget(target: EventTarget | null): boolean {
   return (
@@ -10,6 +23,14 @@ export function isTypingTarget(target: EventTarget | null): boolean {
     target instanceof HTMLTextAreaElement ||
     (target instanceof HTMLElement && target.isContentEditable)
   );
+}
+
+function duplicateSelection() {
+  const { elements, selectedIds, viewport, insertElements } = useBoardStore.getState();
+  const ids = new Set(selectedIds);
+  const selected = elements.filter((el) => ids.has(el.id));
+  const offset = DUPLICATE_OFFSET / viewport.zoom;
+  insertElements(cloneElements(selected, { x: offset, y: offset }));
 }
 
 export function useShortcuts() {
@@ -35,6 +56,7 @@ export function useShortcuts() {
         else if (key === "s" && !e.shiftKey) exportBoard();
         else if (key === "e" && e.shiftKey) store.setExportOpen(true);
         else if (key === "o" && !e.shiftKey) void importBoard();
+        else if (key === "d" && !e.shiftKey) duplicateSelection();
         else if (key === "z" && !e.shiftKey) store.undo();
         else if ((key === "z" && e.shiftKey) || key === "y") store.redo();
         else if (key === "a") {
@@ -53,7 +75,12 @@ export function useShortcuts() {
         return;
       }
 
-      if (key === "delete" || key === "backspace") {
+      const direction = NUDGE_DIRECTIONS[key];
+      if (direction) {
+        if (store.selectedIds.length === 0) return;
+        const step = e.shiftKey ? NUDGE_STEP_FAR : NUDGE_STEP;
+        store.translateElements(store.selectedIds, direction.x * step, direction.y * step, { record: !e.repeat });
+      } else if (key === "delete" || key === "backspace") {
         store.deleteElements(store.selectedIds);
       } else if (key === "escape") {
         store.setSelection([]);

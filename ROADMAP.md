@@ -6,10 +6,11 @@ Os itens concluídos saem deste arquivo: o que o app já faz está no [README.md
 
 ## Ordem sugerida
 
-1. [Duplicar, copiar e colar, mover pelo teclado](#duplicar-copiar-e-colar-mover-pelo-teclado) e os [ajustes pequenos](#ajustes-pequenos): atalhos que fazem falta no uso.
+1. [Ajustes pequenos](#ajustes-pequenos): atalhos que fazem falta no uso.
 2. [Biblioteca de formas prontas](#biblioteca-de-formas-prontas): o maior item que falta, dividido por grupo.
 3. [Tema escuro](#tema-escuro).
 4. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
+5. Depois: [publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm).
 
 ## Decisões tomadas
 
@@ -23,15 +24,10 @@ Valem para todo item novo.
 - A grade de fundo é só visual. O encaixe na grade e as guias de alinhamento foram testados e descartados.
 - Enquanto o projeto está em desenvolvimento, o formato salvo (no navegador e no `.whiteboard.json`) não tem número de versão nem migrações, para não poluir o código. Um board num formato antigo não passa na validação e não abre. As versões e migrações voltam quando houver usuários com dados a preservar.
 - As preferências da grade valem para todos os boards e não vão no arquivo do board.
+- O board vai virar uma biblioteca npm (veja [Publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm)). Código novo do board não deve depender das rotas, do `localStorage`, do `document` inteiro ou do tamanho da janela: navegação e persistência entram por funções e callbacks, os eventos de teclado ficam presos ao board e as medidas vêm do contêiner, não de `100vw`/`100vh`. Cada funcionalidade nova deve poder ser desligada pela configuração da biblioteca: botão, atalho e entrada na ajuda saem de um mesmo lugar (como `tools.ts` e `shortcuts.ts`), para serem escondidos juntos.
 - O atalho de exportar imagem é `Ctrl+Shift+E`, como no Excalidraw, mesmo abrindo o monitor de rede no Firefox (a página não consegue impedir). Lá, vale o botão.
 
 ## Edição
-
-### Duplicar, copiar e colar, mover pelo teclado
-
-- [ ] **O quê:** duplicar a seleção (`Ctrl+D`), copiar, recortar e colar (`Ctrl+C`, `Ctrl+X`, `Ctrl+V`) e mover a seleção pelas setas do teclado (com Shift, passos maiores).
-- **Como:** atalhos novos em `useShortcuts.ts` e `shortcuts.ts`, usando ações que a store já tem. As cópias ganham IDs e `seed` novos e entram deslocadas da original. Ao copiar setas ligadas, as ligações passam a apontar para as cópias das formas quando as duas estão na cópia; uma ponta ligada a uma forma que não foi copiada fica solta. Colar entre boards e entre abas pode usar a área de transferência do sistema com um JSON no mesmo formato do `.whiteboard.json`.
-- **Por quê:** montar diagramas repetitivos (várias caixas iguais num fluxograma) hoje exige desenhar e estilizar cada forma de novo.
 
 ### Agrupar elementos
 
@@ -104,3 +100,30 @@ Valem para todo item novo.
     - Funciona igual com `localStorage` ou IndexedDB, então não depende da troca pelo IndexedDB.
   - **Nível 3, CRDT (grande):** usar uma estrutura que mescla edições simultâneas sem conflito, como o Yjs, que também traz o desfazer por usuário. Só compensa se houver colaboração em tempo real entre pessoas, com servidor; nesse caso a sincronização entre abas vem junto. Só para abas, é exagero.
   - **Em todos os níveis:** o viewport (zoom e posição), a seleção e a ferramenta ativa continuam separados em cada aba. O nível 1 pode ser um primeiro passo e ser trocado pelo 2 depois, sem retrabalho fora da store.
+
+## Distribuição
+
+### Publicar o board como biblioteca npm
+
+- [ ] **O quê:** separar o board (canvas, toolbar, barra de estilo, menu, exportação) num pacote npm que outros projetos React instalam e usam como um componente, por exemplo `<Whiteboard initialData={...} onChange={...} />`. O app atual (lista de boards e rotas) passa a ser um usuário desse pacote.
+- **Problemas de hoje:**
+  - **Store global:** `useBoardStore` é um único store criado no módulo. Dois boards na mesma página dividiriam o estado. Trocar por um store criado por instância (`createStore` do zustand) e entregue por contexto (`BoardProvider`), com os componentes e o `useShortcuts` lendo do contexto. Os `useBoardStore.getState()` das interações viram o `getState` do store da instância.
+  - **Persistência e rotas:** o `Board` usa `useNavigate` (botão "Todos os boards"), a store salva no `localStorage` sozinha e escuta o `pagehide`, e o `Board` muda o `document.title`. No pacote, o board recebe os dados e avisa das mudanças (`initialData`, `onChange` com os elementos, o viewport e o nome), e quem usa decide onde salvar. O botão de voltar, o título da página e as preferências da grade viram props ou callbacks opcionais. O `persistence.ts` e o `homeRoute`/`boardRoute` ficam no app.
+  - **Teclado:** `useShortcuts` e o `Canvas` ouvem o `keydown` do `window`, então capturariam teclas da página inteira. No pacote, ouvir só quando o foco estiver dentro do board (listener no contêiner com `tabIndex`) ou com uma prop para ligar os atalhos globais.
+  - **Tamanho:** o `.board` usa `100vw`/`100vh`. Passar a ocupar o contêiner pai (`width/height: 100%`), com o canvas medindo o próprio elemento (`ResizeObserver`).
+  - **Tema e estilos:** o `applyTheme` grava as variáveis no `document.documentElement`. Gravar no elemento raiz do board, aceitar um tema por prop (combina com o [tema escuro](#tema-escuro)) e prefixar as variáveis (`--wb-*`) para não colidir com as do projeto hospedeiro. Os SCSS modules viram um CSS gerado no build, importado pelo usuário (`import "pacote/style.css"`).
+  - **Fontes:** hoje vêm do `<link>` do `index.html`. O pacote pode documentar o `<link>` necessário, trazer as fontes no CSS (`@font-face` com os arquivos no pacote) ou aceitar as famílias por prop. Decidir na hora.
+  - **Portais:** `Popover`, `Tooltip`, `Modal` e `Toast` vão para o `document.body`. Funciona, mas os estilos e o tema precisam valer lá também (variáveis no portal, ou portal dentro da raiz do board).
+- **Como:**
+  - **Estrutura:** monorepo com workspaces do npm: `packages/whiteboard` (o pacote) e `apps/web` (o app atual). Ou uma pasta `src/whiteboard/` com um build de biblioteca à parte, se o monorepo parecer exagero. O `src/lib/` já é TypeScript puro e quase não muda.
+  - **Build:** modo biblioteca do Vite (`build.lib`) gerando ESM, com `react`, `react-dom` e `react/jsx-runtime` como `peerDependencies` e externos. Os tipos saem com `vite-plugin-dts` ou com `tsc --emitDeclarationOnly`. `roughjs`, `zustand`, `nanoid`, `react-icons` e `react-color` ficam como dependências comuns.
+  - **API pública:** o componente `Whiteboard`, os tipos do modelo (`BoardElement`, `BoardFile`), as funções de arquivo (`serializeBoardFile`/`parseBoardFile`), as de exportar imagem (`renderToCanvas`, `renderToSvg`) e talvez um ref imperativo (`ref.current.exportPng()`, `ref.current.setElements()`). O resto fica interno, para poder mudar sem quebrar quem usa.
+  - **Configuração:** quem usa escolhe o que aparece e o que funciona, com uma prop de configuração (por exemplo, `config`) em que tudo é opcional e o padrão é o app completo de hoje.
+    - **Funcionalidades:** ligar ou desligar cada parte, como ferramentas (lista das que aparecem, `tools: ["selection", "rectangle", "arrow"]`), barra de estilo, menu do board, abrir e salvar arquivo, exportar imagem, grade, zoom, ajuda e a importação por arrastar arquivo.
+    - **Modo somente leitura:** só pan, zoom e exportar, sem selecionar nem editar, para mostrar diagramas prontos.
+    - **Valores iniciais e limites:** estilo inicial das formas, paleta oferecida no seletor de cor, grade inicial, níveis de zoom.
+    - **Fonte única:** um tipo `WhiteboardConfig` com os padrões e uma função que mescla o que veio por prop (`resolveConfig`), guardado no contexto da instância. A toolbar filtra o `TOOLS`, o menu filtra as entradas (e some se ficar vazio), a ajuda mostra só o que está ligado, e o `useShortcuts` ignora os atalhos de funcionalidades desligadas. Desligar uma parte esconde o botão e também o atalho, para não sobrar caminho escondido.
+  - **Formato salvo:** quem usar o pacote guarda os dados, então a decisão de [não ter versão nem migrações](#decisões-tomadas) precisa ser revista antes da primeira versão publicada: o `.whiteboard.json` ganha um campo de versão e as migrações voltam.
+  - **Publicação:** versionamento semântico, `CHANGELOG` e um exemplo mínimo de uso no README do pacote. Começar como `0.x` enquanto a API muda.
+- **Por quê:** permite usar o quadro branco dentro de outros projetos (documentação, ferramentas internas, apps com diagramas) sem copiar o código, mantendo uma base só.
+- **Ordem:** depende pouco dos outros itens, mas fica mais barato se as decisões acima forem seguidas desde já. O tema escuro e a troca pelo IndexedDB mexem nas mesmas partes (tema por instância, persistência fora do board), então vale fazê-los já pensando no pacote.

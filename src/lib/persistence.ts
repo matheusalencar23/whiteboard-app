@@ -185,6 +185,19 @@ export function parseBoardFile(raw: string, fallbackName: string): BoardContent 
   return { ...content, name: normalizeBoardName(data.name) ?? normalizeBoardName(fallbackName) ?? DEFAULT_BOARD_NAME };
 }
 
+export function serializeClipboard(elements: BoardElement[]): string {
+  return JSON.stringify({ type: FILE_TYPE, elements });
+}
+
+export function parseClipboard(raw: string): BoardElement[] | null {
+  if (!raw.trimStart().startsWith("{")) return null;
+  const data = parseJson(raw);
+  if (!isObject(data) || data.type !== FILE_TYPE) return null;
+  const { elements } = data;
+  if (!Array.isArray(elements) || elements.length === 0 || !elements.every(isValidElement)) return null;
+  return elements;
+}
+
 function parseJson(raw: string): unknown {
   try {
     return JSON.parse(raw);

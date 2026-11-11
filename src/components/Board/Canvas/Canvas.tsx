@@ -78,6 +78,7 @@ import { useBoardStore } from "../../../store/boardStore";
 import { TextEditor, type TextEditorLayout } from "../TextEditor/TextEditor";
 import { StyleBar, type StyleBarPlacement } from "../StyleBar/StyleBar";
 import { isTypingTarget } from "../useShortcuts";
+import { useClipboard } from "./useClipboard";
 
 const ZOOM_SENSITIVITY = 0.005;
 const MAX_WHEEL_DELTA = 50;
@@ -198,10 +199,16 @@ function withCurrentStyle<T extends BoardElement>(element: T): T {
   return { ...element, style: { ...useBoardStore.getState().currentStyle } };
 }
 
-function createStyledText(position: Point): TextElement {
+function createStyledText(position: Point, text = ""): TextElement {
   const { currentStyle, currentTextStyle } = useBoardStore.getState();
   const textStyle = { ...currentTextStyle, color: currentTextStyle.color ?? currentStyle.strokeColor };
-  return withCurrentStyle(createText(position, textStyle));
+  return withCurrentStyle(createText(position, textStyle, text));
+}
+
+function createPastedText(raw: string, center: Point): TextElement {
+  const text = raw.replace(/\r\n?/g, "\n").replace(/\s+$/, "");
+  const element = createStyledText(center, text);
+  return { ...element, x: center.x - element.width / 2, y: center.y - element.height / 2 };
 }
 
 function labelTextStyle(element: LabeledElement): TextStyle {
@@ -257,6 +264,7 @@ export function Canvas() {
   }
 
   const lastPointerRef = useRef<Point | null>(null);
+  const hoverPointRef = useRef<Point | null>(null);
   const updateInteractionRef = useRef<(world: Point, shiftKey: boolean) => void>(() => {});
 
   function setDraft(element: BoardElement | null) {
@@ -329,6 +337,14 @@ export function Canvas() {
       window.removeEventListener("keyup", handleKeyUp);
     };
   }, []);
+
+  useClipboard({
+    getPastePosition: () => {
+      const screen = hoverPointRef.current ?? { x: size.width / 2, y: size.height / 2 };
+      return screenToWorld(screen, useBoardStore.getState().viewport);
+    },
+    createPastedText,
+  });
 
   const scene = useMemo(() => {
     let visible = elements;
@@ -638,6 +654,7 @@ export function Canvas() {
   function handlePointerMove(e: React.PointerEvent) {
     const store = useBoardStore.getState();
     const screen = getScreenPoint(e);
+    hoverPointRef.current = screen;
     const world = screenToWorld(screen, store.viewport);
     const interaction = interactionRef.current;
 
@@ -898,6 +915,9 @@ export function Canvas() {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerCancel}
+        onPointerLeave={() => {
+          hoverPointRef.current = null;
+        }}
         onDoubleClick={handleDoubleClick}
       />
       {!editing && !isInteracting && <StyleBar placement={styleBarPlacement} viewportWidth={size.width} />}

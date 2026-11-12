@@ -10,35 +10,35 @@ import {
   strokeOptions,
   type ShapeUtil,
 } from "../shapeUtil";
-import type { TableElement, TextStyle } from "../types";
+import type { CompartmentsElement, TextStyle } from "../types";
 import { resolveTextColor } from "./text";
 
 const PADDING_X = 10;
 const PADDING_Y = 6;
 
-export function getSectionTextStyle(el: TableElement, index: number): TextStyle {
+export function getSectionTextStyle(el: CompartmentsElement, index: number): TextStyle {
   if (index === 0) return { ...el.textStyle, bold: true, align: "center", verticalAlign: "middle" };
   return { ...el.textStyle, verticalAlign: "top" };
 }
 
-function innerWidth(el: TableElement): number {
+function innerWidth(el: CompartmentsElement): number {
   return Math.max(el.width - PADDING_X * 2, 1);
 }
 
-function fitSectionHeight(el: TableElement, index: number): number {
+function fitSectionHeight(el: CompartmentsElement, index: number): number {
   const style = getSectionTextStyle(el, index);
   const { height } = layoutText(el.sections[index].text, style, innerWidth(el));
   return Math.max(height, lineHeight(style)) + PADDING_Y * 2;
 }
 
-function getSectionHeights(el: TableElement): number[] {
+function getSectionHeights(el: CompartmentsElement): number[] {
   const heights = el.sections.map((_, i) => fitSectionHeight(el, i));
   const others = heights.slice(0, -1).reduce((sum, h) => sum + h, 0);
   heights[heights.length - 1] = Math.max(heights[heights.length - 1], el.height - others);
   return heights;
 }
 
-export function getSectionRects(el: TableElement): Bounds[] {
+export function getSectionRects(el: CompartmentsElement): Bounds[] {
   let y = el.y;
   return getSectionHeights(el).map((height) => {
     const rect = { x: el.x, y, width: el.width, height };
@@ -47,7 +47,7 @@ export function getSectionRects(el: TableElement): Bounds[] {
   });
 }
 
-export function getSectionTextArea(el: TableElement, index: number): Bounds {
+export function getSectionTextArea(el: CompartmentsElement, index: number): Bounds {
   const rect = getSectionRects(el)[index];
   return {
     x: rect.x + PADDING_X,
@@ -57,12 +57,12 @@ export function getSectionTextArea(el: TableElement, index: number): Bounds {
   };
 }
 
-export function getSectionAt(el: TableElement, localPoint: Point): number {
+export function getSectionAt(el: CompartmentsElement, localPoint: Point): number {
   const index = getSectionRects(el).findIndex((rect) => localPoint.y < rect.y + rect.height);
   return index === -1 ? el.sections.length - 1 : index;
 }
 
-function withHeight(el: TableElement, height: number): TableElement {
+function withHeight(el: CompartmentsElement, height: number): CompartmentsElement {
   if (height === el.height) return el;
   if (el.rotation === 0) return { ...el, height };
   const corner = rotatePoint({ x: el.x, y: el.y }, getCenter(el), el.rotation);
@@ -71,26 +71,26 @@ function withHeight(el: TableElement, height: number): TableElement {
   return { ...el, height, x: center.x - el.width / 2, y: center.y - height / 2 };
 }
 
-function minTableHeight(el: TableElement): number {
+function minCompartmentsHeight(el: CompartmentsElement): number {
   return el.sections.reduce((sum, _, i) => sum + fitSectionHeight(el, i), 0);
 }
 
-export function fitTable(el: TableElement): TableElement {
-  return withHeight(el, Math.max(el.height, minTableHeight(el)));
+export function fitCompartments(el: CompartmentsElement): CompartmentsElement {
+  return withHeight(el, Math.max(el.height, minCompartmentsHeight(el)));
 }
 
-export function createTable(bounds: Bounds, texts: string[], textStyle: TextStyle): TableElement {
+export function createCompartments(bounds: Bounds, texts: string[], textStyle: TextStyle): CompartmentsElement {
   const sections = texts.map((text) => ({ text }));
-  return fitTable({ ...baseFields(bounds), type: "table", sections, textStyle });
+  return fitCompartments({ ...baseFields(bounds), type: "compartments", sections, textStyle });
 }
 
-export function setSectionText(el: TableElement, index: number, text: string): TableElement {
+export function setSectionText(el: CompartmentsElement, index: number, text: string): CompartmentsElement {
   if (el.sections[index]?.text === text) return el;
   const sections = el.sections.map((section, i) => (i === index ? { ...section, text } : section));
-  return fitTable({ ...el, sections });
+  return fitCompartments({ ...el, sections });
 }
 
-export function drawTableText(el: TableElement, ctx: CanvasRenderingContext2D, hiddenSection: number | null) {
+export function drawCompartmentsText(el: CompartmentsElement, ctx: CanvasRenderingContext2D, hiddenSection: number | null) {
   const rects = getSectionRects(el);
   el.sections.forEach((section, index) => {
     if (index === hiddenSection || section.text === "") return;
@@ -111,7 +111,7 @@ export function drawTableText(el: TableElement, ctx: CanvasRenderingContext2D, h
   });
 }
 
-export const tableUtil: ShapeUtil<TableElement> = {
+export const compartmentsUtil: ShapeUtil<CompartmentsElement> = {
   draw(el, rc, ctx) {
     drawFillAndStroke(ctx, el.style, el.seed, (options) => rc.rectangle(el.x, el.y, el.width, el.height, options));
     getSectionRects(el)
@@ -127,7 +127,7 @@ export const tableUtil: ShapeUtil<TableElement> = {
 
   resize(el, bounds) {
     const resized = { ...el, ...bounds };
-    return { ...resized, height: Math.max(bounds.height, minTableHeight(resized)) };
+    return { ...resized, height: Math.max(bounds.height, minCompartmentsHeight(resized)) };
   },
 
   getBorderOffset(el, d) {

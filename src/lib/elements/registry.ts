@@ -26,7 +26,7 @@ import { rectangleUtil } from "./shapes/rectangle";
 import { ellipseUtil } from "./shapes/ellipse";
 import { diamondUtil } from "./shapes/diamond";
 import { shapeUtil } from "./shapes/shape";
-import { drawTableText, tableUtil } from "./shapes/table";
+import { drawCompartmentsText, compartmentsUtil } from "./shapes/compartments";
 import { arrowUtil } from "./shapes/arrow";
 import { freedrawUtil } from "./shapes/freedraw";
 import { resolveTextColor, textUtil } from "./shapes/text";
@@ -36,7 +36,7 @@ const shapeUtils: { [K in ElementType]: ShapeUtil<ElementOfType<K>> } = {
   ellipse: ellipseUtil,
   diamond: diamondUtil,
   shape: shapeUtil,
-  table: tableUtil,
+  compartments: compartmentsUtil,
   arrow: arrowUtil,
   freedraw: freedrawUtil,
   text: textUtil,
@@ -191,7 +191,7 @@ export function renderElement(
   util.draw(element, rc, ctx);
   if (clipped) ctx.restore();
   if (showLabel) drawLabel(element, ctx);
-  if (element.type === "table") drawTableText(element, ctx, typeof hiddenText === "number" ? hiddenText : null);
+  if (element.type === "compartments") drawCompartmentsText(element, ctx, typeof hiddenText === "number" ? hiddenText : null);
   ctx.restore();
 }
 

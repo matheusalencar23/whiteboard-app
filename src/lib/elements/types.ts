@@ -109,13 +109,13 @@ export interface ShapeElement extends BoxBaseElement {
   kind: ShapeKind;
 }
 
-export interface TableSection {
+export interface Compartment {
   text: string;
 }
 
-export interface TableElement extends BaseElement {
-  type: "table";
-  sections: TableSection[];
+export interface CompartmentsElement extends BaseElement {
+  type: "compartments";
+  sections: Compartment[];
   textStyle: TextStyle;
 }
 
@@ -191,7 +191,7 @@ export type BoardElement =
   | EllipseElement
   | DiamondElement
   | ShapeElement
-  | TableElement
+  | CompartmentsElement
   | ArrowElement
   | FreedrawElement
   | TextElement;

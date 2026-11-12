@@ -59,7 +59,7 @@ const ELEMENT_TYPES: Record<ElementType, true> = {
   ellipse: true,
   diamond: true,
   shape: true,
-  table: true,
+  compartments: true,
   arrow: true,
   freedraw: true,
   text: true,
@@ -307,7 +307,7 @@ function isValidElement(value: unknown): value is BoardElement {
     case "ellipse":
     case "diamond":
       return isValidLabel(value.label);
-    case "table":
+    case "compartments":
       return (
         Array.isArray(value.sections) &&
         value.sections.length > 0 &&

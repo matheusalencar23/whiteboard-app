@@ -24,7 +24,7 @@ const STYLE_PROPERTIES: Record<ElementType, readonly StyleProperty[]> = {
   ellipse: SHAPE_PROPERTIES,
   diamond: SHAPE_PROPERTIES,
   shape: SHAPE_PROPERTIES,
-  table: SHAPE_PROPERTIES,
+  compartments: SHAPE_PROPERTIES,
   arrow: STROKE_PROPERTIES,
   freedraw: ["strokeColor", "strokeWidth", "strokeOpacity"],
   text: ["strokeOpacity"],

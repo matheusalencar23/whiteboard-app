@@ -4,7 +4,7 @@ import type { Bounds } from "../geometry/bounds";
 import { createBoxElement } from "./registry";
 import { createArrow } from "./shapes/arrow";
 import { createShape } from "./shapes/shape";
-import { createTable } from "./shapes/table";
+import { createCompartments } from "./shapes/compartments";
 import { theme } from "../theme";
 import type {
   BoardElement,
@@ -70,8 +70,8 @@ function shape(kind: ShapeKind, label?: LabelOptions) {
   ];
 }
 
-function table(texts: string[]) {
-  return (bounds: Bounds, textStyle: TextStyle): LibraryPart[] => [{ element: createTable(bounds, texts, textStyle) }];
+function compartments(texts: string[]) {
+  return (bounds: Bounds, textStyle: TextStyle): LibraryPart[] => [{ element: createCompartments(bounds, texts, textStyle) }];
 }
 
 const PARTICIPANT_HEIGHT = 50;
@@ -180,7 +180,7 @@ export const LIBRARY_ITEMS: LibraryItem[] = [
     keywords: ["tabela", "atributos", "chave", "pk", "fk", "compartimentos"],
     width: 200,
     height: 120,
-    create: table(["Entidade", "PK  id\nnome"]),
+    create: compartments(["Entidade", "PK  id\nnome"]),
   },
   {
     id: "er.weakEntity",
@@ -243,7 +243,7 @@ export const LIBRARY_ITEMS: LibraryItem[] = [
     keywords: ["atributos", "métodos", "compartimentos", "objeto"],
     width: 220,
     height: 150,
-    create: table(["Classe", "+ atributo: Tipo", "+ método(): Tipo"]),
+    create: compartments(["Classe", "+ atributo: Tipo", "+ método(): Tipo"]),
   },
   {
     id: "uml.interface",
@@ -252,7 +252,7 @@ export const LIBRARY_ITEMS: LibraryItem[] = [
     keywords: ["contrato", "métodos", "abstrata"],
     width: 220,
     height: 110,
-    create: table(["«interface»\nInterface", "+ método(): Tipo"]),
+    create: compartments(["«interface»\nInterface", "+ método(): Tipo"]),
   },
   {
     id: "uml.actor",

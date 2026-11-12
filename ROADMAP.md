@@ -6,10 +6,15 @@ Os itens concluídos saem deste arquivo: o que o app já faz está no [README.md
 
 ## Ordem sugerida
 
-1. [Biblioteca de formas prontas](#biblioteca-de-formas-prontas): faltam as formas extras e os contêineres.
-2. [Tema escuro](#tema-escuro).
-3. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
-4. Depois: [publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm).
+1. [Sublinhado](#sublinhado), junto com o atributo chave do ER.
+2. Biblioteca de formas: [básicas e anotações](#básicas-e-anotações).
+3. Biblioteca de formas: [detalhes preenchidos e cantos arredondados](#detalhes-preenchidos-e-cantos-arredondados), depois [UML estados e atividades](#uml-estados-e-atividades) e [extras do fluxograma](#extras-do-fluxograma).
+4. A decidir: [tabelas](#tabelas). Se entrar, pode vir antes do item 3, porque também serve à entidade ER.
+5. Biblioteca de formas: [arquitetura](#arquitetura-e-c4) e [wireframe](#wireframe).
+6. [Tema escuro](#tema-escuro).
+7. Depois: [contêineres com conteúdo vinculado](#contêineres) e [BPMN](#bpmn).
+8. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
+9. Depois: [publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm).
 
 ## Decisões tomadas
 
@@ -26,17 +31,81 @@ Valem para todo item novo.
 - O board vai virar uma biblioteca npm (veja [Publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm)). Código novo do board não deve depender das rotas, do `localStorage`, do `document` inteiro ou do tamanho da janela: navegação e persistência entram por funções e callbacks, os eventos de teclado ficam presos ao board e as medidas vêm do contêiner, não de `100vw`/`100vh`. Cada funcionalidade nova deve poder ser desligada pela configuração da biblioteca: botão, atalho e entrada na ajuda saem de um mesmo lugar (como `tools.ts` e `shortcuts.ts`), para serem escondidos juntos.
 - O atalho de exportar imagem é `Ctrl+Shift+E`, como no Excalidraw, mesmo abrindo o monitor de rede no Firefox (a página não consegue impedir). Lá, vale o botão.
 
+## Texto
+
+### Sublinhado
+
+- [ ] **O quê:** sublinhar o texto inteiro de um elemento (texto solto, rótulo, texto da seta e seções da entidade), como o negrito e o itálico: botão no grupo "Texto" da barra de estilo e atalho `Ctrl+U`. No grupo ER, um item novo "Atributo chave": elipse com o nome sublinhado (notação de Chen).
+- **Como:**
+  - **Modelo:** `underline` no `TextStyle`. Na validação, opcional e falso quando ausente, para os boards salvos continuarem abrindo. Entra no `textSelectors`, no `applyTextStyle` (que já é genérico) e no `DEFAULT_TEXT_STYLE`.
+  - **Desenho:** o canvas não sublinha sozinho. Hoje o texto é desenhado em três lugares quase iguais (`textUtil.draw`, `drawLabel` no `registry.ts` e `drawCompartmentsText`); juntar os três num ajudante único que desenha as linhas e, se for o caso, o traço embaixo de cada uma. A largura de cada linha vem do `measureLineWidths`, o início do traço depende do alinhamento, e a espessura e a distância da linha de base são proporcionais ao tamanho da fonte.
+  - **SVG:** o traço é um retângulo preenchido, que o `SvgContext` já suporta.
+  - **Editor:** `text-decoration: underline` no `<textarea>`, com `text-underline-offset` e `text-decoration-thickness` iguais aos do canvas.
+  - **Atalho:** `Ctrl+U` abre o código-fonte no navegador, mas a página consegue impedir (o Google Docs faz isso). Entra no `shortcuts.ts` e no `useShortcuts`, como o negrito.
+- **Fora do escopo:** sublinhar só uma palavra ou uma linha. Isso é texto rico (trechos com estilos diferentes) e mudaria o modelo do texto, a quebra de linha, a medição e o editor, que teria de virar `contenteditable`. Na entidade em tabela, a chave continua marcada no texto ("PK"/"FK"), como no draw.io.
+- **Por quê:** completa a notação de Chen e é um estilo de texto comum. Custo pequeno (cerca de meio dia).
+
 ## Diagramas
 
 ### Biblioteca de formas prontas
 
-O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`table`) e os grupos do fluxograma, de entidade-relacionamento e de UML já existem (veja o [CLAUDE.md](CLAUDE.md)). Um formato novo entra em `SHAPE_KINDS` e em `SHAPE_KIND_DEFINITIONS`, e o item, em `LIBRARY_ITEMS`.
+O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`compartments`) e os grupos do fluxograma, de entidade-relacionamento e de UML já existem (veja o [CLAUDE.md](CLAUDE.md)). Um formato novo entra em `SHAPE_KINDS` e em `SHAPE_KIND_DEFINITIONS`, e o item, em `LIBRARY_ITEMS`. Os pacotes abaixo não precisam seguir o draw.io; ele é só inspiração. Silhuetas simples combinam com o traço de esboço; ícones detalhados (como os da AWS) não.
 
-- [ ] **Outros (decidir na hora):** formas básicas extras (triângulo, hexágono, estrela, nuvem, seta grossa) e contêineres (raia, grupo com título).
-- [ ] **A avaliar:**
-  - Atributo chave com o nome sublinhado (notação de Chen). Hoje a chave da entidade é marcada no texto ("PK"), porque o `TextStyle` não tem sublinhado.
-  - Acrescentar e remover seções da `table` pela interface (hoje o número de seções vem do item da biblioteca: duas na entidade e na interface, três na classe).
-  - Ligar a linha de vida do participante ao retângulo. Hoje os dois só estão agrupados, porque a folga das pontas ligadas (`BINDING_GAP`) deixaria a linha descolada da caixa; redimensionar o retângulo dentro do grupo não leva a linha junto.
+#### Básicas e anotações
+
+- [ ] **Básicas:** triângulo, hexágono, pentágono, octógono, trapézio, estrela, cruz, seta grossa (simples e dupla) e cubo. Só contorno e detalhes: custo pequeno.
+- [ ] **Anotações:** balão de fala, nuvem, nuvem de pensamento, post-it (a nota já com preenchimento amarelo, pelo `style` da parte) e chave `{`. É o uso mais de quadro branco; o balão e a nuvem são os mais pedidos. O rabo do balão fica fora da área do texto, mas dentro da caixa.
+
+#### Detalhes preenchidos e cantos arredondados
+
+- [ ] **Detalhes preenchidos:** hoje os `details` dos formatos só têm contorno. Uma opção para um detalhe ser preenchido com a cor do contorno (o círculo do estado inicial, a barra de bifurcação, os marcadores dos gateways do BPMN). Pequeno.
+- [ ] **Cantos arredondados como estilo:** uma opção de estilo no retângulo (e talvez no losango), em vez de um formato "retângulo arredondado", para valer também na ferramenta Retângulo, como no Excalidraw. É a caixa mais usada em diagramas (estado UML, caixas genéricas). O desenho passa para `rc.path` (o caminho com arcos já existe no `roundedRectFigure`) e o clique nos cantos pode ficar aproximado. Pequeno a médio.
+
+#### UML estados e atividades
+
+- [ ] Estado (retângulo arredondado), estado inicial (círculo cheio), estado final (alvo), barra de bifurcação e junção, componente e nó (cubo). Depende dos detalhes preenchidos e dos cantos arredondados.
+
+#### Extras do fluxograma
+
+- [ ] Preparação (hexágono), multidocumento, atraso, entrada manual, conector fora de página e exibição.
+
+#### Arquitetura e C4
+
+- [ ] Servidor, fila (cilindro deitado), dispositivo ou monitor, celular, e a pessoa e o sistema do C4. Silhuetas simples.
+
+#### Wireframe
+
+- [ ] Janela do navegador, botão, campo de texto, checkbox, celular e cartão. Vários são itens compostos (moldura com texto), com o agrupamento que já existe. Médio.
+
+#### Contêineres
+
+- [ ] **Só desenho:** raia horizontal e vertical e grupo com título (faixa de título e área). Pequeno.
+- [ ] **Com conteúdo vinculado:** mover o contêiner leva o que está dentro, como no draw.io (ou os frames do Excalidraw). É uma funcionalidade à parte: um vínculo de pai e filhos que mexe na seleção, no movimento, no redimensionamento, no histórico e na ordem de desenho. Grande; avaliar quando os contêineres simples estiverem em uso.
+
+#### BPMN
+
+- [ ] Tarefa, eventos (início, fim, intermediário), gateways (exclusivo, paralelo, inclusivo) e raia. Grupo grande; depende dos detalhes preenchidos e dos contêineres.
+
+#### A avaliar
+
+- Acrescentar e remover seções dos `compartments` pela interface. Hoje o número de seções vem do item da biblioteca: duas na entidade e na interface, três na classe.
+- Ligar a linha de vida do participante ao retângulo. Hoje os dois só estão agrupados, porque a folga das pontas ligadas (`BINDING_GAP`) deixaria a linha descolada da caixa; redimensionar o retângulo dentro do grupo não leva a linha junto.
+- Lembrar quais grupos do painel estão recolhidos, quando o catálogo crescer.
+
+### Tabelas
+
+- [ ] **A decidir.** Proposta:
+  - **O quê:** uma tabela de verdade, com linhas e colunas, para comparações, listas, planilhas pequenas e entidades de banco com colunas (chave, nome, tipo), como a tabela do draw.io. Inserida pela biblioteca (3×3) e criada ao colar dados de uma planilha.
+  - **Nome do tipo:** `table`. Os compartimentos, que usavam esse nome, já foram renomeados para `compartments`.
+  - **Modelo:** larguras das colunas (`columns: number[]`), células (`cells: { text }[][]`), um `textStyle` para a tabela inteira e `headerRow` (a primeira linha em negrito e com o preenchimento). A altura de cada linha não é guardada: sai do texto mais alto da linha, como as seções da entidade (a última linha fica com a sobra). Largura do elemento é a soma das colunas; redimensionar escala as colunas.
+  - **Desenho:** contorno e linhas internas com o roughjs (um traço por borda, com `seed` derivado), texto com o mesmo ajudante do sublinhado. Clique em qualquer ponto da tabela seleciona, como a entidade.
+  - **Edição:** duplo clique edita a célula sob o cursor, com o mesmo `<textarea>` dos rótulos. `Tab` e `Shift+Tab` passam para a célula seguinte e a anterior (criando uma linha nova depois da última célula, como em editores de texto); `Ctrl+Enter` e `Esc` terminam.
+  - **Estrutura:** com a tabela selecionada, a barra de estilo ganha um grupo "Tabela" (inserir linha acima ou abaixo, coluna à esquerda ou à direita, apagar linha ou coluna), que age sobre a última célula clicada (um cursor de célula guardado no Canvas). Arrastar uma borda interna entre colunas muda a largura (uma `Interaction` nova).
+  - **Colar:** texto separado por tabulações (o que planilhas e tabelas HTML colocam na área de transferência) vira uma tabela no `useClipboard`, em vez de um texto solto. Pequeno e muito útil.
+  - **Ligações:** de início, as setas ligam nos meios dos lados da tabela. Depois, pontos de conexão por linha (esquerda e direita de cada linha), para ligar chaves estrangeiras no ER; isso esbarra no mesmo problema de pontos que mudam de fração quando as linhas mudam de altura, e talvez peça guardar o índice da linha na ligação.
+  - **Fora do escopo:** mesclar células, estilo por célula e fórmulas.
+  - **Custo:** médio a grande, em etapas: (1) modelo, desenho, edição com `Tab`, item na biblioteca e colar de planilha; (2) inserir e apagar linhas e colunas e redimensionar colunas; (3) cabeçalho destacado e alinhamento por coluna; (4) pontos de conexão por linha.
+  - **Relação com a entidade:** a entidade ER poderia virar uma tabela de duas ou três colunas, e os compartimentos ficariam para a classe UML.
 
 ## Visual
 

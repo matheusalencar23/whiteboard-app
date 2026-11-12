@@ -10,7 +10,7 @@ import type {
   BoardElement,
   BoxElementType,
   LabeledElement,
-  TableElement,
+  CompartmentsElement,
   TextElement,
   TextStyle,
 } from "../../../lib/elements/types";
@@ -59,7 +59,7 @@ import {
   getSectionTextArea,
   getSectionTextStyle,
   setSectionText,
-} from "../../../lib/elements/shapes/table";
+} from "../../../lib/elements/shapes/compartments";
 import {
   ROTATION_HANDLE_DISTANCE,
   ROTATION_HANDLE_RADIUS,
@@ -182,7 +182,7 @@ type Editing =
       isNew: boolean;
     }
   | { kind: "label"; element: LabeledElement }
-  | { kind: "section"; element: TableElement; index: number };
+  | { kind: "section"; element: CompartmentsElement; index: number };
 
 function getScreenPoint(e: { nativeEvent: MouseEvent }): Point {
   return { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY };
@@ -509,7 +509,7 @@ export function Canvas() {
     setEditing({ kind: "label", element });
   }
 
-  function startEditingSection(element: TableElement, index: number) {
+  function startEditingSection(element: CompartmentsElement, index: number) {
     useBoardStore.getState().setSelection([]);
     setEditingText(element.sections[index].text);
     setEditing({ kind: "section", element, index });
@@ -526,10 +526,10 @@ export function Canvas() {
 
   function finishEditingSection(id: string, index: number, text: string) {
     const store = useBoardStore.getState();
-    const table = store.elements.find((el) => el.id === id);
-    if (table?.type === "table" && index < table.sections.length) {
-      const updated = setSectionText(table, index, text);
-      if (updated !== table) store.replaceElement(updated);
+    const shape = store.elements.find((el) => el.id === id);
+    if (shape?.type === "compartments" && index < shape.sections.length) {
+      const updated = setSectionText(shape, index, text);
+      if (updated !== shape) store.replaceElement(updated);
       store.setSelection([id]);
     }
     store.setTool("selection");
@@ -905,7 +905,7 @@ export function Canvas() {
     const [element, ...rest] = getSelectedElements();
     if (!element || rest.length > 0) return false;
     if (element.type === "text") startEditingText(element, false);
-    else if (element.type === "table") startEditingSection(element, 0);
+    else if (element.type === "compartments") startEditingSection(element, 0);
     else if (isLabeledElement(element)) startEditingLabel(element);
     else return false;
     return true;
@@ -1014,7 +1014,7 @@ export function Canvas() {
 
     if (hit?.type === "text") {
       startEditingText(hit, false);
-    } else if (hit?.type === "table") {
+    } else if (hit?.type === "compartments") {
       startEditingSection(hit, getSectionAt(hit, rotatePoint(world, getCenter(hit), -hit.rotation)));
     } else if (shape && isLabeledElement(shape)) {
       startEditingLabel(shape);

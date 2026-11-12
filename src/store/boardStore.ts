@@ -14,6 +14,14 @@ import {
 } from "../lib/elements/types";
 import { releaseBindings, setArrowRouting, updateBoundArrows, type ArrowEnd } from "../lib/elements/bindings";
 import { translateElement } from "../lib/elements/registry";
+import {
+  getGroupMembers,
+  getParentGroupId,
+  groupElements,
+  isInGroup,
+  keepEditingGroup,
+  ungroupElements,
+} from "../lib/elements/groups";
 import type { Point } from "../lib/types";
 import {
   DEFAULT_BOARD_NAME,
@@ -51,6 +59,7 @@ export interface BoardState {
   name: string;
   elements: BoardElement[];
   selectedIds: string[];
+  editingGroupId: string | null;
   tool: Tool;
   viewport: Viewport;
   arrowRouting: ArrowRouting;
@@ -81,6 +90,10 @@ export interface BoardState {
   redo: () => void;
 
   setSelection: (ids: string[]) => void;
+  setEditingGroup: (groupId: string | null) => void;
+  exitEditingGroup: () => boolean;
+  groupSelection: () => void;
+  ungroupSelection: () => void;
   setTool: (tool: Tool) => void;
   setArrowRouting: (routing: ArrowRouting) => void;
   setArrowhead: (end: ArrowEnd, arrowhead: Arrowhead) => void;
@@ -125,6 +138,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
   name: DEFAULT_BOARD_NAME,
   elements: [],
   selectedIds: [],
+  editingGroupId: null,
   tool: "selection",
   viewport: INITIAL_VIEWPORT,
   arrowRouting: "straight",
@@ -154,6 +168,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
       return {
         elements: updateBoundArrows([...state.elements, ...inserted], ids),
         selectedIds: ids,
+        editingGroupId: inserted.every((el) => isInGroup(el, state.editingGroupId)) ? state.editingGroupId : null,
         tool: "selection",
         past: pushPast(state.past, state.elements),
         future: [],
@@ -198,6 +213,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
       return {
         elements,
         selectedIds: keepExisting(state.selectedIds, elements),
+        editingGroupId: keepEditingGroup(state.editingGroupId, elements),
         past: pushPast(state.past, state.elements),
         future: [],
       };
@@ -213,6 +229,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
       elements: board.elements,
       viewport: board.viewport,
       selectedIds: [],
+      editingGroupId: null,
       tool: "selection",
       helpOpen: false,
       exportOpen: false,
@@ -229,6 +246,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
       elements: board.elements,
       viewport: board.viewport,
       selectedIds: [],
+      editingGroupId: null,
       tool: "selection",
       past: pushPast(state.past, state.elements),
       future: [],
@@ -255,6 +273,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
       return {
         elements: previous,
         selectedIds: keepExisting(state.selectedIds, previous),
+        editingGroupId: keepEditingGroup(state.editingGroupId, previous),
         past: state.past.slice(0, -1),
         future: [...state.future, state.elements],
       };
@@ -267,14 +286,37 @@ export const useBoardStore = create<BoardState>()((set) => ({
       return {
         elements: next,
         selectedIds: keepExisting(state.selectedIds, next),
+        editingGroupId: keepEditingGroup(state.editingGroupId, next),
         past: pushPast(state.past, state.elements),
         future: state.future.slice(0, -1),
       };
     }),
 
   setSelection: (selectedIds) => set({ selectedIds }),
+  setEditingGroup: (editingGroupId) => set({ editingGroupId }),
+  exitEditingGroup: () => {
+    const { elements, editingGroupId } = useBoardStore.getState();
+    if (editingGroupId === null) return false;
+    set({
+      editingGroupId: getParentGroupId(elements, editingGroupId),
+      selectedIds: getGroupMembers(elements, editingGroupId).map((el) => el.id),
+    });
+    return true;
+  },
+  groupSelection: () =>
+    set((state) => {
+      const elements = groupElements(state.elements, state.selectedIds, state.editingGroupId);
+      if (!elements) return {};
+      return { elements, past: pushPast(state.past, state.elements), future: [] };
+    }),
+  ungroupSelection: () =>
+    set((state) => {
+      const elements = ungroupElements(state.elements, state.selectedIds, state.editingGroupId);
+      if (!elements) return {};
+      return { elements, past: pushPast(state.past, state.elements), future: [] };
+    }),
   setTool: (tool) =>
-    set((state) => ({ tool, selectedIds: tool === "selection" ? state.selectedIds : [] })),
+    set(tool === "selection" ? { tool } : { tool, selectedIds: [], editingGroupId: null }),
   setArrowRouting: (arrowRouting) =>
     set((state) => {
       const ids = new Set(state.selectedIds);

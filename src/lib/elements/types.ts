@@ -32,6 +32,7 @@ interface BaseElement {
   rotation: number;
   style: ElementStyle;
   seed: number;
+  groupIds?: string[];
 }
 
 export const FONT_FAMILIES = ["hand", "sans", "mono"] as const;

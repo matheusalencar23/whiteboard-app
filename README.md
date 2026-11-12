@@ -6,7 +6,7 @@ Tudo roda no navegador, sem servidor. Os boards ficam salvos no próprio navegad
 
 ## Funcionalidades
 
-- **Desenho:** retângulo, losango, elipse, seta, lápis e texto, com traço de esboço ([roughjs](https://roughjs.com)) ou limpo. Selecionar por clique ou por caixa, mover (também pelas setas do teclado), redimensionar, girar, apagar, duplicar, copiar, recortar e colar (inclusive entre boards e abas), desfazer e refazer.
+- **Desenho:** retângulo, losango, elipse, seta, lápis e texto, com traço de esboço ([roughjs](https://roughjs.com)) ou limpo. Selecionar por clique ou por caixa, mover (também pelas setas do teclado), redimensionar, girar, apagar, duplicar, copiar, recortar e colar (inclusive entre boards e abas), agrupar e desagrupar (com duplo clique para entrar no grupo), desfazer e refazer.
 - **Diagramas:** setas ligadas às formas por pontos de conexão. A ponta presa a um ponto fica nele; a ponta solta no corpo da forma escolhe sozinha o lado virado para a outra ponta. A seta pode ser reta, curva (com pontos ajustáveis) ou ortogonal (rota automática que contorna as formas), e tem 16 formatos de ponta, incluindo UML e pé de galinha.
 - **Texto:** texto solto, rótulos dentro das formas e texto no meio das setas, com fonte manuscrita, sem serifa ou monoespaçada, tamanho, negrito, itálico, cor e alinhamento.
 - **Estilo:** barra flutuante acima da seleção com cor, espessura e tipo do contorno, preenchimento (hachura, hachura cruzada ou sólido), opacidade e intensidade do esboço.

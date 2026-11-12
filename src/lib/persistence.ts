@@ -266,6 +266,7 @@ function isValidElement(value: unknown): value is BoardElement {
     isNumber(value.height) &&
     isNumber(value.rotation) &&
     isNumber(value.seed) &&
+    isValidGroupIds(value.groupIds) &&
     isObject(style) &&
     typeof style.strokeColor === "string" &&
     isNumber(style.strokeWidth) &&
@@ -301,6 +302,10 @@ function isValidElement(value: unknown): value is BoardElement {
     case "diamond":
       return isValidLabel(value.label);
   }
+}
+
+function isValidGroupIds(value: unknown): boolean {
+  return value === undefined || (Array.isArray(value) && value.every((id) => typeof id === "string"));
 }
 
 function isValidLabelPosition(value: unknown): boolean {

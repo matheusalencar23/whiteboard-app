@@ -73,6 +73,13 @@ import {
   type SelectionFrame,
 } from "../../../lib/selection";
 import { renderScene } from "../../../lib/render/renderScene";
+import {
+  getGroupMembers,
+  getSelectableGroupId,
+  getSelectionUnit,
+  getUnitsInside,
+  isInGroup,
+} from "../../../lib/elements/groups";
 import { toDegrees, type Measurement } from "../../../lib/render/measurement";
 import { GRID_SIZE } from "../../../lib/render/grid";
 import { screenToWorld, worldToScreen } from "../../../lib/viewport";
@@ -239,6 +246,14 @@ function editorTextStyle(editing: Editing): TextStyle {
   return getLabelTextStyle(editing.element, labelTextStyle(editing.element));
 }
 
+function currentEditingGroup(element: BoardElement): string | null {
+  const store = useBoardStore.getState();
+  if (store.editingGroupId !== null && !isInGroup(element, store.editingGroupId)) {
+    store.setEditingGroup(null);
+  }
+  return useBoardStore.getState().editingGroupId;
+}
+
 function hasSize(element: BoardElement): boolean {
   if (element.type === "arrow") return element.width > 0 || element.height > 0;
   return element.width > 0 && element.height > 0;
@@ -257,6 +272,7 @@ export function Canvas() {
   const showGrid = useBoardStore((s) => s.showGrid);
   const gridStyle = useBoardStore((s) => s.gridStyle);
   const tool = useBoardStore((s) => s.tool);
+  const editingGroupId = useBoardStore((s) => s.editingGroupId);
 
   const [draft, setDraftState] = useState<BoardElement | null>(null);
   const [selectionBox, setSelectionBox] = useState<Bounds | null>(null);
@@ -385,6 +401,11 @@ export function Canvas() {
     return elements.filter((el) => ids.has(el.id));
   }, [elements, selectedIds]);
 
+  const editingGroupBounds = useMemo(
+    () => (editingGroupId ? getSelectionBounds(getGroupMembers(elements, editingGroupId)) : null),
+    [elements, editingGroupId],
+  );
+
   const showBindingTarget = tool === "arrow" || isInteracting;
   const bindingTarget = useMemo(
     () =>
@@ -418,6 +439,7 @@ export function Canvas() {
         bindingFixed: bindingHint?.fixed ?? false,
         frameOverride,
         hiddenLabelId: editing?.kind === "label" ? editing.element.id : null,
+        editingGroup: editingGroupBounds,
         measurement: getMeasurement(measuring, selected),
       },
       viewport,
@@ -436,6 +458,7 @@ export function Canvas() {
     isInteracting,
     bindingTarget,
     bindingHint,
+    editingGroupBounds,
     viewport,
     size,
     fontsLoaded,
@@ -571,15 +594,17 @@ export function Canvas() {
 
     const hit = getElementAtPoint(store.elements, world, tolerance);
     if (hit) {
+      const unit = getSelectionUnit(store.elements, hit, currentEditingGroup(hit));
       const isSelected = store.selectedIds.includes(hit.id);
       if (shiftKey) {
         if (isSelected) {
-          store.setSelection(store.selectedIds.filter((id) => id !== hit.id));
+          const removed = new Set(unit);
+          store.setSelection(store.selectedIds.filter((id) => !removed.has(id)));
           return;
         }
-        store.setSelection([...store.selectedIds, hit.id]);
+        store.setSelection([...new Set([...store.selectedIds, ...unit])]);
       } else if (!isSelected) {
-        store.setSelection([hit.id]);
+        store.setSelection(unit);
       }
       interactionRef.current = {
         kind: "moving",
@@ -601,7 +626,10 @@ export function Canvas() {
     }
 
     const initialSelection = shiftKey ? store.selectedIds : [];
-    if (!shiftKey) store.setSelection([]);
+    if (!shiftKey) {
+      store.setSelection([]);
+      store.setEditingGroup(null);
+    }
     interactionRef.current = { kind: "boxSelecting", start: world, initialSelection };
   }
 
@@ -808,9 +836,11 @@ export function Canvas() {
       case "boxSelecting": {
         const box = getBounds([interaction.start, world]);
         setSelectionBox(box);
-        const inside = store.elements
-          .filter((el) => containsBounds(box, getElementBounds(el)))
-          .map((el) => el.id);
+        const inside = getUnitsInside(
+          store.elements,
+          store.elements.filter((el) => containsBounds(box, getElementBounds(el))).map((el) => el.id),
+          store.editingGroupId,
+        );
         store.setSelection([...new Set([...interaction.initialSelection, ...inside])]);
         break;
       }
@@ -921,6 +951,13 @@ export function Canvas() {
     const tolerance = HIT_TOLERANCE / store.viewport.zoom;
     const hit = getElementAtPoint(store.elements, world, tolerance);
     const shape = hit ? hit : getLabelTargetAt(store.elements, world, 0);
+
+    const groupId = shape && getSelectableGroupId(shape, currentEditingGroup(shape));
+    if (shape && groupId) {
+      store.setEditingGroup(groupId);
+      store.setSelection(getSelectionUnit(store.elements, shape, groupId));
+      return;
+    }
 
     if (hit?.type === "text") {
       startEditingText(hit, false);

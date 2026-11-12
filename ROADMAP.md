@@ -26,14 +26,6 @@ Valem para todo item novo.
 - O board vai virar uma biblioteca npm (veja [Publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm)). Código novo do board não deve depender das rotas, do `localStorage`, do `document` inteiro ou do tamanho da janela: navegação e persistência entram por funções e callbacks, os eventos de teclado ficam presos ao board e as medidas vêm do contêiner, não de `100vw`/`100vh`. Cada funcionalidade nova deve poder ser desligada pela configuração da biblioteca: botão, atalho e entrada na ajuda saem de um mesmo lugar (como `tools.ts` e `shortcuts.ts`), para serem escondidos juntos.
 - O atalho de exportar imagem é `Ctrl+Shift+E`, como no Excalidraw, mesmo abrindo o monitor de rede no Firefox (a página não consegue impedir). Lá, vale o botão.
 
-## Edição
-
-### Agrupar elementos
-
-- [ ] **O quê:** agrupar a seleção (`Ctrl+G`) para mover, redimensionar e girar como um bloco, e desagrupar (`Ctrl+Shift+G`).
-- **Como:** um `groupIds` nos elementos (como no Excalidraw), com o clique num elemento selecionando o grupo inteiro e o duplo clique entrando no grupo. A seleção, o quadro e as alças já tratam vários elementos.
-- **Por quê:** os modelos compostos da biblioteca de formas dependem disso, e é comum querer mover um pedaço do diagrama inteiro.
-
 ## Diagramas
 
 ### Biblioteca de formas prontas
@@ -46,7 +38,7 @@ Valem para todo item novo.
 - **Como:**
   - **Formas novas no modelo:** cada desenho novo vira um tipo na união `BoardElement` com o seu `ShapeUtil` (`draw`, `hitTest`, `resize`, `getBorderOffset`, `getConnectionPoints` e `getLabelArea`), como as formas atuais. Para não multiplicar módulos, avaliar um tipo genérico (por exemplo, `shape` com um campo `kind`) cujo contorno vem de uma função de caminho por formato, desenhado com o `roughjs` (`rc.path` ou `rc.polygon`), para manter o traço de esboço e a ligação das setas.
   - **Formas com compartimentos** (classe UML, entidade ER): precisam de mais de um campo de texto. O rótulo atual (`label`) é um só, então o modelo ganha uma lista de seções (`compartments`, cada uma com texto e altura) e o duplo clique edita a seção sob o cursor. A altura de cada seção cresce com o texto.
-  - **Modelos compostos:** o que for melhor como um conjunto de elementos simples (por exemplo, uma linha de vida da sequência, ou um ator com o nome embaixo) entra como um modelo que cria vários elementos de uma vez. Depende de agrupar elementos (veja [Agrupar elementos](#agrupar-elementos)); até lá, preferir formas de um elemento só.
+  - **Modelos compostos:** o que for melhor como um conjunto de elementos simples (por exemplo, uma linha de vida da sequência, ou um ator com o nome embaixo) entra como um modelo que cria vários elementos de uma vez, já agrupados (`groupIds`, veja o [CLAUDE.md](CLAUDE.md)).
   - **Painel:** uma barra lateral recolhível (ou um botão na toolbar que abre um `Popover` grande) com busca e os grupos em seções recolhíveis. Cada item mostra uma prévia desenhada com o mesmo `draw` do canvas num `<canvas>` pequeno, ou um SVG gerado da mesma geometria, como os ícones das pontas das setas. O visual segue a identidade própria da interface.
   - **Inserção:** arrastar do painel e soltar no quadro (convertendo o ponto com `screenToWorld`), ou clicar para inserir no centro da tela. A forma nova usa o `currentStyle` e fica selecionada, como as criadas pelas ferramentas.
   - **Registro:** um catálogo único (`src/lib/elements/library.ts`) com id, nome, grupo, palavras de busca e a função que cria o elemento, para o painel e a busca lerem do mesmo lugar.

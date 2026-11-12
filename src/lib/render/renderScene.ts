@@ -31,6 +31,7 @@ export interface SceneOverlay {
   bindingFixed: boolean;
   frameOverride: SelectionFrame | null;
   hiddenLabelId: string | null;
+  editingGroup: Bounds | null;
   measurement: Measurement | null;
 }
 
@@ -39,6 +40,8 @@ const CONNECTION_POINT_RADIUS = 4;
 const SELECTION_LINE_WIDTH = 1.5;
 
 const BINDING_HIGHLIGHT_PADDING = 4;
+
+const EDITING_GROUP_PADDING = 10;
 
 function traceOutline(ctx: CanvasRenderingContext2D, el: BoardElement, pad: number) {
   const center = getCenter(el);
@@ -163,6 +166,14 @@ function renderOverlay(ctx: CanvasRenderingContext2D, overlay: SceneOverlay, zoo
     ctx.stroke();
     ctx.restore();
     renderConnectionPoints(ctx, overlay.bindingTarget, overlay.bindingAnchor, overlay.bindingFixed, zoom);
+  }
+
+  if (overlay.editingGroup) {
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.setLineDash([8 / zoom, 6 / zoom]);
+    strokeFrame(ctx, expandBounds(overlay.editingGroup, EDITING_GROUP_PADDING / zoom));
+    ctx.restore();
   }
 
   const frame = overlay.frameOverride ?? getSelectionFrame(overlay.selected);

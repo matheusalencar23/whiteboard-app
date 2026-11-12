@@ -26,11 +26,11 @@ export function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 function duplicateSelection() {
-  const { elements, selectedIds, viewport, insertElements } = useBoardStore.getState();
+  const { elements, selectedIds, editingGroupId, viewport, insertElements } = useBoardStore.getState();
   const ids = new Set(selectedIds);
   const selected = elements.filter((el) => ids.has(el.id));
   const offset = DUPLICATE_OFFSET / viewport.zoom;
-  insertElements(cloneElements(selected, { x: offset, y: offset }));
+  insertElements(cloneElements(selected, { x: offset, y: offset }, editingGroupId));
 }
 
 export function useShortcuts() {
@@ -57,10 +57,15 @@ export function useShortcuts() {
         else if (key === "e" && e.shiftKey) store.setExportOpen(true);
         else if (key === "o" && !e.shiftKey) void importBoard();
         else if (key === "d" && !e.shiftKey) duplicateSelection();
+        else if (key === "g") {
+          if (e.shiftKey) store.ungroupSelection();
+          else store.groupSelection();
+        }
         else if (key === "z" && !e.shiftKey) store.undo();
         else if ((key === "z" && e.shiftKey) || key === "y") store.redo();
         else if (key === "a") {
           store.setTool("selection");
+          store.setEditingGroup(null);
           store.setSelection(store.elements.map((el) => el.id));
         } else return;
         e.preventDefault();
@@ -83,7 +88,7 @@ export function useShortcuts() {
       } else if (key === "delete" || key === "backspace") {
         store.deleteElements(store.selectedIds);
       } else if (key === "escape") {
-        store.setSelection([]);
+        if (!store.exitEditingGroup()) store.setSelection([]);
       } else if (key === "g") {
         if (e.shiftKey) store.cycleGridStyle();
         else store.toggleGrid();

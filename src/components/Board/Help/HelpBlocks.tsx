@@ -6,7 +6,7 @@ import type { Tool } from "../../../store/boardStore";
 
 const TOOL_DESCRIPTIONS: Record<Tool, string> = {
   hand: "Arrasta a tela sem mexer nos elementos.",
-  selection: "Clique para selecionar, Shift + clique para somar à seleção ou arraste no vazio para selecionar por caixa.",
+  selection: "Clique para selecionar, Shift + clique para somar à seleção ou arraste no vazio para selecionar por caixa. O clique num elemento agrupado seleciona o grupo inteiro, e o duplo clique entra nele.",
   rectangle: "Arraste para desenhar. Com Shift, vira um quadrado.",
   diamond: "Arraste para desenhar. Com Shift, fica com os lados iguais.",
   ellipse: "Arraste para desenhar. Com Shift, vira um círculo.",
@@ -41,6 +41,8 @@ const SHORTCUT_GROUPS: { title: string; rows: ShortcutRow[] }[] = [
       SHORTCUTS.copy,
       SHORTCUTS.cut,
       SHORTCUTS.paste,
+      SHORTCUTS.group,
+      SHORTCUTS.ungroup,
       SHORTCUTS.nudge,
       SHORTCUTS.nudgeFar,
     ].map(fromShortcut),
@@ -80,6 +82,7 @@ const SHORTCUT_GROUPS: { title: string; rows: ShortcutRow[] }[] = [
       { label: "Mover a tela na horizontal", combos: [["Shift", "roda"]] },
       { label: "Zoom no cursor", combos: [["Ctrl", "roda"], ["pinça"]] },
       { label: "Escrever um texto ou rótulo", combos: [["duplo clique"]] },
+      { label: "Entrar no grupo para mexer num elemento dele", combos: [["duplo clique"]] },
       { label: "Levar o texto da seta ao longo dela (com a seta selecionada)", combos: [["arrastar o texto"]] },
     ],
   },

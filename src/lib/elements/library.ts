@@ -45,12 +45,13 @@ export const LIBRARY_GROUPS: LibraryGroup[] = [
 interface LabelOptions {
   text: string;
   verticalAlign?: VerticalAlign;
+  underline?: boolean;
 }
 
 function withLabel<T extends LabeledElement>(element: T, textStyle: TextStyle, label?: LabelOptions): T {
   if (!label) return element;
-  const { text, verticalAlign = "middle" } = label;
-  return { ...element, label: { text, textStyle: { ...textStyle, align: "center", verticalAlign } } };
+  const { text, verticalAlign = "middle", underline = textStyle.underline } = label;
+  return { ...element, label: { text, textStyle: { ...textStyle, align: "center", verticalAlign, underline } } };
 }
 
 function createBox(type: BoxElementType, bounds: Bounds) {
@@ -217,6 +218,15 @@ export const LIBRARY_ITEMS: LibraryItem[] = [
     width: 130,
     height: 60,
     create: box("ellipse"),
+  },
+  {
+    id: "er.keyAttribute",
+    name: "Atributo chave",
+    group: "er",
+    keywords: ["elipse", "identificador", "sublinhado", "pk", "primária"],
+    width: 130,
+    height: 60,
+    create: box("ellipse", { label: { text: "id", underline: true } }),
   },
   {
     id: "er.multivaluedAttribute",

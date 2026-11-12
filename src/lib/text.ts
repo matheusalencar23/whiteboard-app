@@ -83,3 +83,49 @@ export function alignedX(align: TextStyle["align"], left: number, width: number)
   if (align === "right") return left + width;
   return left;
 }
+
+export const UNDERLINE_OFFSET = 0.12;
+export const UNDERLINE_THICKNESS = 0.06;
+
+const FALLBACK_BASELINE = 0.28;
+
+function baselineBelowMiddle(font: FontSpec): number {
+  measureCtx ??= document.createElement("canvas").getContext("2d");
+  if (!measureCtx) return font.fontSize * FALLBACK_BASELINE;
+  measureCtx.font = fontString(font);
+  measureCtx.textBaseline = "middle";
+  const offset = -measureCtx.measureText("Hg").alphabeticBaseline;
+  return Number.isFinite(offset) ? offset : font.fontSize * FALLBACK_BASELINE;
+}
+
+export function drawTextLines(
+  ctx: CanvasRenderingContext2D,
+  lines: string[],
+  style: TextStyle,
+  color: string,
+  area: { x: number; width: number },
+  top: number,
+) {
+  const step = lineHeight(style);
+  const x = alignedX(style.align, area.x, area.width);
+  ctx.save();
+  ctx.font = fontString(style);
+  ctx.fillStyle = color;
+  ctx.textAlign = style.align;
+  ctx.textBaseline = "middle";
+  lines.forEach((line, i) => ctx.fillText(line, x, top + step * (i + 0.5)));
+
+  if (style.underline) {
+    const widths = measureLineWidths(lines, style);
+    const below = baselineBelowMiddle(style) + style.fontSize * UNDERLINE_OFFSET;
+    const thickness = Math.max(1, style.fontSize * UNDERLINE_THICKNESS);
+    ctx.beginPath();
+    widths.forEach((width, i) => {
+      if (width === 0) return;
+      const start = style.align === "center" ? x - width / 2 : style.align === "right" ? x - width : x;
+      ctx.rect(start, top + step * (i + 0.5) + below, width, thickness);
+    });
+    ctx.fill();
+  }
+  ctx.restore();
+}

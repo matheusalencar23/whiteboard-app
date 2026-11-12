@@ -6,15 +6,14 @@ Os itens concluídos saem deste arquivo: o que o app já faz está no [README.md
 
 ## Ordem sugerida
 
-1. [Sublinhado](#sublinhado), junto com o atributo chave do ER.
-2. Biblioteca de formas: [básicas e anotações](#básicas-e-anotações).
-3. Biblioteca de formas: [detalhes preenchidos e cantos arredondados](#detalhes-preenchidos-e-cantos-arredondados), depois [UML estados e atividades](#uml-estados-e-atividades) e [extras do fluxograma](#extras-do-fluxograma).
-4. A decidir: [tabelas](#tabelas). Se entrar, pode vir antes do item 3, porque também serve à entidade ER.
-5. Biblioteca de formas: [arquitetura](#arquitetura-e-c4) e [wireframe](#wireframe).
-6. [Tema escuro](#tema-escuro).
-7. Depois: [contêineres com conteúdo vinculado](#contêineres) e [BPMN](#bpmn).
-8. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
-9. Depois: [publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm).
+1. Biblioteca de formas: [básicas e anotações](#básicas-e-anotações).
+2. Biblioteca de formas: [detalhes preenchidos e cantos arredondados](#detalhes-preenchidos-e-cantos-arredondados), depois [UML estados e atividades](#uml-estados-e-atividades) e [extras do fluxograma](#extras-do-fluxograma).
+3. A decidir: [tabelas](#tabelas). Se entrar, pode vir antes do item 2, porque também serve à entidade ER.
+4. Biblioteca de formas: [arquitetura](#arquitetura-e-c4) e [wireframe](#wireframe).
+5. [Tema escuro](#tema-escuro).
+6. Depois: [contêineres com conteúdo vinculado](#contêineres) e [BPMN](#bpmn).
+7. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
+8. Depois: [publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm).
 
 ## Decisões tomadas
 
@@ -30,20 +29,6 @@ Valem para todo item novo.
 - As preferências da grade valem para todos os boards e não vão no arquivo do board.
 - O board vai virar uma biblioteca npm (veja [Publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm)). Código novo do board não deve depender das rotas, do `localStorage`, do `document` inteiro ou do tamanho da janela: navegação e persistência entram por funções e callbacks, os eventos de teclado ficam presos ao board e as medidas vêm do contêiner, não de `100vw`/`100vh`. Cada funcionalidade nova deve poder ser desligada pela configuração da biblioteca: botão, atalho e entrada na ajuda saem de um mesmo lugar (como `tools.ts` e `shortcuts.ts`), para serem escondidos juntos.
 - O atalho de exportar imagem é `Ctrl+Shift+E`, como no Excalidraw, mesmo abrindo o monitor de rede no Firefox (a página não consegue impedir). Lá, vale o botão.
-
-## Texto
-
-### Sublinhado
-
-- [ ] **O quê:** sublinhar o texto inteiro de um elemento (texto solto, rótulo, texto da seta e seções da entidade), como o negrito e o itálico: botão no grupo "Texto" da barra de estilo e atalho `Ctrl+U`. No grupo ER, um item novo "Atributo chave": elipse com o nome sublinhado (notação de Chen).
-- **Como:**
-  - **Modelo:** `underline` no `TextStyle`. Na validação, opcional e falso quando ausente, para os boards salvos continuarem abrindo. Entra no `textSelectors`, no `applyTextStyle` (que já é genérico) e no `DEFAULT_TEXT_STYLE`.
-  - **Desenho:** o canvas não sublinha sozinho. Hoje o texto é desenhado em três lugares quase iguais (`textUtil.draw`, `drawLabel` no `registry.ts` e `drawCompartmentsText`); juntar os três num ajudante único que desenha as linhas e, se for o caso, o traço embaixo de cada uma. A largura de cada linha vem do `measureLineWidths`, o início do traço depende do alinhamento, e a espessura e a distância da linha de base são proporcionais ao tamanho da fonte.
-  - **SVG:** o traço é um retângulo preenchido, que o `SvgContext` já suporta.
-  - **Editor:** `text-decoration: underline` no `<textarea>`, com `text-underline-offset` e `text-decoration-thickness` iguais aos do canvas.
-  - **Atalho:** `Ctrl+U` abre o código-fonte no navegador, mas a página consegue impedir (o Google Docs faz isso). Entra no `shortcuts.ts` e no `useShortcuts`, como o negrito.
-- **Fora do escopo:** sublinhar só uma palavra ou uma linha. Isso é texto rico (trechos com estilos diferentes) e mudaria o modelo do texto, a quebra de linha, a medição e o editor, que teria de virar `contenteditable`. Na entidade em tabela, a chave continua marcada no texto ("PK"/"FK"), como no draw.io.
-- **Por quê:** completa a notação de Chen e é um estilo de texto comum. Custo pequeno (cerca de meio dia).
 
 ## Diagramas
 
@@ -98,7 +83,7 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
   - **O quê:** uma tabela de verdade, com linhas e colunas, para comparações, listas, planilhas pequenas e entidades de banco com colunas (chave, nome, tipo), como a tabela do draw.io. Inserida pela biblioteca (3×3) e criada ao colar dados de uma planilha.
   - **Nome do tipo:** `table`. Os compartimentos, que usavam esse nome, já foram renomeados para `compartments`.
   - **Modelo:** larguras das colunas (`columns: number[]`), células (`cells: { text }[][]`), um `textStyle` para a tabela inteira e `headerRow` (a primeira linha em negrito e com o preenchimento). A altura de cada linha não é guardada: sai do texto mais alto da linha, como as seções da entidade (a última linha fica com a sobra). Largura do elemento é a soma das colunas; redimensionar escala as colunas.
-  - **Desenho:** contorno e linhas internas com o roughjs (um traço por borda, com `seed` derivado), texto com o mesmo ajudante do sublinhado. Clique em qualquer ponto da tabela seleciona, como a entidade.
+  - **Desenho:** contorno e linhas internas com o roughjs (um traço por borda, com `seed` derivado), texto com o `drawTextLines`. Clique em qualquer ponto da tabela seleciona, como a entidade.
   - **Edição:** duplo clique edita a célula sob o cursor, com o mesmo `<textarea>` dos rótulos. `Tab` e `Shift+Tab` passam para a célula seguinte e a anterior (criando uma linha nova depois da última célula, como em editores de texto); `Ctrl+Enter` e `Esc` terminam.
   - **Estrutura:** com a tabela selecionada, a barra de estilo ganha um grupo "Tabela" (inserir linha acima ou abaixo, coluna à esquerda ou à direita, apagar linha ou coluna), que age sobre a última célula clicada (um cursor de célula guardado no Canvas). Arrastar uma borda interna entre colunas muda a largura (uma `Interaction` nova).
   - **Colar:** texto separado por tabulações (o que planilhas e tabelas HTML colocam na área de transferência) vira uma tabela no `useClipboard`, em vez de um texto solto. Pequeno e muito útil.

@@ -1,7 +1,7 @@
 import type { Point } from "../../types";
 import { containsPoint, expandBounds, getCenter } from "../../geometry/bounds";
 import { rotatePoint } from "../../geometry/distance";
-import { alignedX, fontString, lineHeight, measureText } from "../../text";
+import { drawTextLines, measureText } from "../../text";
 import { baseFields, type ShapeUtil } from "../shapeUtil";
 import type { BoardElement, TextElement, TextStyle } from "../types";
 
@@ -33,18 +33,7 @@ export function setText(el: TextElement, text: string, textStyle = el.textStyle)
 
 export const textUtil: ShapeUtil<TextElement> = {
   draw(el, _rc, ctx) {
-    const { textStyle } = el;
-    const step = lineHeight(textStyle);
-    const x = alignedX(textStyle.align, el.x, el.width);
-    ctx.save();
-    ctx.font = fontString(textStyle);
-    ctx.fillStyle = resolveTextColor(textStyle, el);
-    ctx.textAlign = textStyle.align;
-    ctx.textBaseline = "middle";
-    el.text.split("\n").forEach((line, i) => {
-      ctx.fillText(line, x, el.y + step * (i + 0.5));
-    });
-    ctx.restore();
+    drawTextLines(ctx, el.text.split("\n"), el.textStyle, resolveTextColor(el.textStyle, el), el, el.y);
   },
 
   hitTest(el, p, tolerance) {

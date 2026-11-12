@@ -1,7 +1,7 @@
 import type { Point } from "../../types";
 import { containsPoint, expandBounds, getCenter, type Bounds } from "../../geometry/bounds";
 import { rotatePoint } from "../../geometry/distance";
-import { alignedX, fontString, layoutText, lineHeight } from "../../text";
+import { drawTextLines, layoutText, lineHeight } from "../../text";
 import {
   baseFields,
   drawFillAndStroke,
@@ -98,16 +98,8 @@ export function drawCompartmentsText(el: CompartmentsElement, ctx: CanvasRenderi
     const rect = rects[index];
     const area = { x: rect.x + PADDING_X, width: innerWidth(el) };
     const { lines, height } = layoutText(section.text, style, area.width);
-    const step = lineHeight(style);
     const top = index === 0 ? rect.y + (rect.height - height) / 2 : rect.y + PADDING_Y;
-    const x = alignedX(style.align, area.x, area.width);
-    ctx.save();
-    ctx.font = fontString(style);
-    ctx.fillStyle = resolveTextColor(style, el);
-    ctx.textAlign = style.align;
-    ctx.textBaseline = "middle";
-    lines.forEach((line, i) => ctx.fillText(line, x, top + step * (i + 0.5)));
-    ctx.restore();
+    drawTextLines(ctx, lines, style, resolveTextColor(style, el), area, top);
   });
 }
 

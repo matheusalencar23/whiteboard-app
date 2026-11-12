@@ -48,6 +48,8 @@ export function useShortcuts() {
           store.setTextStyle({ bold: textSelectors.bold(store) !== true });
         } else if (hasText && key === "i" && !e.shiftKey) {
           store.setTextStyle({ italic: textSelectors.italic(store) !== true });
+        } else if (hasText && key === "u" && !e.shiftKey) {
+          store.setTextStyle({ underline: textSelectors.underline(store) !== true });
         } else if (hasText && e.shiftKey && (e.code === "Period" || e.code === "Comma")) {
           store.stepTextSize(e.code === "Period" ? 1 : -1);
         } else if (key === "=" || key === "+") store.stepZoom(1);

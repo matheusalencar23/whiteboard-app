@@ -348,6 +348,7 @@ function isValidTextStyle(value: unknown): boolean {
     (value.color === null || typeof value.color === "string") &&
     typeof value.bold === "boolean" &&
     typeof value.italic === "boolean" &&
+    (value.underline === undefined || typeof value.underline === "boolean") &&
     isOneOf(TEXT_ALIGNS, value.align) &&
     isOneOf(VERTICAL_ALIGNS, value.verticalAlign)
   );

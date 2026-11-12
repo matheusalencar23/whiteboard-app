@@ -1,4 +1,11 @@
-import type { ArrowElement, BoardElement, ElementStyle, ElementType, TextStyle } from "../../../lib/elements/types";
+import {
+  DEFAULT_TEXT_STYLE,
+  type ArrowElement,
+  type BoardElement,
+  type ElementStyle,
+  type ElementType,
+  type TextStyle,
+} from "../../../lib/elements/types";
 import { getTextStyle } from "../../../lib/elements/textStyle";
 import { supportsStyle, type StyleProperty } from "../../../lib/elements/style";
 import type { BoardState } from "../../../store/boardStore";
@@ -93,10 +100,11 @@ function selectTextField<K extends keyof TextStyle>(key: K, accepts: (el: BoardE
     for (const el of state.elements) {
       const textStyle = ids.has(el.id) && accepts(el) ? getTextStyle(el) : null;
       if (!textStyle) continue;
+      const current = textStyle[key] ?? DEFAULT_TEXT_STYLE[key];
       if (!found) {
         found = true;
-        value = textStyle[key];
-      } else if (value !== textStyle[key]) {
+        value = current;
+      } else if (value !== current) {
         return "mixed";
       }
     }
@@ -110,6 +118,7 @@ export const textSelectors = {
   color: selectTextField("color"),
   bold: selectTextField("bold"),
   italic: selectTextField("italic"),
+  underline: selectTextField("underline"),
   align: selectTextField("align", (el) => el.type !== "arrow"),
   verticalAlign: selectTextField(
     "verticalAlign",

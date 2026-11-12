@@ -8,6 +8,7 @@ import {
   LuAlignVerticalJustifyStart,
   LuBold,
   LuItalic,
+  LuUnderline,
 } from "react-icons/lu";
 import styles from "./StyleBar.module.scss";
 import {
@@ -121,6 +122,7 @@ export function TextControls() {
   const color = useBoardStore(textSelectors.color);
   const bold = useBoardStore(textSelectors.bold);
   const italic = useBoardStore(textSelectors.italic);
+  const underline = useBoardStore(textSelectors.underline);
   const align = useBoardStore(textSelectors.align);
   const verticalAlign = useBoardStore(textSelectors.verticalAlign);
   const opacity = useBoardStore(styleSelectors.strokeOpacity);
@@ -170,6 +172,15 @@ export function TextControls() {
             tooltipSide="bottom"
             active={italic === true}
             onClick={() => setTextStyle({ italic: italic !== true })}
+          />
+          <IconButton
+            icon={LuUnderline}
+            label="Sublinhado"
+            shortcut={formatShortcut(SHORTCUTS.underline.keys)}
+            size="sm"
+            tooltipSide="bottom"
+            active={underline === true}
+            onClick={() => setTextStyle({ underline: underline !== true })}
           />
         </div>
       </PanelSection>

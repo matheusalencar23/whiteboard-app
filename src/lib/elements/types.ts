@@ -53,6 +53,7 @@ export interface TextStyle {
   color: string | null;
   bold: boolean;
   italic: boolean;
+  underline?: boolean;
   align: TextAlign;
   verticalAlign: VerticalAlign;
 }
@@ -63,6 +64,7 @@ export const DEFAULT_TEXT_STYLE: TextStyle = {
   color: null,
   bold: false,
   italic: false,
+  underline: false,
   align: "left",
   verticalAlign: "middle",
 };

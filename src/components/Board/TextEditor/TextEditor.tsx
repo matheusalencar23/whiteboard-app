@@ -3,7 +3,14 @@ import styles from "./TextEditor.module.scss";
 import type { Point } from "../../../lib/types";
 import type { Bounds } from "../../../lib/geometry/bounds";
 import type { TextStyle } from "../../../lib/elements/types";
-import { FONT_STACKS, LINE_HEIGHT, layoutText, measureText } from "../../../lib/text";
+import {
+  FONT_STACKS,
+  LINE_HEIGHT,
+  UNDERLINE_OFFSET,
+  UNDERLINE_THICKNESS,
+  layoutText,
+  measureText,
+} from "../../../lib/text";
 import { worldToScreen, type Viewport } from "../../../lib/viewport";
 
 export type TextEditorLayout =
@@ -97,6 +104,10 @@ export function TextEditor({
         fontFamily: FONT_STACKS[textStyle.fontFamily],
         fontWeight: textStyle.bold ? 700 : 400,
         fontStyle: textStyle.italic ? "italic" : "normal",
+        textDecoration: textStyle.underline ? "underline" : "none",
+        textUnderlineOffset: `${UNDERLINE_OFFSET}em`,
+        textDecorationThickness: `max(1px, ${UNDERLINE_THICKNESS}em)`,
+        textDecorationSkipInk: "none",
         textAlign: textStyle.align,
         lineHeight: LINE_HEIGHT,
         color,

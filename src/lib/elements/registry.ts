@@ -10,7 +10,7 @@ import {
   type Bounds,
 } from "../geometry/bounds";
 import { distance, rotatePoint } from "../geometry/distance";
-import { alignedX, fontString, layoutText, lineHeight } from "../text";
+import { drawTextLines, layoutText } from "../text";
 import { baseFields, type ShapeUtil } from "./shapeUtil";
 import {
   isLabeledElement,
@@ -138,16 +138,7 @@ function drawLabel(element: BoardElement, ctx: CanvasRenderingContext2D) {
   const layout = getLabelLayout(element);
   if (!layout) return;
   const { lines, textStyle, box } = layout;
-  const x = alignedX(textStyle.align, box.x, box.width);
-  const step = lineHeight(textStyle);
-
-  ctx.save();
-  ctx.font = fontString(textStyle);
-  ctx.fillStyle = resolveTextColor(textStyle, element);
-  ctx.textAlign = textStyle.align;
-  ctx.textBaseline = "middle";
-  lines.forEach((line, i) => ctx.fillText(line, x, box.y + step * (i + 0.5)));
-  ctx.restore();
+  drawTextLines(ctx, lines, textStyle, resolveTextColor(textStyle, element), box, box.y);
 }
 
 function clipOutsideArrowLabel(

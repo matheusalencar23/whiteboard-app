@@ -25,6 +25,7 @@ export const SHORTCUTS = {
   zoomReset: { label: "Voltar a 100%", keys: ["Ctrl", "0"] },
   bold: { label: "Negrito", keys: ["Ctrl", "B"] },
   italic: { label: "Itálico", keys: ["Ctrl", "I"] },
+  underline: { label: "Sublinhado", keys: ["Ctrl", "U"] },
   textBigger: { label: "Aumentar o texto", keys: ["Ctrl", "Shift", ">"] },
   textSmaller: { label: "Diminuir o texto", keys: ["Ctrl", "Shift", "<"] },
   editText: { label: "Escrever no texto ou rótulo selecionado", keys: ["Enter"] },

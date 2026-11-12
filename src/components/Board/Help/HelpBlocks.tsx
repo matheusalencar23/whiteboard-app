@@ -57,6 +57,7 @@ const SHORTCUT_GROUPS: { title: string; rows: ShortcutRow[] }[] = [
       SHORTCUTS.editText,
       SHORTCUTS.bold,
       SHORTCUTS.italic,
+      SHORTCUTS.underline,
       SHORTCUTS.textBigger,
       SHORTCUTS.textSmaller,
     ].map(fromShortcut).concat({ label: SHORTCUTS.confirmText.label, combos: [SHORTCUTS.confirmText.keys, ["Esc"]] }),

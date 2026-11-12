@@ -2,6 +2,7 @@ import {
   ARROWHEADS,
   FILL_STYLES,
   FONT_FAMILIES,
+  SHAPE_KINDS,
   STROKE_STYLES,
   TEXT_ALIGNS,
   VERTICAL_ALIGNS,
@@ -33,6 +34,7 @@ export interface BoardSummary {
 export interface Preferences {
   showGrid: boolean;
   gridStyle: GridStyle;
+  libraryOpen: boolean;
 }
 
 const FILE_TYPE = "whiteboard";
@@ -49,12 +51,15 @@ export function normalizeBoardName(value: unknown): string | null {
 export const DEFAULT_PREFERENCES: Preferences = {
   showGrid: true,
   gridStyle: "dots",
+  libraryOpen: false,
 };
 
 const ELEMENT_TYPES: Record<ElementType, true> = {
   rectangle: true,
   ellipse: true,
   diamond: true,
+  shape: true,
+  table: true,
   arrow: true,
   freedraw: true,
   text: true,
@@ -166,6 +171,7 @@ export function loadPreferences(): Preferences {
   return {
     showGrid: typeof data.showGrid === "boolean" ? data.showGrid : DEFAULT_PREFERENCES.showGrid,
     gridStyle: GRID_STYLES.find((style) => style === data.gridStyle) ?? DEFAULT_PREFERENCES.gridStyle,
+    libraryOpen: typeof data.libraryOpen === "boolean" ? data.libraryOpen : DEFAULT_PREFERENCES.libraryOpen,
   };
 }
 
@@ -301,6 +307,15 @@ function isValidElement(value: unknown): value is BoardElement {
     case "ellipse":
     case "diamond":
       return isValidLabel(value.label);
+    case "table":
+      return (
+        Array.isArray(value.sections) &&
+        value.sections.length > 0 &&
+        value.sections.every((section) => isObject(section) && typeof section.text === "string") &&
+        isValidTextStyle(value.textStyle)
+      );
+    case "shape":
+      return isOneOf(SHAPE_KINDS, value.kind) && isValidLabel(value.label);
   }
 }
 

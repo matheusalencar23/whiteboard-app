@@ -62,12 +62,14 @@ export interface BoardState {
   editingGroupId: string | null;
   tool: Tool;
   viewport: Viewport;
+  viewportSize: { width: number; height: number };
   arrowRouting: ArrowRouting;
   arrowheads: ArrowheadPair;
   currentStyle: ElementStyle;
   currentTextStyle: TextStyle;
   showGrid: boolean;
   gridStyle: GridStyle;
+  libraryOpen: boolean;
   helpOpen: boolean;
   exportOpen: boolean;
   notice: Notice | null;
@@ -104,6 +106,8 @@ export interface BoardState {
   toggleGrid: () => void;
   setGridStyle: (style: GridStyle) => void;
   cycleGridStyle: () => void;
+  setLibraryOpen: (open: boolean) => void;
+  setViewportSize: (size: { width: number; height: number }) => void;
   setHelpOpen: (open: boolean) => void;
   setExportOpen: (open: boolean) => void;
   showNotice: (message: string, tone?: Notice["tone"]) => void;
@@ -126,7 +130,8 @@ function pushPast(past: BoardElement[][], snapshot: BoardElement[]) {
 const SAVE_DELAY = 300;
 
 function screenCenter(): Point {
-  return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+  const { width, height } = useBoardStore.getState().viewportSize;
+  return { x: width / 2, y: height / 2 };
 }
 
 const preferences = loadPreferences();
@@ -141,12 +146,14 @@ export const useBoardStore = create<BoardState>()((set) => ({
   editingGroupId: null,
   tool: "selection",
   viewport: INITIAL_VIEWPORT,
+  viewportSize: { width: 0, height: 0 },
   arrowRouting: "straight",
   arrowheads: DEFAULT_ARROWHEADS,
   currentStyle: DEFAULT_STYLE,
   currentTextStyle: DEFAULT_TEXT_STYLE,
   showGrid: preferences.showGrid,
   gridStyle: preferences.gridStyle,
+  libraryOpen: preferences.libraryOpen,
   helpOpen: false,
   exportOpen: false,
   notice: null,
@@ -412,6 +419,8 @@ export const useBoardStore = create<BoardState>()((set) => ({
       const index = GRID_STYLES.indexOf(state.gridStyle);
       return { gridStyle: GRID_STYLES[(index + 1) % GRID_STYLES.length], showGrid: true };
     }),
+  setLibraryOpen: (libraryOpen) => set({ libraryOpen }),
+  setViewportSize: (viewportSize) => set({ viewportSize }),
   setHelpOpen: (helpOpen) => set({ helpOpen }),
   setExportOpen: (exportOpen) => set({ exportOpen }),
   showNotice: (message, tone = "info") => set({ notice: { id: ++noticeCount, message, tone } }),
@@ -445,8 +454,12 @@ export function flushBoardSave() {
 }
 
 const unsubscribe = useBoardStore.subscribe((state, prev) => {
-  if (state.showGrid !== prev.showGrid || state.gridStyle !== prev.gridStyle) {
-    savePreferences({ showGrid: state.showGrid, gridStyle: state.gridStyle });
+  if (
+    state.showGrid !== prev.showGrid ||
+    state.gridStyle !== prev.gridStyle ||
+    state.libraryOpen !== prev.libraryOpen
+  ) {
+    savePreferences({ showGrid: state.showGrid, gridStyle: state.gridStyle, libraryOpen: state.libraryOpen });
   }
   if (state.boardId === null || state.boardId !== prev.boardId) return;
   const changed =

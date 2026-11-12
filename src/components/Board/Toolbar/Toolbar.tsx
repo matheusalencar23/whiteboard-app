@@ -1,5 +1,5 @@
 import type { IconType } from "react-icons";
-import { LuGrid3X3, LuGrip, LuGroup, LuRedo2, LuTrash2, LuUndo2, LuUngroup } from "react-icons/lu";
+import { LuGrid3X3, LuGrip, LuGroup, LuShapes, LuRedo2, LuTrash2, LuUndo2, LuUngroup } from "react-icons/lu";
 import styles from "./Toolbar.module.scss";
 import { TOOLS } from "./tools";
 import { Divider } from "../../../ui/Divider/Divider";
@@ -35,6 +35,8 @@ export function Toolbar() {
   const gridStyle = useBoardStore((s) => s.gridStyle);
   const toggleGrid = useBoardStore((s) => s.toggleGrid);
   const setGridStyle = useBoardStore((s) => s.setGridStyle);
+  const libraryOpen = useBoardStore((s) => s.libraryOpen);
+  const setLibraryOpen = useBoardStore((s) => s.setLibraryOpen);
 
   return (
     <nav className={styles.toolbar} aria-label="Ferramentas">
@@ -50,6 +52,14 @@ export function Toolbar() {
           onClick={() => setTool(t)}
         />
       ))}
+      <IconButton
+        icon={LuShapes}
+        label="Biblioteca de formas"
+        shortcut={formatShortcut(SHORTCUTS.library.keys)}
+        active={libraryOpen}
+        activeMarker
+        onClick={() => setLibraryOpen(!libraryOpen)}
+      />
 
       <Divider />
 

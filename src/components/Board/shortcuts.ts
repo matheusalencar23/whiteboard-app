@@ -17,6 +17,7 @@ export const SHORTCUTS = {
   nudge: { label: "Mover a seleção", keys: ["Setas"] },
   nudgeFar: { label: "Mover a seleção em passos maiores", keys: ["Shift", "Setas"] },
   deselect: { label: "Sair do grupo ou limpar a seleção", keys: ["Esc"] },
+  library: { label: "Mostrar ou esconder a biblioteca de formas", keys: ["Shift", "L"] },
   toggleGrid: { label: "Mostrar ou esconder a grade", keys: ["G"] },
   cycleGrid: { label: "Alternar a grade entre pontos e linhas", keys: ["Shift", "G"] },
   zoomIn: { label: "Aumentar zoom", keys: ["Ctrl", "+"] },

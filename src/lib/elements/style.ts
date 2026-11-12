@@ -23,6 +23,8 @@ const STYLE_PROPERTIES: Record<ElementType, readonly StyleProperty[]> = {
   rectangle: SHAPE_PROPERTIES,
   ellipse: SHAPE_PROPERTIES,
   diamond: SHAPE_PROPERTIES,
+  shape: SHAPE_PROPERTIES,
+  table: SHAPE_PROPERTIES,
   arrow: STROKE_PROPERTIES,
   freedraw: ["strokeColor", "strokeWidth", "strokeOpacity"],
   text: ["strokeOpacity"],

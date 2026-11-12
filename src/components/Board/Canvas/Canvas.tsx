@@ -10,6 +10,7 @@ import type {
   BoardElement,
   BoxElementType,
   LabeledElement,
+  TableElement,
   TextElement,
   TextStyle,
 } from "../../../lib/elements/types";
@@ -54,6 +55,12 @@ import {
 import { createFreedraw, setFreedrawPoints } from "../../../lib/elements/shapes/freedraw";
 import { createText, resolveTextColor, setText } from "../../../lib/elements/shapes/text";
 import {
+  getSectionAt,
+  getSectionTextArea,
+  getSectionTextStyle,
+  setSectionText,
+} from "../../../lib/elements/shapes/table";
+import {
   ROTATION_HANDLE_DISTANCE,
   ROTATION_HANDLE_RADIUS,
   ROTATION_SNAP,
@@ -89,6 +96,8 @@ import { TextEditor, type TextEditorLayout } from "../TextEditor/TextEditor";
 import { StyleBar, type StyleBarPlacement } from "../StyleBar/StyleBar";
 import { isTypingTarget } from "../useShortcuts";
 import { useClipboard } from "./useClipboard";
+import { findLibraryItem } from "../../../lib/elements/library";
+import { LIBRARY_DRAG_TYPE, insertLibraryItem } from "../Library/libraryActions";
 
 const ZOOM_SENSITIVITY = 0.005;
 const MAX_WHEEL_DELTA = 50;
@@ -172,7 +181,8 @@ type Editing =
       element: TextElement;
       isNew: boolean;
     }
-  | { kind: "label"; element: LabeledElement };
+  | { kind: "label"; element: LabeledElement }
+  | { kind: "section"; element: TableElement; index: number };
 
 function getScreenPoint(e: { nativeEvent: MouseEvent }): Point {
   return { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY };
@@ -204,15 +214,29 @@ function detachFromStaying(moved: BoardElement[]): BoardElement[] {
   return releaseBindings(moved, new Set(moved.map((el) => el.id)));
 }
 
-function editorLayout(editing: Editing): TextEditorLayout {
+function liveEditingElement(editing: Editing, text: string): BoardElement {
+  return editing.kind === "section" ? setSectionText(editing.element, editing.index, text) : editing.element;
+}
+
+function editorLayout(editing: Editing, text: string): TextEditorLayout {
   const { rotation } = editing.element;
   if (editing.kind === "text") {
     const el = editing.element;
     const position = rotatePoint({ x: el.x, y: el.y }, getCenter(el), rotation);
     return { kind: "free", position, rotation };
   }
+  if (editing.kind === "section") {
+    const live = setSectionText(editing.element, editing.index, text);
+    return { kind: "label", area: getSectionTextArea(live, editing.index), rotation, pivot: getCenter(live) };
+  }
   const area = getLabelArea(editing.element) ?? editing.element;
-  return { kind: "label", area, rotation };
+  return { kind: "label", area, rotation, pivot: getCenter(editing.element) };
+}
+
+function editorInitialText(editing: Editing): string {
+  if (editing.kind === "text") return editing.element.text;
+  if (editing.kind === "section") return editing.element.sections[editing.index].text;
+  return editing.element.label?.text ?? "";
 }
 
 function withCurrentStyle<T extends BoardElement>(element: T): T {
@@ -243,6 +267,7 @@ function labelTextStyle(element: LabeledElement): TextStyle {
 
 function editorTextStyle(editing: Editing): TextStyle {
   if (editing.kind === "text") return editing.element.textStyle;
+  if (editing.kind === "section") return getSectionTextStyle(editing.element, editing.index);
   return getLabelTextStyle(editing.element, labelTextStyle(editing.element));
 }
 
@@ -311,6 +336,7 @@ export function Canvas() {
     const observer = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect;
       setSize({ width, height });
+      useBoardStore.getState().setViewportSize({ width, height });
     });
     observer.observe(canvas);
 
@@ -392,6 +418,9 @@ export function Canvas() {
           ? { ...el, label: { text: editingText, textStyle } }
           : el,
       );
+    } else if (editing?.kind === "section") {
+      const live = liveEditingElement(editing, editingText);
+      visible = elements.map((el) => (el.id === live.id ? live : el));
     }
     return draft ? [...visible, draft] : visible;
   }, [elements, draft, editing, editingText]);
@@ -438,7 +467,12 @@ export function Canvas() {
         bindingAnchor: bindingHint && (bindingHint.fixed || isInteracting) ? bindingHint.anchor : null,
         bindingFixed: bindingHint?.fixed ?? false,
         frameOverride,
-        hiddenLabelId: editing?.kind === "label" ? editing.element.id : null,
+        hiddenText:
+          editing?.kind === "label"
+            ? { id: editing.element.id, text: "label" }
+            : editing?.kind === "section"
+              ? { id: editing.element.id, text: editing.index }
+              : null,
         editingGroup: editingGroupBounds,
         measurement: getMeasurement(measuring, selected),
       },
@@ -475,12 +509,30 @@ export function Canvas() {
     setEditing({ kind: "label", element });
   }
 
+  function startEditingSection(element: TableElement, index: number) {
+    useBoardStore.getState().setSelection([]);
+    setEditingText(element.sections[index].text);
+    setEditing({ kind: "section", element, index });
+  }
+
   function finishEditing(text: string) {
     const current = editing;
     setEditing(null);
     if (!current) return;
     if (current.kind === "label") finishEditingLabel(current.element.id, text);
+    else if (current.kind === "section") finishEditingSection(current.element.id, current.index, text);
     else finishEditingText(current, text);
+  }
+
+  function finishEditingSection(id: string, index: number, text: string) {
+    const store = useBoardStore.getState();
+    const table = store.elements.find((el) => el.id === id);
+    if (table?.type === "table" && index < table.sections.length) {
+      const updated = setSectionText(table, index, text);
+      if (updated !== table) store.replaceElement(updated);
+      store.setSelection([id]);
+    }
+    store.setTool("selection");
   }
 
   function finishEditingLabel(id: string, text: string) {
@@ -853,6 +905,7 @@ export function Canvas() {
     const [element, ...rest] = getSelectedElements();
     if (!element || rest.length > 0) return false;
     if (element.type === "text") startEditingText(element, false);
+    else if (element.type === "table") startEditingSection(element, 0);
     else if (isLabeledElement(element)) startEditingLabel(element);
     else return false;
     return true;
@@ -961,12 +1014,28 @@ export function Canvas() {
 
     if (hit?.type === "text") {
       startEditingText(hit, false);
+    } else if (hit?.type === "table") {
+      startEditingSection(hit, getSectionAt(hit, rotatePoint(world, getCenter(hit), -hit.rotation)));
     } else if (shape && isLabeledElement(shape)) {
       startEditingLabel(shape);
     } else if (!hit) {
       const text = createStyledText(world);
       startEditingText({ ...text, y: world.y - lineHeight(text.textStyle) / 2 }, true);
     }
+  }
+
+  function handleDragOver(e: React.DragEvent<HTMLCanvasElement>) {
+    if (!e.dataTransfer.types.includes(LIBRARY_DRAG_TYPE)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLCanvasElement>) {
+    const item = findLibraryItem(e.dataTransfer.getData(LIBRARY_DRAG_TYPE));
+    if (!item) return;
+    e.preventDefault();
+    if (editing) (document.activeElement as HTMLElement | null)?.blur();
+    insertLibraryItem(item, getScreenPoint(e));
   }
 
   let styleBarPlacement: StyleBarPlacement = { kind: "top" };
@@ -1003,15 +1072,18 @@ export function Canvas() {
           hoverPointRef.current = null;
         }}
         onDoubleClick={handleDoubleClick}
+        onAuxClick={(e) => e.preventDefault()}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
       />
       {!editing && !isInteracting && <StyleBar placement={styleBarPlacement} viewportWidth={size.width} />}
       {editing && (
         <TextEditor
-          key={editing.element.id}
-          initialText={editing.kind === "text" ? editing.element.text : (editing.element.label?.text ?? "")}
+          key={editing.kind === "section" ? `${editing.element.id}:${editing.index}` : editing.element.id}
+          initialText={editorInitialText(editing)}
           textStyle={editorTextStyle(editing)}
           color={resolveTextColor(editorTextStyle(editing), editing.element)}
-          layout={editorLayout(editing)}
+          layout={editorLayout(editing, editingText)}
           viewport={viewport}
           onChange={setEditingText}
           onSubmit={finishEditing}

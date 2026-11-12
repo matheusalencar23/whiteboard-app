@@ -1,9 +1,10 @@
 import { FONT_SIZE_PRESETS } from "../text";
 import { setText } from "./shapes/text";
+import { fitTable } from "./shapes/table";
 import { isLabeledElement, type BoardElement, type TextStyle } from "./types";
 
 export function getTextStyle(element: BoardElement): TextStyle | null {
-  if (element.type === "text") return element.textStyle;
+  if (element.type === "text" || element.type === "table") return element.textStyle;
   if (isLabeledElement(element) && element.label) return element.label.textStyle;
   return null;
 }
@@ -18,6 +19,7 @@ export function applyTextStyle<T extends BoardElement>(element: T, patch: Partia
   const textStyle = { ...current, ...patch };
   if (sameStyle(current, textStyle)) return element;
   if (element.type === "text") return setText(element, element.text, textStyle) as T;
+  if (element.type === "table") return fitTable({ ...element, textStyle }) as T;
   if (isLabeledElement(element) && element.label) {
     return { ...element, label: { ...element.label, textStyle } };
   }

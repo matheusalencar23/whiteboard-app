@@ -8,7 +8,7 @@ import { worldToScreen, type Viewport } from "../../../lib/viewport";
 
 export type TextEditorLayout =
   | { kind: "free"; position: Point; rotation: number }
-  | { kind: "label"; area: Bounds; rotation: number };
+  | { kind: "label"; area: Bounds; rotation: number; pivot: Point };
 
 interface TextEditorProps {
   initialText: string;
@@ -101,7 +101,10 @@ export function TextEditor({
         lineHeight: LINE_HEIGHT,
         color,
         transform: layout.rotation === 0 ? undefined : `rotate(${layout.rotation}rad)`,
-        transformOrigin: layout.kind === "free" ? "0 0" : "50% 50%",
+        transformOrigin:
+          layout.kind === "free"
+            ? "0 0"
+            : `${(layout.pivot.x - box.x) * zoom}px ${(layout.pivot.y - box.y) * zoom}px`,
       }}
     />
   );

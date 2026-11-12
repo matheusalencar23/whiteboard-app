@@ -7,7 +7,7 @@ Tudo roda no navegador, sem servidor. Os boards ficam salvos no próprio navegad
 ## Funcionalidades
 
 - **Desenho:** retângulo, losango, elipse, seta, lápis e texto, com traço de esboço ([roughjs](https://roughjs.com)) ou limpo. Selecionar por clique ou por caixa, mover (também pelas setas do teclado), redimensionar, girar, apagar, duplicar, copiar, recortar e colar (inclusive entre boards e abas), agrupar e desagrupar (com duplo clique para entrar no grupo), desfazer e refazer.
-- **Diagramas:** setas ligadas às formas por pontos de conexão. A ponta presa a um ponto fica nele; a ponta solta no corpo da forma escolhe sozinha o lado virado para a outra ponta. A seta pode ser reta, curva (com pontos ajustáveis) ou ortogonal (rota automática que contorna as formas), e tem 16 formatos de ponta, incluindo UML e pé de galinha.
+- **Diagramas:** setas ligadas às formas por pontos de conexão. A ponta presa a um ponto fica nele; a ponta solta no corpo da forma escolhe sozinha o lado virado para a outra ponta. A seta pode ser reta, curva (com pontos ajustáveis) ou ortogonal (rota automática que contorna as formas), e tem 16 formatos de ponta, incluindo UML e pé de galinha. Uma biblioteca de formas prontas (`Shift+L`) traz as formas do fluxograma (início/fim, entrada/saída, documento, banco de dados, subprocesso, nota e outras) do diagrama entidade-relacionamento (entidade com cabeçalho e lista de atributos, entidade fraca, relacionamentos e atributos) e da UML (classe, interface, ator, caso de uso, fronteira do sistema, pacote, nota, participante com linha de vida e ativação), com busca, para arrastar ou clicar e pôr no quadro.
 - **Texto:** texto solto, rótulos dentro das formas e texto no meio das setas, com fonte manuscrita, sem serifa ou monoespaçada, tamanho, negrito, itálico, cor e alinhamento.
 - **Estilo:** barra flutuante acima da seleção com cor, espessura e tipo do contorno, preenchimento (hachura, hachura cruzada ou sólido), opacidade e intensidade do esboço.
 - **Navegação:** pan e zoom pela roda, pelo trackpad ou pelo indicador de zoom, e grade de fundo em pontos ou linhas.
@@ -76,4 +76,4 @@ Os detalhes da arquitetura e as convenções do código estão no [CLAUDE.md](CL
 
 ## Roadmap
 
-O que falta fazer e as decisões que orientam o projeto ficam no [ROADMAP.md](ROADMAP.md). Entre os próximos itens estão a biblioteca de formas prontas (fluxograma, ER e UML), o tema escuro e o agrupamento de elementos. A troca do `localStorage` pelo IndexedDB e a sincronização entre abas estão registradas para decidir depois.
+O que falta fazer e as decisões que orientam o projeto ficam no [ROADMAP.md](ROADMAP.md). Entre os próximos itens estão as formas extras da biblioteca e o tema escuro. A troca do `localStorage` pelo IndexedDB e a sincronização entre abas estão registradas para decidir depois.

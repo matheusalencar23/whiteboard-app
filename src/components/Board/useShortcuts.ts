@@ -89,6 +89,8 @@ export function useShortcuts() {
         store.deleteElements(store.selectedIds);
       } else if (key === "escape") {
         if (!store.exitEditingGroup()) store.setSelection([]);
+      } else if (key === "l" && e.shiftKey) {
+        store.setLibraryOpen(!store.libraryOpen);
       } else if (key === "g") {
         if (e.shiftKey) store.cycleGridStyle();
         else store.toggleGrid();

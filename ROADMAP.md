@@ -6,7 +6,7 @@ Os itens concluídos saem deste arquivo: o que o app já faz está no [README.md
 
 ## Ordem sugerida
 
-1. [Biblioteca de formas prontas](#biblioteca-de-formas-prontas): o maior item que falta, dividido por grupo.
+1. [Biblioteca de formas prontas](#biblioteca-de-formas-prontas): faltam as formas extras e os contêineres.
 2. [Tema escuro](#tema-escuro).
 3. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
 4. Depois: [publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm).
@@ -30,20 +30,13 @@ Valem para todo item novo.
 
 ### Biblioteca de formas prontas
 
-- [ ] **O quê:** um painel com formas prontas agrupadas por tipo de diagrama, como as bibliotecas do draw.io. O usuário arrasta (ou clica) uma forma do painel para o quadro, e ela já vem com o desenho, o tamanho, os pontos de conexão e os campos de texto certos. Grupos iniciais:
-  - **Fluxograma:** processo (retângulo), decisão (losango), início/fim (terminal arredondado), entrada/saída (paralelogramo), documento, banco de dados (cilindro), subprocesso, conector (círculo pequeno) e nota.
-  - **UML:** classe (nome, atributos e métodos em compartimentos), interface, ator (boneco), caso de uso (elipse), pacote, nota com canto dobrado, e os elementos de sequência (participante com linha de vida e ativação).
-  - **Entidade-relacionamento:** entidade (título e lista de atributos, com marcação de chave), entidade fraca, relacionamento (losango) e atributo (elipse). Combina com as pontas pé de galinha que as setas já têm.
-  - **Outros (decidir na hora):** formas básicas extras (triângulo, hexágono, estrela, nuvem, seta grossa) e contêineres (raia, grupo com título).
-- **Como:**
-  - **Formas novas no modelo:** cada desenho novo vira um tipo na união `BoardElement` com o seu `ShapeUtil` (`draw`, `hitTest`, `resize`, `getBorderOffset`, `getConnectionPoints` e `getLabelArea`), como as formas atuais. Para não multiplicar módulos, avaliar um tipo genérico (por exemplo, `shape` com um campo `kind`) cujo contorno vem de uma função de caminho por formato, desenhado com o `roughjs` (`rc.path` ou `rc.polygon`), para manter o traço de esboço e a ligação das setas.
-  - **Formas com compartimentos** (classe UML, entidade ER): precisam de mais de um campo de texto. O rótulo atual (`label`) é um só, então o modelo ganha uma lista de seções (`compartments`, cada uma com texto e altura) e o duplo clique edita a seção sob o cursor. A altura de cada seção cresce com o texto.
-  - **Modelos compostos:** o que for melhor como um conjunto de elementos simples (por exemplo, uma linha de vida da sequência, ou um ator com o nome embaixo) entra como um modelo que cria vários elementos de uma vez, já agrupados (`groupIds`, veja o [CLAUDE.md](CLAUDE.md)).
-  - **Painel:** uma barra lateral recolhível (ou um botão na toolbar que abre um `Popover` grande) com busca e os grupos em seções recolhíveis. Cada item mostra uma prévia desenhada com o mesmo `draw` do canvas num `<canvas>` pequeno, ou um SVG gerado da mesma geometria, como os ícones das pontas das setas. O visual segue a identidade própria da interface.
-  - **Inserção:** arrastar do painel e soltar no quadro (convertendo o ponto com `screenToWorld`), ou clicar para inserir no centro da tela. A forma nova usa o `currentStyle` e fica selecionada, como as criadas pelas ferramentas.
-  - **Registro:** um catálogo único (`src/lib/elements/library.ts`) com id, nome, grupo, palavras de busca e a função que cria o elemento, para o painel e a busca lerem do mesmo lugar.
-- **Por quê:** é a parte do draw.io que mais acelera montar diagramas. Hoje um fluxograma ou um diagrama ER precisa ser montado com retângulos, losangos e elipses soltos, e formas como cilindro, documento, classe UML ou ator não existem.
-- **Divisão sugerida:** é grande, então pode entrar por grupo: fluxograma primeiro (formas de um campo de texto só), depois ER e UML (que precisam dos compartimentos).
+O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`table`) e os grupos do fluxograma, de entidade-relacionamento e de UML já existem (veja o [CLAUDE.md](CLAUDE.md)). Um formato novo entra em `SHAPE_KINDS` e em `SHAPE_KIND_DEFINITIONS`, e o item, em `LIBRARY_ITEMS`.
+
+- [ ] **Outros (decidir na hora):** formas básicas extras (triângulo, hexágono, estrela, nuvem, seta grossa) e contêineres (raia, grupo com título).
+- [ ] **A avaliar:**
+  - Atributo chave com o nome sublinhado (notação de Chen). Hoje a chave da entidade é marcada no texto ("PK"), porque o `TextStyle` não tem sublinhado.
+  - Acrescentar e remover seções da `table` pela interface (hoje o número de seções vem do item da biblioteca: duas na entidade e na interface, três na classe).
+  - Ligar a linha de vida do participante ao retângulo. Hoje os dois só estão agrupados, porque a folga das pontas ligadas (`BINDING_GAP`) deixaria a linha descolada da caixa; redimensionar o retângulo dentro do grupo não leva a linha junto.
 
 ## Visual
 

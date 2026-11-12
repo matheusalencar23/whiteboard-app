@@ -11,6 +11,16 @@ interface ClipboardOptions {
   createPastedText: (text: string, center: Point) => BoardElement;
 }
 
+const MIDDLE_BUTTON = 1;
+const MIDDLE_PASTE_WINDOW = 500;
+
+let middleButtonDown = false;
+let middleButtonReleasedAt = -Infinity;
+
+function isMiddleClickPaste(): boolean {
+  return middleButtonDown || performance.now() - middleButtonReleasedAt < MIDDLE_PASTE_WINDOW;
+}
+
 function isBlocked(e: ClipboardEvent): boolean {
   const { helpOpen, exportOpen } = useBoardStore.getState();
   return isTypingTarget(e.target) || helpOpen || exportOpen;
@@ -44,8 +54,22 @@ export function useClipboard(options: ClipboardOptions) {
       if (copied) useBoardStore.getState().deleteElements(copied);
     }
 
+    function handlePointerDown(e: PointerEvent) {
+      if (e.button === MIDDLE_BUTTON) middleButtonDown = true;
+    }
+
+    function handlePointerUp(e: PointerEvent) {
+      if (e.button !== MIDDLE_BUTTON) return;
+      middleButtonDown = false;
+      middleButtonReleasedAt = performance.now();
+    }
+
     function handlePaste(e: ClipboardEvent) {
       if (isBlocked(e)) return;
+      if (isMiddleClickPaste()) {
+        e.preventDefault();
+        return;
+      }
       const text = e.clipboardData?.getData("text/plain") ?? "";
       if (text.trim() === "") return;
       e.preventDefault();
@@ -59,7 +83,11 @@ export function useClipboard(options: ClipboardOptions) {
     document.addEventListener("copy", handleCopy);
     document.addEventListener("cut", handleCut);
     document.addEventListener("paste", handlePaste);
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    document.addEventListener("pointerup", handlePointerUp, true);
     return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+      document.removeEventListener("pointerup", handlePointerUp, true);
       document.removeEventListener("copy", handleCopy);
       document.removeEventListener("cut", handleCut);
       document.removeEventListener("paste", handlePaste);

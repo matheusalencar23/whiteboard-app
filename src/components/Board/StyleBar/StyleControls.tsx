@@ -31,6 +31,7 @@ const STROKE_SWATCHES: Swatch[] = [
 
 const FILL_SWATCHES: Swatch[] = [
   { color: TRANSPARENT, label: "Sem preenchimento" },
+  { color: palette.paper, label: "Branco" },
   { color: palette.redLight, label: "Vermelho claro" },
   { color: palette.greenLight, label: "Verde claro" },
   { color: palette.blueLight, label: "Azul claro" },

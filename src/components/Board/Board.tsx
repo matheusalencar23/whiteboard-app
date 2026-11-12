@@ -10,6 +10,7 @@ import { BoardNotice } from "./BoardNotice";
 import { BoardTitle } from "./BoardTitle/BoardTitle";
 import { BoardMenu } from "./BoardMenu/BoardMenu";
 import { ExportDialog } from "./Export/ExportDialog";
+import { LibraryPanel } from "./Library/LibraryPanel";
 import { importBoard } from "./boardFileActions";
 import { isBoardFileCandidate } from "../../lib/boardFile";
 import { IconButton } from "../../ui/IconButton/IconButton";
@@ -26,6 +27,7 @@ export function Board() {
   const name = useBoardStore((s) => s.name);
   const exportOpen = useBoardStore((s) => s.exportOpen);
   const setExportOpen = useBoardStore((s) => s.setExportOpen);
+  const libraryOpen = useBoardStore((s) => s.libraryOpen);
   const [dropping, setDropping] = useState(false);
   const [renaming, setRenaming] = useState(false);
 
@@ -80,6 +82,11 @@ export function Board() {
         <Toolbar />
       </div>
       <Canvas />
+      {libraryOpen && (
+        <div className={styles.sidebar}>
+          <LibraryPanel />
+        </div>
+      )}
       <div className={styles.corner}>
         <ZoomIndicator />
         <HelpButton />

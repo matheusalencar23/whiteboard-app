@@ -77,7 +77,7 @@ export function selectTextScope(state: BoardState): string {
     const ids = new Set(state.selectedIds);
     for (const el of state.elements) {
       if (!ids.has(el.id) || !getTextStyle(el)) continue;
-      kinds.add(el.type === "text" ? "free" : el.type === "arrow" ? "arrow" : "box");
+      kinds.add(el.type === "text" || el.type === "table" ? "free" : el.type === "arrow" ? "arrow" : "box");
     }
   } else if (state.tool === "text") {
     kinds.add("free");
@@ -111,5 +111,8 @@ export const textSelectors = {
   bold: selectTextField("bold"),
   italic: selectTextField("italic"),
   align: selectTextField("align", (el) => el.type !== "arrow"),
-  verticalAlign: selectTextField("verticalAlign", (el) => el.type !== "arrow" && el.type !== "text"),
+  verticalAlign: selectTextField(
+    "verticalAlign",
+    (el) => el.type !== "arrow" && el.type !== "text" && el.type !== "table",
+  ),
 };

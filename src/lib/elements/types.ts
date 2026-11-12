@@ -88,6 +88,37 @@ export interface DiamondElement extends BoxBaseElement {
   type: "diamond";
 }
 
+export const SHAPE_KINDS = [
+  "terminal",
+  "parallelogram",
+  "document",
+  "cylinder",
+  "subprocess",
+  "note",
+  "weakEntity",
+  "doubleDiamond",
+  "doubleEllipse",
+  "actor",
+  "package",
+] as const;
+
+export type ShapeKind = (typeof SHAPE_KINDS)[number];
+
+export interface ShapeElement extends BoxBaseElement {
+  type: "shape";
+  kind: ShapeKind;
+}
+
+export interface TableSection {
+  text: string;
+}
+
+export interface TableElement extends BaseElement {
+  type: "table";
+  sections: TableSection[];
+  textStyle: TextStyle;
+}
+
 export type ArrowRouting = "straight" | "elbow" | "curved";
 
 export const ARROWHEADS = [
@@ -159,6 +190,8 @@ export type BoardElement =
   | RectangleElement
   | EllipseElement
   | DiamondElement
+  | ShapeElement
+  | TableElement
   | ArrowElement
   | FreedrawElement
   | TextElement;
@@ -175,10 +208,10 @@ export function isBoxElement(element: BoardElement): element is BoxElement {
   return element.type === "rectangle" || element.type === "ellipse" || element.type === "diamond";
 }
 
-export type LabeledElement = BoxElement | ArrowElement;
+export type LabeledElement = BoxElement | ShapeElement | ArrowElement;
 
 export function isLabeledElement(element: BoardElement): element is LabeledElement {
-  return isBoxElement(element) || element.type === "arrow";
+  return isBoxElement(element) || element.type === "shape" || element.type === "arrow";
 }
 
 export const DEFAULT_STYLE: ElementStyle = {

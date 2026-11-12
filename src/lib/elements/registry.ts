@@ -15,6 +15,7 @@ import { baseFields, type ShapeUtil } from "./shapeUtil";
 import {
   isLabeledElement,
   type BoardElement,
+  type BoxElement,
   type BoxElementType,
   type ElementOfType,
   type ElementType,
@@ -24,6 +25,8 @@ import {
 import { rectangleUtil } from "./shapes/rectangle";
 import { ellipseUtil } from "./shapes/ellipse";
 import { diamondUtil } from "./shapes/diamond";
+import { shapeUtil } from "./shapes/shape";
+import { drawTableText, tableUtil } from "./shapes/table";
 import { arrowUtil } from "./shapes/arrow";
 import { freedrawUtil } from "./shapes/freedraw";
 import { resolveTextColor, textUtil } from "./shapes/text";
@@ -32,6 +35,8 @@ const shapeUtils: { [K in ElementType]: ShapeUtil<ElementOfType<K>> } = {
   rectangle: rectangleUtil,
   ellipse: ellipseUtil,
   diamond: diamondUtil,
+  shape: shapeUtil,
+  table: tableUtil,
   arrow: arrowUtil,
   freedraw: freedrawUtil,
   text: textUtil,
@@ -41,7 +46,7 @@ export function getShapeUtil<T extends BoardElement>(element: T): ShapeUtil<T> {
   return shapeUtils[element.type] as unknown as ShapeUtil<T>;
 }
 
-export function createBoxElement(type: BoxElementType, start: Point, end: Point): BoardElement {
+export function createBoxElement(type: BoxElementType, start: Point, end: Point): BoxElement {
   return { ...baseFields(getBounds([start, end])), type };
 }
 
@@ -163,12 +168,15 @@ function clipOutsideArrowLabel(
   return true;
 }
 
+export type HiddenText = "label" | number | null;
+
 export function renderElement(
   element: BoardElement,
   rc: RoughCanvas,
   ctx: CanvasRenderingContext2D,
-  showLabel = true,
+  hiddenText: HiddenText = null,
 ) {
+  const showLabel = hiddenText !== "label";
   const util = getShapeUtil(element);
   ctx.save();
   ctx.globalAlpha = element.style.strokeOpacity / 100;
@@ -183,6 +191,7 @@ export function renderElement(
   util.draw(element, rc, ctx);
   if (clipped) ctx.restore();
   if (showLabel) drawLabel(element, ctx);
+  if (element.type === "table") drawTableText(element, ctx, typeof hiddenText === "number" ? hiddenText : null);
   ctx.restore();
 }
 

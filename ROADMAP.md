@@ -6,13 +6,12 @@ Os itens concluídos saem deste arquivo: o que o app já faz está no [README.md
 
 ## Ordem sugerida
 
-1. Biblioteca de formas: [UML estados e atividades](#uml-estados-e-atividades) e [extras do fluxograma](#extras-do-fluxograma).
-2. A decidir: [tabelas](#tabelas). Se entrar, pode vir antes do item 1, porque também serve à entidade ER.
-3. Biblioteca de formas: [arquitetura](#arquitetura-e-c4) e [wireframe](#wireframe).
-4. [Tema escuro](#tema-escuro).
-5. Depois: [contêineres com conteúdo vinculado](#contêineres) e [BPMN](#bpmn).
-6. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
-7. Depois: [publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm).
+1. A decidir: [tabelas](#tabelas). Também serviria à entidade ER.
+2. [Tema escuro](#tema-escuro).
+3. Biblioteca de formas: [contêineres só de desenho](#contêineres).
+4. Depois: [contêineres com conteúdo vinculado](#contêineres) e [BPMN](#bpmn).
+5. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
+6. Depois: [publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm).
 
 ## Decisões tomadas
 
@@ -33,23 +32,7 @@ Valem para todo item novo.
 
 ### Biblioteca de formas prontas
 
-O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`compartments`) e os grupos do fluxograma, de entidade-relacionamento e de UML já existem (veja o [CLAUDE.md](CLAUDE.md)). Um formato novo entra em `SHAPE_KINDS` e em `SHAPE_KIND_DEFINITIONS`, e o item, em `LIBRARY_ITEMS`. Os pacotes abaixo não precisam seguir o draw.io; ele é só inspiração. Silhuetas simples combinam com o traço de esboço; ícones detalhados (como os da AWS) não.
-
-#### UML estados e atividades
-
-- [ ] Estado (retângulo com `corners: "round"` pelo `style` da parte), estado inicial (círculo cheio), estado final (alvo), barra de bifurcação e junção, componente e nó (o formato `cube` já existe). Os círculos e a barra cheios usam um detalhe com `fill: "stroke"`.
-
-#### Extras do fluxograma
-
-- [ ] Preparação (o formato `hexagon` já existe; falta o item no grupo), multidocumento, atraso, entrada manual, conector fora de página e exibição.
-
-#### Arquitetura e C4
-
-- [ ] Servidor, fila (cilindro deitado), dispositivo ou monitor, celular, e a pessoa e o sistema do C4. Silhuetas simples.
-
-#### Wireframe
-
-- [ ] Janela do navegador, botão, campo de texto, checkbox, celular e cartão. Vários são itens compostos (moldura com texto), com o agrupamento que já existe. Médio.
+O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`compartments`) e os grupos de formas básicas, anotações, fluxograma, entidade-relacionamento, UML, arquitetura e wireframe já existem (veja o [CLAUDE.md](CLAUDE.md)). Um formato novo entra em `SHAPE_KINDS` e em `SHAPE_KIND_DEFINITIONS`, e o item, em `LIBRARY_ITEMS`. Os pacotes abaixo não precisam seguir o draw.io; ele é só inspiração. Silhuetas simples combinam com o traço de esboço; ícones detalhados (como os da AWS) não.
 
 #### Contêineres
 

@@ -5,6 +5,7 @@ import { createBoxElement } from "./registry";
 import { createArrow } from "./shapes/arrow";
 import { createShape } from "./shapes/shape";
 import { createCompartments } from "./shapes/compartments";
+import { createText } from "./shapes/text";
 import { theme } from "../theme";
 import type {
   BoardElement,
@@ -12,6 +13,7 @@ import type {
   ElementStyle,
   LabeledElement,
   ShapeKind,
+  TextAlign,
   TextStyle,
   VerticalAlign,
 } from "./types";
@@ -42,18 +44,22 @@ export const LIBRARY_GROUPS: LibraryGroup[] = [
   { id: "flowchart", name: "Fluxograma" },
   { id: "er", name: "Entidade-relacionamento" },
   { id: "uml", name: "UML" },
+  { id: "umlBehavior", name: "UML: estados e atividades" },
+  { id: "architecture", name: "Arquitetura e C4" },
+  { id: "wireframe", name: "Wireframe" },
 ];
 
 interface LabelOptions {
   text: string;
+  align?: TextAlign;
   verticalAlign?: VerticalAlign;
   underline?: boolean;
 }
 
 function withLabel<T extends LabeledElement>(element: T, textStyle: TextStyle, label?: LabelOptions): T {
   if (!label) return element;
-  const { text, verticalAlign = "middle", underline = textStyle.underline } = label;
-  return { ...element, label: { text, textStyle: { ...textStyle, align: "center", verticalAlign, underline } } };
+  const { text, align = "center", verticalAlign = "middle", underline = textStyle.underline } = label;
+  return { ...element, label: { text, textStyle: { ...textStyle, align, verticalAlign, underline } } };
 }
 
 function createBox(type: BoxElementType, bounds: Bounds) {
@@ -91,6 +97,43 @@ function participant(bounds: Bounds, textStyle: TextStyle): LibraryPart[] {
   return [
     { element: withLabel(head, textStyle, { text: "Objeto" }) },
     { element: lifeline, style: { strokeStyle: "dashed" } },
+  ];
+}
+
+const CHECKBOX_SIZE = 20;
+const CHECKBOX_GAP = 10;
+
+function checkbox(bounds: Bounds, textStyle: TextStyle): LibraryPart[] {
+  const cy = bounds.y + bounds.height / 2;
+  const box = createShape("checkbox", { x: bounds.x, y: cy - CHECKBOX_SIZE / 2, width: CHECKBOX_SIZE, height: CHECKBOX_SIZE });
+  const text = createText({ x: bounds.x + CHECKBOX_SIZE + CHECKBOX_GAP, y: cy }, textStyle, "Opção");
+  return [{ element: box }, { element: { ...text, y: cy - text.height / 2 } }];
+}
+
+const CARD_PADDING = 14;
+const CARD_IMAGE_SHARE = 0.5;
+const CARD_TEXT_GAP = 6;
+
+function card(bounds: Bounds, textStyle: TextStyle): LibraryPart[] {
+  const frame = createBox("rectangle", bounds);
+  const image = createShape("imagePlaceholder", {
+    x: bounds.x + CARD_PADDING,
+    y: bounds.y + CARD_PADDING,
+    width: bounds.width - CARD_PADDING * 2,
+    height: bounds.height * CARD_IMAGE_SHARE,
+  });
+  const left = bounds.x + CARD_PADDING;
+  const title = createText({ x: left, y: image.y + image.height + CARD_PADDING }, { ...textStyle, bold: true }, "Título");
+  const description = createText(
+    { x: left, y: title.y + title.height + CARD_TEXT_GAP },
+    { ...textStyle, bold: false, fontSize: Math.round(textStyle.fontSize * 0.75) },
+    "Descrição",
+  );
+  return [
+    { element: frame, style: { corners: "round" } },
+    { element: image },
+    { element: title },
+    { element: description },
   ];
 }
 
@@ -312,6 +355,60 @@ export const LIBRARY_ITEMS: LibraryItem[] = [
     create: shape("note"),
   },
   {
+    id: "flowchart.preparation",
+    name: "Preparação",
+    group: "flowchart",
+    keywords: ["hexágono", "inicialização", "configuração"],
+    width: 160,
+    height: 80,
+    create: shape("hexagon"),
+  },
+  {
+    id: "flowchart.multiDocument",
+    name: "Multidocumento",
+    group: "flowchart",
+    keywords: ["documentos", "vários", "relatórios", "papéis"],
+    width: 170,
+    height: 100,
+    create: shape("multiDocument"),
+  },
+  {
+    id: "flowchart.delay",
+    name: "Atraso",
+    group: "flowchart",
+    keywords: ["espera", "pausa", "tempo", "d"],
+    width: 140,
+    height: 80,
+    create: shape("delay"),
+  },
+  {
+    id: "flowchart.manualInput",
+    name: "Entrada manual",
+    group: "flowchart",
+    keywords: ["teclado", "digitação", "formulário"],
+    width: 160,
+    height: 80,
+    create: shape("manualInput"),
+  },
+  {
+    id: "flowchart.offPageConnector",
+    name: "Conector fora de página",
+    group: "flowchart",
+    keywords: ["outra página", "referência", "continuação"],
+    width: 60,
+    height: 60,
+    create: shape("offPageConnector"),
+  },
+  {
+    id: "flowchart.display",
+    name: "Exibição",
+    group: "flowchart",
+    keywords: ["tela", "monitor", "saída", "mostrar"],
+    width: 160,
+    height: 80,
+    create: shape("display"),
+  },
+  {
     id: "er.entity",
     name: "Entidade",
     group: "er",
@@ -463,6 +560,195 @@ export const LIBRARY_ITEMS: LibraryItem[] = [
     width: 18,
     height: 90,
     create: box("rectangle", { style: { fillColor: theme.palette.paper, fillStyle: "solid" } }),
+  },
+  {
+    id: "uml.component",
+    name: "Componente",
+    group: "uml",
+    keywords: ["módulo", "serviço", "biblioteca", "implantação"],
+    width: 180,
+    height: 90,
+    create: shape("component"),
+  },
+  {
+    id: "uml.node",
+    name: "Nó",
+    group: "uml",
+    keywords: ["cubo", "servidor", "implantação", "dispositivo", "máquina"],
+    width: 160,
+    height: 110,
+    create: shape("cube"),
+  },
+  {
+    id: "umlBehavior.state",
+    name: "Estado / ação",
+    group: "umlBehavior",
+    keywords: ["estado", "ação", "atividade", "arredondado", "máquina de estados"],
+    width: 160,
+    height: 70,
+    create: box("rectangle", { style: { corners: "round" } }),
+  },
+  {
+    id: "umlBehavior.initial",
+    name: "Início",
+    group: "umlBehavior",
+    keywords: ["estado inicial", "nó inicial", "círculo cheio", "começo"],
+    width: 30,
+    height: 30,
+    create: shape("initialState"),
+  },
+  {
+    id: "umlBehavior.final",
+    name: "Fim",
+    group: "umlBehavior",
+    keywords: ["estado final", "nó final", "alvo", "término"],
+    width: 36,
+    height: 36,
+    create: shape("finalState"),
+  },
+  {
+    id: "umlBehavior.flowFinal",
+    name: "Fim de fluxo",
+    group: "umlBehavior",
+    keywords: ["final de fluxo", "círculo com x", "encerrar fluxo"],
+    width: 32,
+    height: 32,
+    create: shape("flowFinal"),
+  },
+  {
+    id: "umlBehavior.decision",
+    name: "Decisão / junção",
+    group: "umlBehavior",
+    keywords: ["losango", "escolha", "merge", "condição"],
+    width: 60,
+    height: 60,
+    create: box("diamond"),
+  },
+  {
+    id: "umlBehavior.bar",
+    name: "Barra de bifurcação",
+    group: "umlBehavior",
+    keywords: ["fork", "join", "junção", "paralelo", "sincronização"],
+    width: 140,
+    height: 8,
+    create: shape("bar"),
+  },
+  {
+    id: "architecture.server",
+    name: "Servidor",
+    group: "architecture",
+    keywords: ["máquina", "host", "backend", "infraestrutura"],
+    width: 110,
+    height: 120,
+    create: shape("server", { text: "Servidor" }),
+  },
+  {
+    id: "architecture.queue",
+    name: "Fila",
+    group: "architecture",
+    keywords: ["cilindro deitado", "mensagens", "broker", "tópico", "kafka"],
+    width: 170,
+    height: 70,
+    create: shape("queue"),
+  },
+  {
+    id: "architecture.monitor",
+    name: "Dispositivo / monitor",
+    group: "architecture",
+    keywords: ["computador", "tela", "desktop", "cliente"],
+    width: 140,
+    height: 110,
+    create: shape("monitor"),
+  },
+  {
+    id: "architecture.mobile",
+    name: "Celular",
+    group: "architecture",
+    keywords: ["smartphone", "app", "dispositivo móvel", "cliente"],
+    width: 70,
+    height: 120,
+    create: shape("mobile"),
+  },
+  {
+    id: "architecture.person",
+    name: "Pessoa (C4)",
+    group: "architecture",
+    keywords: ["c4", "usuário", "ator", "persona"],
+    width: 110,
+    height: 150,
+    create: shape("person", { text: "Pessoa" }),
+  },
+  {
+    id: "architecture.system",
+    name: "Sistema (C4)",
+    group: "architecture",
+    keywords: ["c4", "software", "contêiner", "aplicação"],
+    width: 220,
+    height: 110,
+    create: box("rectangle", { label: { text: "Sistema\n[Sistema de software]" }, style: { corners: "round" } }),
+  },
+  {
+    id: "wireframe.browser",
+    name: "Janela do navegador",
+    group: "wireframe",
+    keywords: ["página", "site", "web", "tela"],
+    width: 360,
+    height: 240,
+    create: shape("browserWindow"),
+  },
+  {
+    id: "wireframe.button",
+    name: "Botão",
+    group: "wireframe",
+    keywords: ["ação", "clique", "cta"],
+    width: 120,
+    height: 44,
+    create: box("rectangle", { label: { text: "Botão" }, style: { corners: "round" } }),
+  },
+  {
+    id: "wireframe.textField",
+    name: "Campo de texto",
+    group: "wireframe",
+    keywords: ["input", "entrada", "formulário", "caixa de texto"],
+    width: 220,
+    height: 44,
+    create: box("rectangle", { label: { text: "Digite aqui", align: "left" } }),
+  },
+  {
+    id: "wireframe.checkbox",
+    name: "Checkbox",
+    group: "wireframe",
+    keywords: ["caixa de seleção", "marcar", "opção", "formulário"],
+    width: 140,
+    height: 30,
+    create: checkbox,
+  },
+  {
+    id: "wireframe.phone",
+    name: "Celular",
+    group: "wireframe",
+    keywords: ["smartphone", "tela", "app", "mobile"],
+    width: 200,
+    height: 400,
+    create: shape("mobile"),
+  },
+  {
+    id: "wireframe.card",
+    name: "Cartão",
+    group: "wireframe",
+    keywords: ["card", "imagem", "título", "descrição"],
+    width: 220,
+    height: 230,
+    create: card,
+  },
+  {
+    id: "wireframe.image",
+    name: "Imagem",
+    group: "wireframe",
+    keywords: ["foto", "figura", "placeholder"],
+    width: 160,
+    height: 110,
+    create: shape("imagePlaceholder"),
   },
 ];
 

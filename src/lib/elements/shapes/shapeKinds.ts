@@ -23,6 +23,7 @@ export interface ShapeKindDefinition {
   labelArea(box: Bounds, strokeWidth: number): Bounds;
   connectionPoints?: readonly Point[];
   bindToBox?: boolean;
+  solid?: boolean;
 }
 
 const PARALLELOGRAM_SKEW = 0.2;
@@ -56,6 +57,25 @@ function documentWave(box: Bounds): number {
 }
 
 const WAVE_CONTROL = 4 / 3;
+
+function waveSegments(right: number, left: number, base: number, amplitude: number): PathSegment[] {
+  const w = right - left;
+  const k = amplitude * WAVE_CONTROL;
+  return [
+    {
+      kind: "cubic",
+      c1: { x: left + w * 0.83, y: base - k },
+      c2: { x: left + w * 0.67, y: base - k },
+      to: { x: left + w / 2, y: base },
+    },
+    {
+      kind: "cubic",
+      c1: { x: left + w * 0.33, y: base + k },
+      c2: { x: left + w * 0.17, y: base + k },
+      to: { x: left, y: base },
+    },
+  ];
+}
 
 function cylinderCap(box: Bounds): number {
   return Math.min(box.height * 0.12, box.width * 0.25);
@@ -335,6 +355,110 @@ const BLOCK_ARROW_POINTS: readonly Point[] = [
   { x: 0, y: 0.5 },
 ];
 
+const MULTI_DOCUMENT_OFFSET = { x: 0.05, y: 0.07 };
+
+function multiDocumentParts(box: Bounds) {
+  const ox = box.width * MULTI_DOCUMENT_OFFSET.x;
+  const oy = box.height * MULTI_DOCUMENT_OFFSET.y;
+  const front = { x: box.x, y: box.y + oy * 2, width: box.width - ox * 2, height: box.height - oy * 2 };
+  return { ox, oy, front, wave: documentWave(front) };
+}
+
+const MULTI_DOCUMENT_FRONT_WIDTH = 1 - MULTI_DOCUMENT_OFFSET.x * 2;
+const MULTI_DOCUMENT_FRONT_HEIGHT = 1 - MULTI_DOCUMENT_OFFSET.y * 2;
+
+function delayRadius(box: Bounds): number {
+  return Math.min(box.width / 2, box.height / 2);
+}
+
+const MANUAL_INPUT_SLANT = 0.3;
+const OFF_PAGE_BODY = 0.6;
+const DISPLAY_POINT = 0.15;
+const DISPLAY_CURVE = 0.15;
+
+function insetEllipseBox(box: Bounds, share: number): Bounds {
+  const inset = Math.min(box.width, box.height) * share;
+  return insetBox(box, inset);
+}
+
+function componentIcon(box: Bounds) {
+  const height = Math.min(20, box.height * 0.3);
+  const width = height * 0.8;
+  const margin = Math.min(8, box.height * 0.1, box.width * 0.1);
+  const body = { x: box.x + box.width - margin - width, y: box.y + margin, width, height };
+  const tab = { width: width * 0.5, height: height * 0.18 };
+  const tabX = body.x - tab.width / 2;
+  return {
+    body,
+    margin,
+    tabs: [
+      { x: tabX, y: body.y + height * 0.2, ...tab },
+      { x: tabX, y: body.y + height * 0.62, ...tab },
+    ],
+  };
+}
+
+const CAPTION_SHARE = 0.24;
+
+function captionFigureHeight(box: Bounds): number {
+  return box.height * (1 - CAPTION_SHARE);
+}
+
+function captionArea(box: Bounds): Bounds {
+  const top = box.y + captionFigureHeight(box);
+  return { x: box.x, y: top, width: box.width, height: box.y + box.height - top };
+}
+
+function serverParts(box: Bounds) {
+  const height = captionFigureHeight(box);
+  const width = Math.min(box.width, height * 0.62);
+  const body = { x: box.x + (box.width - width) / 2, y: box.y, width, height };
+  const bay = height / 3;
+  const led = Math.min(bay * 0.22, width * 0.12);
+  return { body, bay, led };
+}
+
+function queueCap(box: Bounds): number {
+  return Math.min(box.width * 0.12, box.height * 0.25);
+}
+
+const MONITOR_SCREEN = 0.8;
+
+function monitorScreen(box: Bounds): Bounds {
+  return { ...box, height: box.height * MONITOR_SCREEN };
+}
+
+function mobileParts(box: Bounds) {
+  const radius = Math.min(box.width, box.height) * 0.12;
+  const sideMargin = box.width * 0.07;
+  const topMargin = box.height * 0.1;
+  const screen = {
+    x: box.x + sideMargin,
+    y: box.y + topMargin,
+    width: box.width - sideMargin * 2,
+    height: box.height - topMargin * 2,
+  };
+  const button = Math.min(topMargin * 0.5, box.width * 0.18);
+  return { radius, screen, topMargin, button };
+}
+
+const PERSON_HEAD_GAP = 0.1;
+
+function personParts(box: Bounds) {
+  const head = Math.min(box.width * 0.45, box.height * 0.32);
+  const bodyTop = box.y + head * (1 + PERSON_HEAD_GAP);
+  const body = { x: box.x, y: bodyTop, width: box.width, height: box.y + box.height - bodyTop };
+  return {
+    head: { x: box.x + (box.width - head) / 2, y: box.y, width: head, height: head },
+    body,
+    radius: Math.min(box.width * 0.42, body.height * 0.5),
+  };
+}
+
+function browserBar(box: Bounds): number {
+  return Math.min(36, box.height * 0.25);
+}
+
 export const SHAPE_KIND_DEFINITIONS: Record<ShapeKind, ShapeKindDefinition> = {
   terminal: {
     outline: (box) => roundedRectFigure(box, terminalRadius(box)),
@@ -365,7 +489,6 @@ export const SHAPE_KIND_DEFINITIONS: Record<ShapeKind, ShapeKindDefinition> = {
       const { x, y, width: w, height: h } = box;
       const a = documentWave(box);
       const base = y + h - a;
-      const k = a * WAVE_CONTROL;
       return {
         kind: "path",
         start: { x, y },
@@ -373,18 +496,7 @@ export const SHAPE_KIND_DEFINITIONS: Record<ShapeKind, ShapeKindDefinition> = {
         segments: [
           { kind: "line", to: { x: x + w, y } },
           { kind: "line", to: { x: x + w, y: base } },
-          {
-            kind: "cubic",
-            c1: { x: x + w * 0.83, y: base - k },
-            c2: { x: x + w * 0.67, y: base - k },
-            to: { x: x + w / 2, y: base },
-          },
-          {
-            kind: "cubic",
-            c1: { x: x + w * 0.33, y: base + k },
-            c2: { x: x + w * 0.17, y: base + k },
-            to: { x, y: base },
-          },
+          ...waveSegments(x + w, x, base, a),
         ],
       };
     },
@@ -709,5 +821,373 @@ export const SHAPE_KIND_DEFINITIONS: Record<ShapeKind, ShapeKindDefinition> = {
     outline: braceFigure,
     labelArea: (box) => box,
     bindToBox: true,
+  },
+  multiDocument: {
+    outline(box) {
+      const { x, y, width: w, height: h } = box;
+      const { ox, oy, front, wave } = multiDocumentParts(box);
+      const backBottom = y + h - oy * 2 - wave;
+      const middleBottom = y + h - oy - wave;
+      const frontRight = front.x + front.width;
+      return {
+        kind: "path",
+        start: { x, y: y + oy * 2 },
+        closed: true,
+        segments: [
+          { kind: "line", to: { x: x + ox, y: y + oy * 2 } },
+          { kind: "line", to: { x: x + ox, y: y + oy } },
+          { kind: "line", to: { x: x + ox * 2, y: y + oy } },
+          { kind: "line", to: { x: x + ox * 2, y } },
+          { kind: "line", to: { x: x + w, y } },
+          { kind: "line", to: { x: x + w, y: backBottom } },
+          { kind: "line", to: { x: x + w - ox, y: backBottom } },
+          { kind: "line", to: { x: x + w - ox, y: middleBottom } },
+          { kind: "line", to: { x: frontRight, y: middleBottom } },
+          { kind: "line", to: { x: frontRight, y: y + h - wave } },
+          ...waveSegments(frontRight, x, y + h - wave, wave),
+        ],
+      };
+    },
+    details(box) {
+      const { x, y, width: w, height: h } = box;
+      const { ox, oy, front, wave } = multiDocumentParts(box);
+      const frontRight = front.x + front.width;
+      return [
+        polylineFigure([
+          { x: x + ox, y: front.y },
+          { x: frontRight, y: front.y },
+          { x: frontRight, y: y + h - oy - wave },
+        ]),
+        polylineFigure([
+          { x: x + ox * 2, y: y + oy },
+          { x: x + w - ox, y: y + oy },
+          { x: x + w - ox, y: y + h - oy * 2 - wave },
+        ]),
+      ];
+    },
+    labelArea(box) {
+      const { front, wave } = multiDocumentParts(box);
+      return { ...front, height: Math.max(front.height - wave * 2, 0) };
+    },
+    connectionPoints: [
+      { x: 0.5, y: 0 },
+      { x: 1, y: 0.5 },
+      { x: MULTI_DOCUMENT_FRONT_WIDTH / 2, y: 1 - MULTI_DOCUMENT_FRONT_HEIGHT * DOCUMENT_WAVE },
+      { x: 0, y: 0.5 },
+    ],
+  },
+
+  delay: {
+    outline(box) {
+      const { x, y, width: w, height: h } = box;
+      const r = delayRadius(box);
+      const cy = y + h / 2;
+      return {
+        kind: "path",
+        start: { x, y },
+        closed: true,
+        segments: [
+          { kind: "line", to: { x: x + w - r, y } },
+          quarterArc({ x: x + w - r, y }, { x: x + w, y: cy }, { x: x + w, y }),
+          quarterArc({ x: x + w, y: cy }, { x: x + w - r, y: y + h }, { x: x + w, y: y + h }),
+          { kind: "line", to: { x, y: y + h } },
+        ],
+      };
+    },
+    labelArea: (box) => ({ ...box, width: Math.max(box.width - delayRadius(box) * 0.4, 0) }),
+  },
+
+  manualInput: {
+    outline: (box) =>
+      fractionPolygon(box, [
+        { x: 0, y: MANUAL_INPUT_SLANT },
+        { x: 1, y: 0 },
+        { x: 1, y: 1 },
+        { x: 0, y: 1 },
+      ]),
+    labelArea: (box) => fractionBox(box, { x: 0, y: MANUAL_INPUT_SLANT, width: 1, height: 1 - MANUAL_INPUT_SLANT }),
+    connectionPoints: [
+      { x: 0.5, y: MANUAL_INPUT_SLANT / 2 },
+      { x: 1, y: 0.5 },
+      { x: 0.5, y: 1 },
+      { x: 0, y: 0.5 + MANUAL_INPUT_SLANT / 2 },
+    ],
+  },
+
+  offPageConnector: {
+    outline: (box) =>
+      fractionPolygon(box, [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 1, y: OFF_PAGE_BODY },
+        { x: 0.5, y: 1 },
+        { x: 0, y: OFF_PAGE_BODY },
+      ]),
+    labelArea: (box) => fractionBox(box, { x: 0, y: 0, width: 1, height: OFF_PAGE_BODY }),
+    connectionPoints: [
+      { x: 0.5, y: 0 },
+      { x: 1, y: OFF_PAGE_BODY / 2 },
+      { x: 0.5, y: 1 },
+      { x: 0, y: OFF_PAGE_BODY / 2 },
+    ],
+  },
+
+  display: {
+    outline(box) {
+      const { x, y, width: w, height: h } = box;
+      const point = w * DISPLAY_POINT;
+      const curve = w * DISPLAY_CURVE;
+      const cy = y + h / 2;
+      return {
+        kind: "path",
+        start: { x, y: cy },
+        closed: true,
+        segments: [
+          { kind: "line", to: { x: x + point, y } },
+          { kind: "line", to: { x: x + w - curve, y } },
+          quarterArc({ x: x + w - curve, y }, { x: x + w, y: cy }, { x: x + w, y }),
+          quarterArc({ x: x + w, y: cy }, { x: x + w - curve, y: y + h }, { x: x + w, y: y + h }),
+          { kind: "line", to: { x: x + point, y: y + h } },
+        ],
+      };
+    },
+    labelArea: (box) => insetX(box, box.width * DISPLAY_POINT * 0.75),
+  },
+
+  initialState: {
+    outline: (box) => ({ kind: "ellipse", box }),
+    labelArea: (box) => box,
+    solid: true,
+  },
+
+  finalState: {
+    outline: (box) => ({ kind: "ellipse", box }),
+    details: (box) => [{ kind: "ellipse", box: insetEllipseBox(box, 0.22), fill: "stroke" }],
+    labelArea: (box) => box,
+  },
+
+  flowFinal: {
+    outline: (box) => ({ kind: "ellipse", box }),
+    details(box) {
+      const cx = box.x + box.width / 2;
+      const cy = box.y + box.height / 2;
+      const dx = (box.width / 2) * Math.SQRT1_2;
+      const dy = (box.height / 2) * Math.SQRT1_2;
+      return [
+        polylineFigure([{ x: cx - dx, y: cy - dy }, { x: cx + dx, y: cy + dy }]),
+        polylineFigure([{ x: cx + dx, y: cy - dy }, { x: cx - dx, y: cy + dy }]),
+      ];
+    },
+    labelArea: (box) => box,
+  },
+
+  bar: {
+    outline: rectFigure,
+    labelArea: (box) => box,
+    solid: true,
+    connectionPoints: [
+      { x: 0.25, y: 0 },
+      { x: 0.5, y: 0 },
+      { x: 0.75, y: 0 },
+      { x: 1, y: 0.5 },
+      { x: 0.75, y: 1 },
+      { x: 0.5, y: 1 },
+      { x: 0.25, y: 1 },
+      { x: 0, y: 0.5 },
+    ],
+  },
+
+  component: {
+    outline: rectFigure,
+    details(box) {
+      const { body, tabs } = componentIcon(box);
+      return [rectFigure(body), ...tabs.map(rectFigure)];
+    },
+    labelArea(box) {
+      const { body, margin } = componentIcon(box);
+      return insetX(box, body.width + margin);
+    },
+  },
+  server: {
+    outline: (box) => rectFigure(serverParts(box).body),
+    details(box) {
+      const { body, bay, led } = serverParts(box);
+      const figures: ShapeDetail[] = [];
+      for (let i = 0; i < 3; i++) {
+        const top = body.y + bay * i;
+        const cy = top + bay / 2;
+        if (i > 0) figures.push(polylineFigure([{ x: body.x, y: top }, { x: body.x + body.width, y: top }]));
+        figures.push(
+          polylineFigure([
+            { x: body.x + body.width * 0.15, y: cy },
+            { x: body.x + body.width * 0.55, y: cy },
+          ]),
+        );
+        figures.push({
+          kind: "ellipse",
+          box: { x: body.x + body.width * 0.78 - led / 2, y: cy - led / 2, width: led, height: led },
+          fill: "stroke",
+        });
+      }
+      return figures;
+    },
+    labelArea: captionArea,
+    bindToBox: true,
+  },
+
+  queue: {
+    outline(box) {
+      const { x, y, width: w, height: h } = box;
+      const rx = queueCap(box);
+      const cy = y + h / 2;
+      return {
+        kind: "path",
+        start: { x: x + rx, y },
+        closed: true,
+        segments: [
+          { kind: "line", to: { x: x + w - rx, y } },
+          quarterArc({ x: x + w - rx, y }, { x: x + w, y: cy }, { x: x + w, y }),
+          quarterArc({ x: x + w, y: cy }, { x: x + w - rx, y: y + h }, { x: x + w, y: y + h }),
+          { kind: "line", to: { x: x + rx, y: y + h } },
+          quarterArc({ x: x + rx, y: y + h }, { x, y: cy }, { x, y: y + h }),
+          quarterArc({ x, y: cy }, { x: x + rx, y }, { x, y }),
+        ],
+      };
+    },
+    details(box) {
+      const { x, y, width: w, height: h } = box;
+      const rx = queueCap(box);
+      const cy = y + h / 2;
+      return [
+        {
+          kind: "path",
+          start: { x: x + w - rx, y },
+          closed: false,
+          segments: [
+            quarterArc({ x: x + w - rx, y }, { x: x + w - rx * 2, y: cy }, { x: x + w - rx * 2, y }),
+            quarterArc({ x: x + w - rx * 2, y: cy }, { x: x + w - rx, y: y + h }, { x: x + w - rx * 2, y: y + h }),
+          ],
+        },
+      ];
+    },
+    labelArea(box) {
+      const rx = queueCap(box);
+      return { ...box, x: box.x + rx, width: Math.max(box.width - rx * 3, 0) };
+    },
+  },
+
+  monitor: {
+    outline: (box) => roundedRectFigure(monitorScreen(box), Math.min(6, box.width * 0.05)),
+    details(box) {
+      const screen = monitorScreen(box);
+      const cx = box.x + box.width / 2;
+      const neck = box.width * 0.06;
+      const base = box.width * 0.2;
+      const bottom = box.y + box.height;
+      const top = screen.y + screen.height;
+      return [
+        polylineFigure([{ x: cx - neck, y: top }, { x: cx - neck, y: bottom }]),
+        polylineFigure([{ x: cx + neck, y: top }, { x: cx + neck, y: bottom }]),
+        polylineFigure([{ x: cx - base, y: bottom }, { x: cx + base, y: bottom }]),
+      ];
+    },
+    labelArea: (box) => insetBox(monitorScreen(box), 6),
+    bindToBox: true,
+  },
+
+  mobile: {
+    outline: (box) => roundedRectFigure(box, mobileParts(box).radius),
+    details(box) {
+      const { screen, topMargin, button } = mobileParts(box);
+      const cx = box.x + box.width / 2;
+      const speaker = box.width * 0.12;
+      return [
+        rectFigure(screen),
+        polylineFigure([
+          { x: cx - speaker, y: box.y + topMargin / 2 },
+          { x: cx + speaker, y: box.y + topMargin / 2 },
+        ]),
+        {
+          kind: "ellipse",
+          box: { x: cx - button / 2, y: box.y + box.height - topMargin / 2 - button / 2, width: button, height: button },
+        },
+      ];
+    },
+    labelArea: (box) => mobileParts(box).screen,
+  },
+
+  person: {
+    outline(box) {
+      const { body, radius } = personParts(box);
+      const { x, y, width: w, height: h } = body;
+      return {
+        kind: "path",
+        start: { x, y: y + h },
+        closed: true,
+        segments: [
+          { kind: "line", to: { x, y: y + radius } },
+          quarterArc({ x, y: y + radius }, { x: x + radius, y }, { x, y }),
+          { kind: "line", to: { x: x + w - radius, y } },
+          quarterArc({ x: x + w - radius, y }, { x: x + w, y: y + radius }, { x: x + w, y }),
+          { kind: "line", to: { x: x + w, y: y + h } },
+        ],
+      };
+    },
+    details: (box) => [{ kind: "ellipse", box: personParts(box).head, fill: "shape" }],
+    labelArea(box) {
+      const { body, radius } = personParts(box);
+      return { ...body, y: body.y + radius * 0.3, height: Math.max(body.height - radius * 0.3, 0) };
+    },
+    bindToBox: true,
+  },
+
+  browserWindow: {
+    outline: (box) => roundedRectFigure(box, Math.min(8, box.width * 0.04, box.height * 0.04)),
+    details(box) {
+      const bar = browserBar(box);
+      const dot = Math.min(bar * 0.3, box.width * 0.04);
+      const dotY = box.y + bar / 2 - dot / 2;
+      const dots: ShapeDetail[] = [0, 1, 2].map((i) => ({
+        kind: "ellipse",
+        box: { x: box.x + bar * 0.4 + i * dot * 1.7, y: dotY, width: dot, height: dot },
+      }));
+      const addressLeft = box.x + bar * 0.4 + dot * 5.4;
+      const address = {
+        x: addressLeft,
+        y: box.y + bar * 0.22,
+        width: Math.max(box.x + box.width - bar * 0.4 - addressLeft, 0),
+        height: bar * 0.56,
+      };
+      return [
+        polylineFigure([{ x: box.x, y: box.y + bar }, { x: box.x + box.width, y: box.y + bar }]),
+        ...dots,
+        roundedRectFigure(address, address.height / 2),
+      ];
+    },
+    labelArea(box) {
+      const bar = browserBar(box);
+      return { ...box, y: box.y + bar, height: Math.max(box.height - bar, 0) };
+    },
+  },
+
+  imagePlaceholder: {
+    outline: rectFigure,
+    details: ({ x, y, width: w, height: h }) => [
+      polylineFigure([{ x, y }, { x: x + w, y: y + h }]),
+      polylineFigure([{ x: x + w, y }, { x, y: y + h }]),
+    ],
+    labelArea: (box) => box,
+  },
+
+  checkbox: {
+    outline: rectFigure,
+    details: (box) => [
+      polylineFigure([
+        { x: box.x + box.width * 0.22, y: box.y + box.height * 0.52 },
+        { x: box.x + box.width * 0.42, y: box.y + box.height * 0.72 },
+        { x: box.x + box.width * 0.78, y: box.y + box.height * 0.3 },
+      ]),
+    ],
+    labelArea: (box) => box,
   },
 };

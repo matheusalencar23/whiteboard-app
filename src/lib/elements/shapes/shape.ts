@@ -40,10 +40,14 @@ function hitsDetail(detail: ShapeDetail, el: ShapeElement, p: Point, tolerance: 
   return isClosedFigure(detail) ? distanceToPolygonEdge(p, points) <= tolerance : distanceToPolyline(p, points) <= tolerance;
 }
 
+function solidOptions(el: ShapeElement): Options {
+  return { ...strokeOptions(el.style, el.seed), fill: el.style.strokeColor, fillStyle: "solid" };
+}
+
 function drawDetail(rc: RoughCanvas, ctx: CanvasRenderingContext2D, el: ShapeElement, detail: ShapeDetail) {
   const stroke = strokeOptions(el.style, el.seed);
   if (detail.fill === "stroke") {
-    drawFigure(rc, detail, { ...stroke, fill: el.style.strokeColor, fillStyle: "solid" });
+    drawFigure(rc, detail, solidOptions(el));
   } else if (detail.fill === "shape") {
     drawFillAndStroke(ctx, el.style, el.seed, (options) => drawFigure(rc, detail, options));
   } else {
@@ -74,21 +78,24 @@ function drawFigure(rc: RoughCanvas, figure: Figure, options: Options) {
 
 export const shapeUtil: ShapeUtil<ShapeElement> = {
   draw(el, rc, ctx) {
-    const outline = SHAPE_KIND_DEFINITIONS[el.kind].outline(el);
-    if (isClosedFigure(outline)) drawFillAndStroke(ctx, el.style, el.seed, (options) => drawFigure(rc, outline, options));
+    const definition = SHAPE_KIND_DEFINITIONS[el.kind];
+    const outline = definition.outline(el);
+    if (definition.solid) drawFigure(rc, outline, solidOptions(el));
+    else if (isClosedFigure(outline)) drawFillAndStroke(ctx, el.style, el.seed, (options) => drawFigure(rc, outline, options));
     else drawFigure(rc, outline, strokeOptions(el.style, el.seed));
     for (const detail of getShapeDetails(el)) drawDetail(rc, ctx, el, detail);
   },
 
   hitTest(el, p, tolerance) {
     const t = tolerance + el.style.strokeWidth / 2;
-    const figure = SHAPE_KIND_DEFINITIONS[el.kind].outline(el);
+    const definition = SHAPE_KIND_DEFINITIONS[el.kind];
+    const figure = definition.outline(el);
     const outline = sampleFigure(figure);
     if (!isClosedFigure(figure)) {
       if (distanceToPolyline(p, outline) <= t) return true;
     } else {
       if (distanceToPolygonEdge(p, outline) <= t) return true;
-      if (isFilled(el.style) && isPointInPolygon(p, outline)) return true;
+      if ((definition.solid || isFilled(el.style)) && isPointInPolygon(p, outline)) return true;
     }
     return getShapeDetails(el).some((detail) => hitsDetail(detail, el, p, t));
   },

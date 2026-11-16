@@ -6,14 +6,13 @@ Os itens concluídos saem deste arquivo: o que o app já faz está no [README.md
 
 ## Ordem sugerida
 
-1. Biblioteca de formas: [básicas e anotações](#básicas-e-anotações).
-2. Biblioteca de formas: [detalhes preenchidos e cantos arredondados](#detalhes-preenchidos-e-cantos-arredondados), depois [UML estados e atividades](#uml-estados-e-atividades) e [extras do fluxograma](#extras-do-fluxograma).
-3. A decidir: [tabelas](#tabelas). Se entrar, pode vir antes do item 2, porque também serve à entidade ER.
-4. Biblioteca de formas: [arquitetura](#arquitetura-e-c4) e [wireframe](#wireframe).
-5. [Tema escuro](#tema-escuro).
-6. Depois: [contêineres com conteúdo vinculado](#contêineres) e [BPMN](#bpmn).
-7. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
-8. Depois: [publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm).
+1. Biblioteca de formas: [UML estados e atividades](#uml-estados-e-atividades) e [extras do fluxograma](#extras-do-fluxograma).
+2. A decidir: [tabelas](#tabelas). Se entrar, pode vir antes do item 1, porque também serve à entidade ER.
+3. Biblioteca de formas: [arquitetura](#arquitetura-e-c4) e [wireframe](#wireframe).
+4. [Tema escuro](#tema-escuro).
+5. Depois: [contêineres com conteúdo vinculado](#contêineres) e [BPMN](#bpmn).
+6. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
+7. Depois: [publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm).
 
 ## Decisões tomadas
 
@@ -36,23 +35,13 @@ Valem para todo item novo.
 
 O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`compartments`) e os grupos do fluxograma, de entidade-relacionamento e de UML já existem (veja o [CLAUDE.md](CLAUDE.md)). Um formato novo entra em `SHAPE_KINDS` e em `SHAPE_KIND_DEFINITIONS`, e o item, em `LIBRARY_ITEMS`. Os pacotes abaixo não precisam seguir o draw.io; ele é só inspiração. Silhuetas simples combinam com o traço de esboço; ícones detalhados (como os da AWS) não.
 
-#### Básicas e anotações
-
-- [ ] **Básicas:** triângulo, hexágono, pentágono, octógono, trapézio, estrela, cruz, seta grossa (simples e dupla) e cubo. Só contorno e detalhes: custo pequeno.
-- [ ] **Anotações:** balão de fala, nuvem, nuvem de pensamento, post-it (a nota já com preenchimento amarelo, pelo `style` da parte) e chave `{`. É o uso mais de quadro branco; o balão e a nuvem são os mais pedidos. O rabo do balão fica fora da área do texto, mas dentro da caixa.
-
-#### Detalhes preenchidos e cantos arredondados
-
-- [ ] **Detalhes preenchidos:** hoje os `details` dos formatos só têm contorno. Uma opção para um detalhe ser preenchido com a cor do contorno (o círculo do estado inicial, a barra de bifurcação, os marcadores dos gateways do BPMN). Pequeno.
-- [ ] **Cantos arredondados como estilo:** uma opção de estilo no retângulo (e talvez no losango), em vez de um formato "retângulo arredondado", para valer também na ferramenta Retângulo, como no Excalidraw. É a caixa mais usada em diagramas (estado UML, caixas genéricas). O desenho passa para `rc.path` (o caminho com arcos já existe no `roundedRectFigure`) e o clique nos cantos pode ficar aproximado. Pequeno a médio.
-
 #### UML estados e atividades
 
-- [ ] Estado (retângulo arredondado), estado inicial (círculo cheio), estado final (alvo), barra de bifurcação e junção, componente e nó (cubo). Depende dos detalhes preenchidos e dos cantos arredondados.
+- [ ] Estado (retângulo com `corners: "round"` pelo `style` da parte), estado inicial (círculo cheio), estado final (alvo), barra de bifurcação e junção, componente e nó (o formato `cube` já existe). Os círculos e a barra cheios usam um detalhe com `fill: "stroke"`.
 
 #### Extras do fluxograma
 
-- [ ] Preparação (hexágono), multidocumento, atraso, entrada manual, conector fora de página e exibição.
+- [ ] Preparação (o formato `hexagon` já existe; falta o item no grupo), multidocumento, atraso, entrada manual, conector fora de página e exibição.
 
 #### Arquitetura e C4
 
@@ -69,7 +58,7 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
 
 #### BPMN
 
-- [ ] Tarefa, eventos (início, fim, intermediário), gateways (exclusivo, paralelo, inclusivo) e raia. Grupo grande; depende dos detalhes preenchidos e dos contêineres.
+- [ ] Tarefa, eventos (início, fim, intermediário), gateways (exclusivo, paralelo, inclusivo) e raia. Grupo grande; depende dos contêineres.
 
 #### A avaliar
 

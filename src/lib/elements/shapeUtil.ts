@@ -4,6 +4,7 @@ import type { RoughCanvas } from "roughjs/bin/canvas";
 import type { Options } from "roughjs/bin/core";
 import type { Point } from "../types";
 import type { Bounds } from "../geometry/bounds";
+import { figureToSvgPath, type PathFigure } from "../geometry/figure";
 import {
   DEFAULT_STYLE,
   TRANSPARENT,
@@ -96,6 +97,10 @@ export function drawFillAndStroke(
     ctx.restore();
   }
   draw(strokeOptions(style, seed));
+}
+
+export function drawPathFigure(rc: RoughCanvas, figure: PathFigure, options: Options) {
+  rc.path(figureToSvgPath(figure), { ...options, preserveVertices: true });
 }
 
 export function isFilled(style: ElementStyle): boolean {

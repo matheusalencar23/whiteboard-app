@@ -1,5 +1,6 @@
 import {
   ARROWHEADS,
+  CORNER_STYLES,
   FILL_STYLES,
   FONT_FAMILIES,
   SHAPE_KINDS,
@@ -282,7 +283,8 @@ function isValidElement(value: unknown): value is BoardElement {
     typeof style.fillColor === "string" &&
     isOneOf(FILL_STYLES, style.fillStyle) &&
     isNumber(style.fillRoughness) &&
-    isNumber(style.fillOpacity);
+    isNumber(style.fillOpacity) &&
+    (style.corners === undefined || isOneOf(CORNER_STYLES, style.corners));
   if (!baseOk) return false;
 
   switch (value.type as ElementType) {

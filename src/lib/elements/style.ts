@@ -19,10 +19,12 @@ const FILL_PROPERTIES: StyleProperty[] = [
 
 const SHAPE_PROPERTIES = [...STROKE_PROPERTIES, ...FILL_PROPERTIES];
 
+const CORNERED_SHAPE_PROPERTIES: StyleProperty[] = [...SHAPE_PROPERTIES, "corners"];
+
 const STYLE_PROPERTIES: Record<ElementType, readonly StyleProperty[]> = {
-  rectangle: SHAPE_PROPERTIES,
+  rectangle: CORNERED_SHAPE_PROPERTIES,
   ellipse: SHAPE_PROPERTIES,
-  diamond: SHAPE_PROPERTIES,
+  diamond: CORNERED_SHAPE_PROPERTIES,
   shape: SHAPE_PROPERTIES,
   compartments: SHAPE_PROPERTIES,
   arrow: STROKE_PROPERTIES,
@@ -32,6 +34,10 @@ const STYLE_PROPERTIES: Record<ElementType, readonly StyleProperty[]> = {
 
 export function supportsStyle(type: ElementType, property: StyleProperty): boolean {
   return STYLE_PROPERTIES[type].includes(property);
+}
+
+export function hasRoundCorners(style: ElementStyle): boolean {
+  return style.corners === "round";
 }
 
 export function applyStyle<T extends BoardElement>(element: T, patch: Partial<ElementStyle>): T {

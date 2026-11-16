@@ -4,7 +4,9 @@ import type { ArrowElement, BoardElement } from "../elements/types";
 import { getConnectionAnchors, renderElement, type HiddenText } from "../elements/registry";
 import { anchorPoint, isSegmentFixed } from "../elements/bindings";
 import type { Point } from "../types";
-import { getDiamondVertices } from "../elements/shapes/diamond";
+import { getDiamondOutline } from "../elements/shapes/diamond";
+import { getRoundedRectangleOutline } from "../elements/shapes/rectangle";
+import { hasRoundCorners } from "../elements/style";
 import { getShapeBoundary } from "../elements/shapes/shape";
 import {
   ENDPOINT_RADIUS,
@@ -44,6 +46,11 @@ const BINDING_HIGHLIGHT_PADDING = 4;
 
 const EDITING_GROUP_PADDING = 10;
 
+function tracePolygon(ctx: CanvasRenderingContext2D, points: Point[]) {
+  points.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+  ctx.closePath();
+}
+
 function traceOutline(ctx: CanvasRenderingContext2D, el: BoardElement, pad: number) {
   const center = getCenter(el);
   ctx.save();
@@ -61,15 +68,12 @@ function traceOutline(ctx: CanvasRenderingContext2D, el: BoardElement, pad: numb
     const k = Math.hypot(a, b);
     const ga = b > 0 ? (pad * k) / b : pad;
     const gb = a > 0 ? (pad * k) / a : pad;
-    const vertices = getDiamondVertices({
-      ...el,
-      x: el.x - ga,
-      y: el.y - gb,
-      width: el.width + ga * 2,
-      height: el.height + gb * 2,
-    });
-    vertices.forEach((v, i) => (i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y)));
-    ctx.closePath();
+    tracePolygon(
+      ctx,
+      getDiamondOutline({ ...el, x: el.x - ga, y: el.y - gb, width: el.width + ga * 2, height: el.height + gb * 2 }),
+    );
+  } else if (el.type === "rectangle" && hasRoundCorners(el.style)) {
+    tracePolygon(ctx, getRoundedRectangleOutline({ ...el, ...box }));
   } else if (el.type === "shape") {
     const sx = el.width > 0 ? box.width / el.width : 1;
     const sy = el.height > 0 ? box.height / el.height : 1;

@@ -37,6 +37,8 @@ export interface LibraryPart {
 }
 
 export const LIBRARY_GROUPS: LibraryGroup[] = [
+  { id: "basic", name: "Básicas" },
+  { id: "annotations", name: "Anotações" },
   { id: "flowchart", name: "Fluxograma" },
   { id: "er", name: "Entidade-relacionamento" },
   { id: "uml", name: "UML" },
@@ -65,9 +67,9 @@ function box(type: BoxElementType, options: { label?: LabelOptions; style?: Part
   };
 }
 
-function shape(kind: ShapeKind, label?: LabelOptions) {
+function shape(kind: ShapeKind, label?: LabelOptions, style?: Partial<ElementStyle>) {
   return (bounds: Bounds, textStyle: TextStyle): LibraryPart[] => [
-    { element: withLabel(createShape(kind, bounds), textStyle, label) },
+    { element: withLabel(createShape(kind, bounds), textStyle, label), style },
   ];
 }
 
@@ -93,6 +95,141 @@ function participant(bounds: Bounds, textStyle: TextStyle): LibraryPart[] {
 }
 
 export const LIBRARY_ITEMS: LibraryItem[] = [
+  {
+    id: "basic.triangle",
+    name: "Triângulo",
+    group: "basic",
+    keywords: ["polígono", "três lados"],
+    width: 120,
+    height: 100,
+    create: shape("triangle"),
+  },
+  {
+    id: "basic.pentagon",
+    name: "Pentágono",
+    group: "basic",
+    keywords: ["polígono", "cinco lados"],
+    width: 120,
+    height: 115,
+    create: shape("pentagon"),
+  },
+  {
+    id: "basic.hexagon",
+    name: "Hexágono",
+    group: "basic",
+    keywords: ["polígono", "seis lados", "preparação"],
+    width: 140,
+    height: 100,
+    create: shape("hexagon"),
+  },
+  {
+    id: "basic.octagon",
+    name: "Octógono",
+    group: "basic",
+    keywords: ["polígono", "oito lados", "pare"],
+    width: 110,
+    height: 110,
+    create: shape("octagon"),
+  },
+  {
+    id: "basic.trapezoid",
+    name: "Trapézio",
+    group: "basic",
+    keywords: ["polígono", "quadrilátero"],
+    width: 150,
+    height: 90,
+    create: shape("trapezoid"),
+  },
+  {
+    id: "basic.star",
+    name: "Estrela",
+    group: "basic",
+    keywords: ["destaque", "favorito", "pontas"],
+    width: 120,
+    height: 115,
+    create: shape("star"),
+  },
+  {
+    id: "basic.cross",
+    name: "Cruz",
+    group: "basic",
+    keywords: ["mais", "soma", "adição"],
+    width: 100,
+    height: 100,
+    create: shape("cross"),
+  },
+  {
+    id: "basic.blockArrow",
+    name: "Seta grossa",
+    group: "basic",
+    keywords: ["seta", "direção", "próximo", "avançar"],
+    width: 160,
+    height: 80,
+    create: shape("blockArrow"),
+  },
+  {
+    id: "basic.doubleBlockArrow",
+    name: "Seta grossa dupla",
+    group: "basic",
+    keywords: ["seta", "duas pontas", "bidirecional", "troca"],
+    width: 180,
+    height: 80,
+    create: shape("doubleBlockArrow"),
+  },
+  {
+    id: "basic.cube",
+    name: "Cubo",
+    group: "basic",
+    keywords: ["caixa", "3d", "bloco", "nó"],
+    width: 120,
+    height: 110,
+    create: shape("cube"),
+  },
+  {
+    id: "annotations.speechBubble",
+    name: "Balão de fala",
+    group: "annotations",
+    keywords: ["fala", "diálogo", "comentário", "conversa"],
+    width: 180,
+    height: 110,
+    create: shape("speechBubble"),
+  },
+  {
+    id: "annotations.cloud",
+    name: "Nuvem",
+    group: "annotations",
+    keywords: ["internet", "rede", "ideia"],
+    width: 180,
+    height: 110,
+    create: shape("cloud"),
+  },
+  {
+    id: "annotations.thoughtBubble",
+    name: "Nuvem de pensamento",
+    group: "annotations",
+    keywords: ["pensamento", "balão", "ideia", "imaginação"],
+    width: 180,
+    height: 140,
+    create: shape("thoughtBubble"),
+  },
+  {
+    id: "annotations.stickyNote",
+    name: "Post-it",
+    group: "annotations",
+    keywords: ["nota", "lembrete", "adesivo", "amarelo"],
+    width: 150,
+    height: 150,
+    create: shape("note", undefined, { fillColor: theme.palette.amberLight, fillStyle: "solid" }),
+  },
+  {
+    id: "annotations.brace",
+    name: "Chave",
+    group: "annotations",
+    keywords: ["chave", "agrupar", "colchete", "{"],
+    width: 30,
+    height: 150,
+    create: shape("brace"),
+  },
   {
     id: "flowchart.process",
     name: "Processo",

@@ -21,7 +21,7 @@ export type Figure = PathFigure | EllipseFigure;
 
 const CURVE_SAMPLES = 12;
 
-const KAPPA = 0.5522847498;
+export const KAPPA = 0.5522847498;
 
 export function polygonFigure(points: Point[]): PathFigure {
   const [start, ...rest] = points;
@@ -40,6 +40,41 @@ export function quarterArc(from: Point, to: Point, corner: Point): PathSegment {
     c2: { x: to.x + (corner.x - to.x) * KAPPA, y: to.y + (corner.y - to.y) * KAPPA },
     to,
   };
+}
+
+function moveToward(from: Point, to: Point, length: number): Point {
+  const total = Math.hypot(to.x - from.x, to.y - from.y);
+  if (total === 0) return from;
+  return { x: from.x + ((to.x - from.x) * length) / total, y: from.y + ((to.y - from.y) * length) / total };
+}
+
+export function roundedPolygonFigure(points: Point[], cut: (edgeLength: number) => number): PathFigure {
+  const n = points.length;
+  const corners = points.map((corner, i) => {
+    const prev = points[(i - 1 + n) % n];
+    const next = points[(i + 1) % n];
+    return {
+      corner,
+      before: moveToward(corner, prev, cut(Math.hypot(prev.x - corner.x, prev.y - corner.y))),
+      after: moveToward(corner, next, cut(Math.hypot(next.x - corner.x, next.y - corner.y))),
+    };
+  });
+  const segments: PathSegment[] = [];
+  for (let i = 1; i <= n; i++) {
+    const { corner, before, after } = corners[i % n];
+    segments.push({ kind: "line", to: before }, quarterArc(before, after, corner));
+  }
+  return { kind: "path", start: corners[0].after, segments, closed: true };
+}
+
+export function roundedRectFigure({ x, y, width: w, height: h }: Bounds, radius: number): PathFigure {
+  const corners = [
+    { x, y },
+    { x: x + w, y },
+    { x: x + w, y: y + h },
+    { x, y: y + h },
+  ];
+  return roundedPolygonFigure(corners, (length) => Math.min(radius, length / 2));
 }
 
 function formatPoint(p: Point): string {

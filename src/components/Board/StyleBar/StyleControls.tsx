@@ -2,9 +2,11 @@ import type { IconType } from "react-icons";
 import { LuArrowLeftRight } from "react-icons/lu";
 import styles from "./StyleBar.module.scss";
 import {
+  CORNER_STYLES,
   FILL_STYLES,
   STROKE_STYLES,
   TRANSPARENT,
+  type CornerStyle,
   type FillStyle,
   type StrokeStyle,
 } from "../../../lib/elements/types";
@@ -16,7 +18,7 @@ import { ArrowheadPicker } from "./ArrowheadPicker";
 import { ColorField, type Swatch } from "./ColorField";
 import { ROUTING_OPTIONS } from "./routing";
 import { arrowSelectors, scopeSupports, selectScope, styleSelectors } from "./selectors";
-import { FillStyleIcon, RoughnessIcon, StrokeStyleIcon, StrokeWidthIcon } from "./StyleIcons";
+import { CornerStyleIcon, FillStyleIcon, RoughnessIcon, StrokeStyleIcon, StrokeWidthIcon } from "./StyleIcons";
 import { useStylePreview } from "./useStylePreview";
 
 const { palette } = theme;
@@ -80,6 +82,17 @@ const ROUGHNESS_OPTIONS: Option<number>[] = [
   { value: 2, label: "Esboço forte", icon: () => <RoughnessIcon roughness={2} /> },
 ];
 
+const CORNER_STYLE_LABELS: Record<CornerStyle, string> = {
+  sharp: "Retos",
+  round: "Arredondados",
+};
+
+const CORNER_STYLE_OPTIONS: Option<CornerStyle>[] = CORNER_STYLES.map((corners) => ({
+  value: corners,
+  label: CORNER_STYLE_LABELS[corners],
+  icon: () => <CornerStyleIcon corners={corners} />,
+}));
+
 export function OptionGroup<T extends string | number>({
   options,
   value,
@@ -141,6 +154,7 @@ export function StrokeControls() {
   const lineStyle = useBoardStore(styleSelectors.strokeStyle);
   const roughness = useBoardStore(styleSelectors.strokeRoughness);
   const opacity = useBoardStore(styleSelectors.strokeOpacity);
+  const corners = useBoardStore(styleSelectors.corners);
   const setStyle = useBoardStore((s) => s.setStyle);
   const { preview, commit } = useStylePreview();
 
@@ -181,6 +195,11 @@ export function StrokeControls() {
             value={roughness}
             onChange={(value) => setStyle({ strokeRoughness: value })}
           />
+        </PanelSection>
+      )}
+      {scopeSupports(scope, "corners") && (
+        <PanelSection title="Cantos">
+          <OptionGroup options={CORNER_STYLE_OPTIONS} value={corners} onChange={(value) => setStyle({ corners: value })} />
         </PanelSection>
       )}
       <PanelSection title="Opacidade">

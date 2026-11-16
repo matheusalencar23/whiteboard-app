@@ -1,4 +1,4 @@
-import type { FillStyle, StrokeStyle } from "../../../lib/elements/types";
+import type { CornerStyle, FillStyle, StrokeStyle } from "../../../lib/elements/types";
 
 function Icon({ children }: { children: React.ReactNode }) {
   return (
@@ -66,6 +66,19 @@ export function FillStyleIcon({ fillStyle }: { fillStyle: FillStyle }) {
     <Icon>
       <rect x="5" y="5" width="14" height="14" rx="2" fill={lines ? "none" : "currentColor"} />
       {lines && <path d={lines} strokeWidth="1.25" />}
+    </Icon>
+  );
+}
+
+const CORNER_PATHS: Record<CornerStyle, string> = {
+  sharp: "M5 19 V5 H19",
+  round: "M5 19 V12 A7 7 0 0 1 12 5 H19",
+};
+
+export function CornerStyleIcon({ corners }: { corners: CornerStyle }) {
+  return (
+    <Icon>
+      <path d={CORNER_PATHS[corners]} />
     </Icon>
   );
 }

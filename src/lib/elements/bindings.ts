@@ -34,8 +34,15 @@ function nearestAnchor(shape: BoardElement, point: Point): Point | null {
   return best;
 }
 
+function keepFixedAnchor(shape: BoardElement, binding: ArrowBinding): ArrowBinding {
+  const anchors = getConnectionAnchors(shape);
+  if (anchors.length === 0 || anchors.some((anchor) => sameAnchor(anchor, binding.anchor))) return binding;
+  const anchor = nearestAnchor(shape, anchorPoint(shape, binding.anchor));
+  return anchor ? { ...binding, anchor } : binding;
+}
+
 function resolveBinding(shape: BoardElement, binding: ArrowBinding, towards: Point): ArrowBinding {
-  if (binding.fixed) return binding;
+  if (binding.fixed) return keepFixedAnchor(shape, binding);
   const anchor = nearestAnchor(shape, towards);
   if (!anchor || (anchor.x === binding.anchor.x && anchor.y === binding.anchor.y)) return binding;
   return { ...binding, anchor };
@@ -56,11 +63,13 @@ function resolveBindings(
   startTowards: Point,
   endTowards: Point,
 ): ArrowElement {
-  if (isLoop(arrow)) return arrow;
-  const startBinding =
-    start && arrow.startBinding ? resolveBinding(start, arrow.startBinding, startTowards) : arrow.startBinding;
-  const endBinding =
-    end && arrow.endBinding ? resolveBinding(end, arrow.endBinding, endTowards) : arrow.endBinding;
+  const loop = isLoop(arrow);
+  const resolve = (shape: BoardElement, binding: ArrowBinding, towards: Point) => {
+    if (!loop) return resolveBinding(shape, binding, towards);
+    return binding.fixed ? keepFixedAnchor(shape, binding) : binding;
+  };
+  const startBinding = start && arrow.startBinding ? resolve(start, arrow.startBinding, startTowards) : arrow.startBinding;
+  const endBinding = end && arrow.endBinding ? resolve(end, arrow.endBinding, endTowards) : arrow.endBinding;
   if (startBinding === arrow.startBinding && endBinding === arrow.endBinding) return arrow;
   return { ...arrow, startBinding, endBinding };
 }

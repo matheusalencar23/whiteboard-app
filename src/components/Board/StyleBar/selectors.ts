@@ -1,4 +1,5 @@
 import {
+  DEFAULT_STYLE,
   DEFAULT_TEXT_STYLE,
   type ArrowElement,
   type BoardElement,
@@ -32,20 +33,27 @@ export function scopeSupports(scope: string, property: StyleProperty): boolean {
   return scope.split(",").some((type) => supportsStyle(type as ElementType, property));
 }
 
+type StyleValue<K extends StyleProperty> = Required<ElementStyle>[K];
+
+function styleValue<K extends StyleProperty>(style: ElementStyle, key: K): StyleValue<K> {
+  return (style[key] ?? DEFAULT_STYLE[key]) as StyleValue<K>;
+}
+
 function selectStyleField<K extends StyleProperty>(key: K) {
-  return (state: BoardState): ElementStyle[K] | "mixed" => {
+  return (state: BoardState): StyleValue<K> | "mixed" => {
     const ids = new Set(state.selectedIds);
-    let value: ElementStyle[K] | null = null;
+    let value: StyleValue<K> | null = null;
     for (const el of state.elements) {
       if (!ids.has(el.id) || !supportsStyle(el.type, key)) continue;
-      if (value === null) value = el.style[key];
-      else if (value !== el.style[key]) return "mixed";
+      const current = styleValue(el.style, key);
+      if (value === null) value = current;
+      else if (value !== current) return "mixed";
     }
-    return value ?? state.currentStyle[key];
+    return value ?? styleValue(state.currentStyle, key);
   };
 }
 
-export const styleSelectors: { [K in StyleProperty]: (state: BoardState) => ElementStyle[K] | "mixed" } = {
+export const styleSelectors: { [K in StyleProperty]: (state: BoardState) => StyleValue<K> | "mixed" } = {
   strokeColor: selectStyleField("strokeColor"),
   strokeWidth: selectStyleField("strokeWidth"),
   strokeStyle: selectStyleField("strokeStyle"),
@@ -55,6 +63,7 @@ export const styleSelectors: { [K in StyleProperty]: (state: BoardState) => Elem
   fillStyle: selectStyleField("fillStyle"),
   fillRoughness: selectStyleField("fillRoughness"),
   fillOpacity: selectStyleField("fillOpacity"),
+  corners: selectStyleField("corners"),
 };
 
 type ArrowField = "routing" | "startArrowhead" | "endArrowhead";

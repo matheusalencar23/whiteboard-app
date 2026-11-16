@@ -388,14 +388,15 @@ export const useBoardStore = create<BoardState>()((set) => ({
     set((state) => {
       const currentStyle = { ...state.currentStyle, ...patch };
       const ids = new Set(state.selectedIds);
-      let changed = false;
-      const elements = state.elements.map((el) => {
+      const changedIds: string[] = [];
+      const styled = state.elements.map((el) => {
         if (!ids.has(el.id)) return el;
-        const styled = applyStyle(el, patch);
-        if (styled !== el) changed = true;
-        return styled;
+        const next = applyStyle(el, patch);
+        if (next !== el) changedIds.push(el.id);
+        return next;
       });
-      if (!changed) return { currentStyle };
+      if (changedIds.length === 0) return { currentStyle };
+      const elements = patch.corners === undefined ? styled : updateBoundArrows(styled, changedIds, state.elements);
       if (options?.record === false) return { currentStyle, elements };
       return { currentStyle, elements, past: pushPast(state.past, state.elements), future: [] };
     }),

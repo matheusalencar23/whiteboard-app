@@ -11,6 +11,10 @@ export type StrokeStyle = (typeof STROKE_STYLES)[number];
 
 export const TRANSPARENT = "transparent";
 
+export const CORNER_STYLES = ["sharp", "round"] as const;
+
+export type CornerStyle = (typeof CORNER_STYLES)[number];
+
 export interface ElementStyle {
   strokeColor: string;
   strokeWidth: number;
@@ -21,6 +25,7 @@ export interface ElementStyle {
   fillStyle: FillStyle;
   fillRoughness: number;
   fillOpacity: number;
+  corners?: CornerStyle;
 }
 
 interface BaseElement {
@@ -102,6 +107,20 @@ export const SHAPE_KINDS = [
   "doubleEllipse",
   "actor",
   "package",
+  "triangle",
+  "pentagon",
+  "hexagon",
+  "octagon",
+  "trapezoid",
+  "star",
+  "cross",
+  "blockArrow",
+  "doubleBlockArrow",
+  "cube",
+  "speechBubble",
+  "cloud",
+  "thoughtBubble",
+  "brace",
 ] as const;
 
 export type ShapeKind = (typeof SHAPE_KINDS)[number];
@@ -216,7 +235,7 @@ export function isLabeledElement(element: BoardElement): element is LabeledEleme
   return isBoxElement(element) || element.type === "shape" || element.type === "arrow";
 }
 
-export const DEFAULT_STYLE: ElementStyle = {
+export const DEFAULT_STYLE: Required<ElementStyle> = {
   strokeColor: theme.palette.ink,
   strokeWidth: 2,
   strokeStyle: "solid",
@@ -226,4 +245,5 @@ export const DEFAULT_STYLE: ElementStyle = {
   fillStyle: "hachure",
   fillRoughness: 1,
   fillOpacity: 100,
+  corners: "sharp",
 };

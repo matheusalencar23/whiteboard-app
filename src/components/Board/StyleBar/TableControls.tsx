@@ -6,6 +6,8 @@ import {
   LuBetweenVerticalStart,
   LuHeading,
   LuPanelTop,
+  LuTableCellsMerge,
+  LuTableCellsSplit,
   LuTableColumnsSplit,
   LuTableRowsSplit,
 } from "react-icons/lu";
@@ -18,7 +20,12 @@ import {
   insertColumn,
   insertRow,
   TITLE_PLACEHOLDER,
+  canMergeRange,
   getColumnAlign,
+  getMergeRange,
+  isMergedCell,
+  mergeRange,
+  unmergeCell,
   hasTitle,
   isTitleCell,
   setTitle,
@@ -86,6 +93,8 @@ function TableControlsContent({ table }: { table: TableElement }) {
 
   const cell = tableCell?.elementId === table.id ? clampCell(table, tableCell) : { row: 0, column: 0 };
   const onTitle = isTitleCell(cell);
+  const extent = tableCell?.elementId === table.id && tableCell.extent ? clampCell(table, tableCell.extent) : null;
+  const range = extent && !onTitle && !isTitleCell(extent) ? getMergeRange(table, cell, extent) : null;
   const cellFill = onTitle ? undefined : table.cells[cell.row][cell.column].fill;
 
   function apply(update: TableUpdate, nextCell: CellPosition = cell, mapRow?: (row: number) => number | undefined) {
@@ -172,6 +181,28 @@ function TableControlsContent({ table }: { table: TableElement }) {
             onChange={(align) => apply((t) => setColumnAlign(t, cell.column, align))}
           />
         )}
+      </PanelSection>
+      <PanelSection title="Células">
+        <div className={styles.options}>
+          <IconButton
+            icon={LuTableCellsMerge}
+            label="Mesclar células (Shift+clique marca o intervalo)"
+            size="sm"
+            tooltipSide="bottom"
+            disabled={!range || !canMergeRange(table, range)}
+            onClick={() =>
+              range && apply((t) => mergeRange(t, range), { row: range.top, column: range.left })
+            }
+          />
+          <IconButton
+            icon={LuTableCellsSplit}
+            label="Desfazer mesclagem"
+            size="sm"
+            tooltipSide="bottom"
+            disabled={!isMergedCell(table, cell)}
+            onClick={() => apply((t) => unmergeCell(t, cell))}
+          />
+        </div>
       </PanelSection>
       <PanelSection title="Cabeçalho">
         <div className={styles.options}>

@@ -161,6 +161,8 @@ export interface CompartmentsElement extends BaseElement {
 export interface TableCell {
   text: string;
   fill?: string;
+  rowSpan?: number;
+  colSpan?: number;
 }
 
 export interface TableElement extends BaseElement {

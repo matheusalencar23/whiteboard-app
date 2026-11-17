@@ -6,7 +6,7 @@ Os itens concluídos saem deste arquivo: o que o app já faz está no [README.md
 
 ## Ordem sugerida
 
-1. [Tabelas](#tabelas): mesclar células, estilo de texto por célula e fórmulas.
+1. [Tabelas](#tabelas): estilo de texto por célula.
 2. [Tema escuro](#tema-escuro).
 3. Biblioteca de formas: [contêineres só de desenho](#contêineres).
 4. Depois: [contêineres com conteúdo vinculado](#contêineres) e [BPMN](#bpmn).
@@ -51,11 +51,9 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
 
 ### Tabelas
 
-A tabela (`table`), com título opcional, cabeçalho, cores, alinhamento por coluna e setas ligadas a cada linha, já existe, e a entidade ER é uma tabela (veja o [CLAUDE.md](CLAUDE.md)). Próximos passos, nesta ordem:
+A tabela (`table`), com título opcional, cabeçalho, cores, alinhamento por coluna, células mescladas e setas ligadas a cada linha, já existe, e a entidade ER é uma tabela (veja o [CLAUDE.md](CLAUDE.md)). Falta:
 
-- [ ] **Mesclar células:** juntar um retângulo de células numa só (como o título, que já é uma faixa que ocupa a largura toda). Guardar a extensão na célula de origem (`rowSpan`, `colSpan`) e marcar as cobertas, para o desenho, o clique, a edição com `Tab`, a altura das linhas (o texto de uma célula mesclada se reparte entre as linhas que ela cobre) e as operações de inserir e apagar linhas e colunas pularem ou ajustarem as células cobertas. Desfazer a mesclagem pelo mesmo grupo "Tabela". Médio a grande.
 - [ ] **Estilo de texto por célula:** negrito, itálico, sublinhado, cor e alinhamento próprios numa célula, sobrepondo o `textStyle` da tabela (um `textStyle` parcial e opcional na célula, mesclado no `getCellTextStyle`). Com a célula selecionada, o grupo "Texto" age só sobre ela; com a tabela inteira, sobre a tabela e limpando as sobreposições daquela propriedade, como já acontece com o alinhamento das colunas. Médio.
-- [ ] **Fórmulas:** células que começam com `=` são calculadas (`=SOMA(B2:B5)`, `=A1*2`, referências por letra da coluna e número da linha, contando o cabeçalho). Um avaliador próprio e pequeno (números, operadores, parênteses, intervalos e algumas funções: `SOMA`, `MÉDIA`, `MÍN`, `MÁX`, `CONT`), sem `eval`. O texto guardado é a fórmula; o desenho mostra o resultado, e a edição mostra a fórmula. Erros e referências circulares aparecem como `#ERRO`. Inserir ou apagar linhas e colunas precisa reescrever as referências. Grande.
 
 ## Visual
 

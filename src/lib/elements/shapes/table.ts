@@ -26,6 +26,55 @@ export function sameCell(a: CellPosition | null, b: CellPosition | null): boolea
   return a !== null && b !== null && a.row === b.row && a.column === b.column;
 }
 
+export interface CellRange {
+  top: number;
+  left: number;
+  bottom: number;
+  right: number;
+}
+
+const coverageCache = new WeakMap<TableCell[][], CellPosition[][]>();
+
+export function getRowSpan(cell: TableCell): number {
+  return cell.rowSpan ?? 1;
+}
+
+export function getColSpan(cell: TableCell): number {
+  return cell.colSpan ?? 1;
+}
+
+function getCoverage(el: TableElement): CellPosition[][] {
+  const cached = coverageCache.get(el.cells);
+  if (cached) return cached;
+  const coverage = el.cells.map((row, r) => row.map((_, c) => ({ row: r, column: c })));
+  el.cells.forEach((row, r) =>
+    row.forEach((cell, c) => {
+      if (getRowSpan(cell) === 1 && getColSpan(cell) === 1) return;
+      for (let i = r; i < r + getRowSpan(cell) && i < el.cells.length; i++) {
+        for (let j = c; j < c + getColSpan(cell) && j < row.length; j++) coverage[i][j] = { row: r, column: c };
+      }
+    }),
+  );
+  coverageCache.set(el.cells, coverage);
+  return coverage;
+}
+
+function isOrigin(coverage: CellPosition[][], row: number, column: number): boolean {
+  const origin = coverage[row][column];
+  return origin.row === row && origin.column === column;
+}
+
+export function resolveCell(el: TableElement, cell: CellPosition): CellPosition {
+  return cell.row === TITLE_ROW ? cell : getCoverage(el)[cell.row][cell.column];
+}
+
+export function isMergedCell(el: TableElement, position: CellPosition): boolean {
+  if (position.row === TITLE_ROW) return false;
+  const cell = resolveCell(el, position);
+  const origin = el.cells[cell.row][cell.column];
+  return getRowSpan(origin) > 1 || getColSpan(origin) > 1;
+}
+
 export const TITLE_ROW = -1;
 
 export const TITLE_PLACEHOLDER = "Título";
@@ -41,11 +90,13 @@ export function isTitleCell(cell: CellPosition): boolean {
 export function clampCell(el: TableElement, cell: CellPosition): CellPosition {
   const row = Math.min(Math.max(cell.row, hasTitle(el) ? TITLE_ROW : 0), el.cells.length - 1);
   if (row === TITLE_ROW) return { row, column: 0 };
-  return { row, column: Math.min(Math.max(cell.column, 0), el.columns.length - 1) };
+  return resolveCell(el, { row, column: Math.min(Math.max(cell.column, 0), el.columns.length - 1) });
 }
 
-export function getCellText(el: TableElement, cell: CellPosition): string {
-  return isTitleCell(cell) ? (el.title ?? "") : el.cells[cell.row][cell.column].text;
+export function getCellText(el: TableElement, position: CellPosition): string {
+  if (isTitleCell(position)) return el.title ?? "";
+  const cell = resolveCell(el, position);
+  return el.cells[cell.row][cell.column].text;
 }
 
 export function isHeaderCell(el: TableElement, row: number): boolean {
@@ -96,10 +147,31 @@ function cellMinHeight(cell: TableCell, style: TextStyle, columnWidth: number): 
   return Math.max(height, lineHeight(style)) + PADDING_Y * 2;
 }
 
+function spanWidth(el: TableElement, column: number, colSpan: number): number {
+  return sum(el.columns.slice(column, column + colSpan));
+}
+
 function minRowHeights(el: TableElement): number[] {
-  return el.cells.map((row, r) =>
-    Math.max(...row.map((cell, c) => cellMinHeight(cell, getCellTextStyle(el, r, c), el.columns[c]))),
+  const coverage = getCoverage(el);
+  const empty = cellMinHeight({ text: "" }, el.textStyle, 1);
+  const mins = el.cells.map(() => empty);
+  const tall: { row: number; rowSpan: number; height: number }[] = [];
+  el.cells.forEach((row, r) =>
+    row.forEach((cell, c) => {
+      if (!isOrigin(coverage, r, c)) return;
+      const height = cellMinHeight(cell, getCellTextStyle(el, r, c), spanWidth(el, c, getColSpan(cell)));
+      const rowSpan = getRowSpan(cell);
+      if (rowSpan === 1) mins[r] = Math.max(mins[r], height);
+      else tall.push({ row: r, rowSpan, height });
+    }),
   );
+  tall.sort((a, b) => a.rowSpan - b.rowSpan);
+  for (const { row, rowSpan, height } of tall) {
+    const missing = height - sum(mins.slice(row, row + rowSpan));
+    if (missing <= 0) continue;
+    for (let i = row; i < row + rowSpan; i++) mins[i] += missing / rowSpan;
+  }
+  return mins;
 }
 
 function getTitleHeight(el: TableElement): number {
@@ -124,11 +196,67 @@ export function getColumnLefts(el: TableElement): number[] {
   return offsets(el.columns, el.x);
 }
 
-export function getCellRect(el: TableElement, { row, column }: CellPosition): Bounds {
-  if (row === TITLE_ROW) return { x: el.x, y: el.y, width: el.width, height: getTitleHeight(el) };
+export function getCellRect(el: TableElement, position: CellPosition): Bounds {
+  if (position.row === TITLE_ROW) return { x: el.x, y: el.y, width: el.width, height: getTitleHeight(el) };
+  const { row, column } = resolveCell(el, position);
+  const cell = el.cells[row][column];
+  return getRangeRect(el, {
+    top: row,
+    left: column,
+    bottom: row + getRowSpan(cell) - 1,
+    right: column + getColSpan(cell) - 1,
+  });
+}
+
+export function getRangeRect(el: TableElement, range: CellRange): Bounds {
   const heights = getRowHeights(el);
   const tops = offsets(heights, getDataTop(el));
-  return { x: getColumnLefts(el)[column], y: tops[row], width: el.columns[column], height: heights[row] };
+  return {
+    x: getColumnLefts(el)[range.left],
+    y: tops[range.top],
+    width: spanWidth(el, range.left, range.right - range.left + 1),
+    height: sum(heights.slice(range.top, range.bottom + 1)),
+  };
+}
+
+function rangeOf(a: CellPosition, b: CellPosition): CellRange {
+  return {
+    top: Math.min(a.row, b.row),
+    left: Math.min(a.column, b.column),
+    bottom: Math.max(a.row, b.row),
+    right: Math.max(a.column, b.column),
+  };
+}
+
+export function getMergeRange(el: TableElement, a: CellPosition, b: CellPosition): CellRange {
+  const range = rangeOf({ row: Math.max(a.row, 0), column: a.column }, { row: Math.max(b.row, 0), column: b.column });
+  let grown = true;
+  while (grown) {
+    grown = false;
+    for (let r = range.top; r <= range.bottom; r++) {
+      for (let c = range.left; c <= range.right; c++) {
+        const origin = resolveCell(el, { row: r, column: c });
+        const cell = el.cells[origin.row][origin.column];
+        const next = {
+          top: Math.min(range.top, origin.row),
+          left: Math.min(range.left, origin.column),
+          bottom: Math.max(range.bottom, origin.row + getRowSpan(cell) - 1),
+          right: Math.max(range.right, origin.column + getColSpan(cell) - 1),
+        };
+        if (next.top !== range.top || next.left !== range.left || next.bottom !== range.bottom || next.right !== range.right) {
+          Object.assign(range, next);
+          grown = true;
+        }
+      }
+    }
+  }
+  return range;
+}
+
+export function canMergeRange(el: TableElement, range: CellRange): boolean {
+  if (range.top === range.bottom && range.left === range.right) return false;
+  const origin = el.cells[range.top][range.left];
+  return !(range.bottom - range.top + 1 === getRowSpan(origin) && range.right - range.left + 1 === getColSpan(origin));
 }
 
 export function getCellTextArea(el: TableElement, cell: CellPosition): Bounds {
@@ -150,10 +278,10 @@ export function getCellAt(el: TableElement, localPoint: Point): CellPosition {
   const top = getDataTop(el);
   if (hasTitle(el) && localPoint.y < top) return { row: TITLE_ROW, column: 0 };
   const heights = getRowHeights(el);
-  return {
+  return resolveCell(el, {
     row: indexAt(offsets(heights, top), heights, localPoint.y),
     column: indexAt(getColumnLefts(el), el.columns, localPoint.x),
-  };
+  });
 }
 
 export function getColumnBorderAt(el: TableElement, localPoint: Point, tolerance: number): number | null {
@@ -229,19 +357,70 @@ export function createTableFromRows(rows: string[][], center: Point, textStyle: 
   return { ...table, x: center.x - table.width / 2, y: center.y - table.height / 2 };
 }
 
-function mapCell(el: TableElement, target: CellPosition, update: (cell: TableCell) => TableCell): TableCell[][] {
+function mapCell(el: TableElement, position: CellPosition, update: (cell: TableCell) => TableCell): TableCell[][] {
+  const target = resolveCell(el, position);
   return el.cells.map((row, r) =>
     r === target.row ? row.map((cell, c) => (c === target.column ? update(cell) : cell)) : row,
   );
 }
 
-export function setCellText(el: TableElement, cell: CellPosition, text: string): TableElement {
+function withSpans(cell: TableCell, rowSpan: number, colSpan: number): TableCell {
+  const next: TableCell = { ...cell };
+  delete next.rowSpan;
+  delete next.colSpan;
+  if (rowSpan > 1) next.rowSpan = rowSpan;
+  if (colSpan > 1) next.colSpan = colSpan;
+  return next;
+}
+
+export function mergeRange(el: TableElement, range: CellRange): TableElement {
+  if (!canMergeRange(el, range)) return el;
+  const coverage = getCoverage(el);
+  const texts: string[] = [];
+  for (let r = range.top; r <= range.bottom; r++) {
+    for (let c = range.left; c <= range.right; c++) {
+      const text = el.cells[r][c].text;
+      if (isOrigin(coverage, r, c) && text.trim() !== "") texts.push(text);
+    }
+  }
+  const cells = el.cells.map((row, r) =>
+    row.map((cell, c) => {
+      if (r < range.top || r > range.bottom || c < range.left || c > range.right) return cell;
+      if (r !== range.top || c !== range.left) return { text: "" };
+      const merged = { ...cell, text: texts.join("\n") };
+      return withSpans(merged, range.bottom - range.top + 1, range.right - range.left + 1);
+    }),
+  );
+  return fitTable({ ...el, cells });
+}
+
+export function unmergeCell(el: TableElement, position: CellPosition): TableElement {
+  if (!isMergedCell(el, position)) return el;
+  return fitTable({ ...el, cells: mapCell(el, position, (cell) => withSpans(cell, 1, 1)) });
+}
+
+export function getNextCell(el: TableElement, cell: CellPosition, backwards: boolean): CellPosition | null {
+  if (isTitleCell(cell)) return backwards ? null : resolveCell(el, { row: 0, column: 0 });
+  const columns = el.columns.length;
+  const coverage = getCoverage(el);
+  let index = cell.row * columns + cell.column;
+  for (;;) {
+    index += backwards ? -1 : 1;
+    if (index < 0) return hasTitle(el) ? { row: TITLE_ROW, column: 0 } : null;
+    const target = { row: Math.floor(index / columns), column: index % columns };
+    if (target.row >= el.cells.length || isOrigin(coverage, target.row, target.column)) return target;
+  }
+}
+
+export function setCellText(el: TableElement, position: CellPosition, text: string): TableElement {
+  const cell = resolveCell(el, position);
   if (isTitleCell(cell)) return el.title === undefined || el.title === text ? el : fitTable({ ...el, title: text });
   if (el.cells[cell.row]?.[cell.column]?.text === text) return el;
   return fitTable({ ...el, cells: mapCell(el, cell, (current) => ({ ...current, text })) });
 }
 
-export function setCellFill(el: TableElement, cell: CellPosition, fill: string | undefined): TableElement {
+export function setCellFill(el: TableElement, position: CellPosition, fill: string | undefined): TableElement {
+  const cell = resolveCell(el, position);
   if (isTitleCell(cell)) return el;
   if (el.cells[cell.row][cell.column].fill === fill) return el;
   const cells = mapCell(el, cell, ({ text }) => (fill === undefined ? { text } : { text, fill }));
@@ -264,8 +443,36 @@ export function setTitle(el: TableElement, title: string | undefined): TableElem
   return fitTable(withSize(next, el.width, el.height - getTitleHeight(el)));
 }
 
+function growSpans(el: TableElement, index: number, axis: "row" | "column"): TableCell[][] {
+  return el.cells.map((row, r) =>
+    row.map((cell, c) => {
+      const start = axis === "row" ? r : c;
+      const span = axis === "row" ? getRowSpan(cell) : getColSpan(cell);
+      if (!(start < index && index < start + span)) return cell;
+      return axis === "row" ? withSpans(cell, span + 1, getColSpan(cell)) : withSpans(cell, getRowSpan(cell), span + 1);
+    }),
+  );
+}
+
+function shrinkSpans(el: TableElement, index: number, axis: "row" | "column"): TableCell[][] {
+  const cells = el.cells.map((row) => [...row]);
+  el.cells.forEach((row, r) =>
+    row.forEach((cell, c) => {
+      const start = axis === "row" ? r : c;
+      const span = axis === "row" ? getRowSpan(cell) : getColSpan(cell);
+      if (span === 1 || index < start || index >= start + span) return;
+      const shrunk = axis === "row" ? withSpans(cell, span - 1, getColSpan(cell)) : withSpans(cell, getRowSpan(cell), span - 1);
+      if (start !== index) cells[r][c] = shrunk;
+      else if (axis === "row") cells[r + 1][c] = shrunk;
+      else cells[r][c + 1] = shrunk;
+    }),
+  );
+  return cells;
+}
+
 export function insertRow(el: TableElement, index: number): TableElement {
-  const cells = [...el.cells.slice(0, index), emptyRow(el.columns.length), ...el.cells.slice(index)];
+  const grown = growSpans(el, index, "row");
+  const cells = [...grown.slice(0, index), emptyRow(el.columns.length), ...grown.slice(index)];
   const next = { ...el, cells };
   const added = minRowHeights(next)[index];
   return fitTable(withSize(next, el.width, el.height + added));
@@ -274,7 +481,7 @@ export function insertRow(el: TableElement, index: number): TableElement {
 export function deleteRow(el: TableElement, index: number): TableElement {
   if (el.cells.length <= 1) return el;
   const removed = getRowHeights(el)[index];
-  const cells = el.cells.filter((_, r) => r !== index);
+  const cells = shrinkSpans(el, index, "row").filter((_, r) => r !== index);
   return fitTable(withSize({ ...el, cells }, el.width, el.height - removed));
 }
 
@@ -288,7 +495,7 @@ function withColumnAligns(el: TableElement, aligns: (TextAlign | null)[] | undef
 export function insertColumn(el: TableElement, index: number): TableElement {
   const width = el.columns[Math.min(index, el.columns.length - 1)];
   const columns = [...el.columns.slice(0, index), width, ...el.columns.slice(index)];
-  const cells = el.cells.map((row) => [...row.slice(0, index), { text: "" }, ...row.slice(index)]);
+  const cells = growSpans(el, index, "column").map((row) => [...row.slice(0, index), { text: "" }, ...row.slice(index)]);
   const aligns = el.columnAligns && [...el.columnAligns.slice(0, index), null, ...el.columnAligns.slice(index)];
   return fitTable(withColumnAligns({ ...el, columns, cells }, aligns));
 }
@@ -296,7 +503,7 @@ export function insertColumn(el: TableElement, index: number): TableElement {
 export function deleteColumn(el: TableElement, index: number): TableElement {
   if (el.columns.length <= 1) return el;
   const columns = el.columns.filter((_, c) => c !== index);
-  const cells = el.cells.map((row) => row.filter((_, c) => c !== index));
+  const cells = shrinkSpans(el, index, "column").map((row) => row.filter((_, c) => c !== index));
   const aligns = el.columnAligns?.filter((_, c) => c !== index);
   return fitTable(withColumnAligns({ ...el, columns, cells }, aligns));
 }
@@ -379,13 +586,33 @@ export function drawTableText(el: TableElement, ctx: CanvasRenderingContext2D, h
   if (el.title && !sameCell(hidden, title)) {
     drawCellText(ctx, el.title, getTitleTextStyle(el), color, getCellRect(el, title));
   }
+  const coverage = getCoverage(el);
   el.cells.forEach((row, r) => {
     row.forEach((cell, c) => {
-      if (cell.text === "" || sameCell(hidden, { row: r, column: c })) return;
-      const rect = { x: lefts[c], y: tops[r], width: el.columns[c], height: heights[r] };
+      if (cell.text === "" || !isOrigin(coverage, r, c) || sameCell(hidden, { row: r, column: c })) return;
+      const rect = {
+        x: lefts[c],
+        y: tops[r],
+        width: spanWidth(el, c, getColSpan(cell)),
+        height: sum(heights.slice(r, r + getRowSpan(cell))),
+      };
       drawCellText(ctx, cell.text, getCellTextStyle(el, r, c), color, rect);
     });
   });
+}
+
+function openRuns(count: number, isOpen: (index: number) => boolean): [number, number][] {
+  const runs: [number, number][] = [];
+  let start = -1;
+  for (let i = 0; i <= count; i++) {
+    if (i < count && isOpen(i)) {
+      if (start === -1) start = i;
+    } else if (start !== -1) {
+      runs.push([start, i - 1]);
+      start = -1;
+    }
+  }
+  return runs;
 }
 
 export const tableUtil: ShapeUtil<TableElement> = {
@@ -400,20 +627,32 @@ export const tableUtil: ShapeUtil<TableElement> = {
         rc.rectangle(el.x, el.y, el.width, dataTop - el.y, options),
       );
     }
+    const coverage = getCoverage(el);
     el.cells.forEach((row, r) =>
-      row.forEach((_, c) => {
+      row.forEach((cell, c) => {
+        if (!isOrigin(coverage, r, c)) return;
         const style = { ...el.style, fillColor: getCellFill(el, { row: r, column: c }) };
+        const width = spanWidth(el, c, getColSpan(cell));
+        const height = sum(heights.slice(r, r + getRowSpan(cell)));
         drawFill(ctx, style, el.seed + r * columnCount + c, (options) =>
-          rc.rectangle(lefts[c], tops[r], el.columns[c], heights[r], options),
+          rc.rectangle(lefts[c], tops[r], width, height, options),
         );
       }),
     );
     rc.rectangle(el.x, el.y, el.width, el.height, strokeOptions(el.style, el.seed));
     let seed = el.seed + 1;
-    for (const y of hasTitle(el) ? tops : tops.slice(1)) {
-      rc.line(el.x, y, el.x + el.width, y, strokeOptions(el.style, seed++));
+    if (hasTitle(el)) rc.line(el.x, dataTop, el.x + el.width, dataTop, strokeOptions(el.style, seed++));
+    for (let r = 1; r < heights.length; r++) {
+      for (const [from, to] of openRuns(columnCount, (c) => coverage[r][c].row === r)) {
+        const right = lefts[to] + el.columns[to];
+        rc.line(lefts[from], tops[r], right, tops[r], strokeOptions(el.style, seed++));
+      }
     }
-    for (const x of lefts.slice(1)) rc.line(x, dataTop, x, el.y + el.height, strokeOptions(el.style, seed++));
+    for (let c = 1; c < columnCount; c++) {
+      for (const [from, to] of openRuns(heights.length, (r) => coverage[r][c].column === c)) {
+        rc.line(lefts[c], tops[from], lefts[c], tops[to] + heights[to], strokeOptions(el.style, seed++));
+      }
+    }
   },
 
   hitTest(el, p, tolerance) {

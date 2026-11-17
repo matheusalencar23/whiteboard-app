@@ -325,6 +325,31 @@ function isValidElement(value: unknown): value is BoardElement {
   }
 }
 
+function isSpan(value: unknown): boolean {
+  return value === undefined || (Number.isInteger(value) && (value as number) >= 1);
+}
+
+function hasValidMerges(cells: Record<string, unknown>[][]): boolean {
+  const covered = cells.map((row) => row.map(() => false));
+  for (let r = 0; r < cells.length; r++) {
+    for (let c = 0; c < cells[r].length; c++) {
+      if (covered[r][c]) continue;
+      const rowSpan = (cells[r][c].rowSpan as number | undefined) ?? 1;
+      const colSpan = (cells[r][c].colSpan as number | undefined) ?? 1;
+      if (r + rowSpan > cells.length || c + colSpan > cells[r].length) return false;
+      for (let i = r; i < r + rowSpan; i++) {
+        for (let j = c; j < c + colSpan; j++) {
+          if (covered[i][j] || ((i !== r || j !== c) && (cells[i][j].rowSpan !== undefined || cells[i][j].colSpan !== undefined))) {
+            return false;
+          }
+          covered[i][j] = true;
+        }
+      }
+    }
+  }
+  return true;
+}
+
 function isValidTable(value: Record<string, unknown>): boolean {
   const { columns, cells } = value;
   if (!Array.isArray(columns) || columns.length === 0 || !columns.every((width) => isNumber(width) && width > 0)) {
@@ -339,9 +364,14 @@ function isValidTable(value: Record<string, unknown>): boolean {
         row.length === columns.length &&
         row.every(
           (cell) =>
-            isObject(cell) && typeof cell.text === "string" && (cell.fill === undefined || typeof cell.fill === "string"),
+            isObject(cell) &&
+            typeof cell.text === "string" &&
+            (cell.fill === undefined || typeof cell.fill === "string") &&
+            isSpan(cell.rowSpan) &&
+            isSpan(cell.colSpan),
         ),
     ) &&
+    hasValidMerges(cells as Record<string, unknown>[][]) &&
     (value.columnAligns === undefined ||
       (Array.isArray(value.columnAligns) &&
         value.columnAligns.length === columns.length &&

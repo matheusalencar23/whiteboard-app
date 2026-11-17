@@ -57,6 +57,7 @@ export interface Notice {
 
 export interface TableCursor extends CellPosition {
   elementId: string;
+  extent?: CellPosition;
 }
 
 export interface BoardState {

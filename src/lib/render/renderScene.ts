@@ -1,7 +1,7 @@
 import type { RoughCanvas } from "roughjs/bin/canvas";
 import { expandBounds, getCenter, type Bounds } from "../geometry/bounds";
 import type { ArrowElement, BoardElement, TableElement } from "../elements/types";
-import { getCellRect, type CellPosition } from "../elements/shapes/table";
+import { getCellRect, getRangeRect, type CellPosition, type CellRange } from "../elements/shapes/table";
 import { getConnectionAnchors, renderElement, type HiddenText } from "../elements/registry";
 import { anchorPoint, isSegmentFixed } from "../elements/bindings";
 import type { Point } from "../types";
@@ -37,7 +37,7 @@ export interface SceneOverlay {
   hiddenText: { id: string; text: HiddenText } | null;
   editingGroup: Bounds | null;
   measurement: Measurement | null;
-  activeCell: { table: TableElement; cell: CellPosition } | null;
+  activeCell: { table: TableElement; cell: CellPosition; range: CellRange | null } | null;
 }
 
 const CONNECTION_POINT_RADIUS = 4;
@@ -51,6 +51,8 @@ const EDITING_GROUP_PADDING = 10;
 const ACTIVE_CELL_INSET = 2;
 
 const ACTIVE_CELL_LINE_WIDTH = 2;
+
+const RANGE_FILL_ALPHA = 0.12;
 
 function tracePolygon(ctx: CanvasRenderingContext2D, points: Point[]) {
   points.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
@@ -198,11 +200,21 @@ function renderOverlay(ctx: CanvasRenderingContext2D, overlay: SceneOverlay, zoo
   }
 
   if (overlay.activeCell && overlay.showHandles) {
-    const { table, cell } = overlay.activeCell;
-    const rect = expandBounds(getCellRect(table, cell), -ACTIVE_CELL_INSET / zoom);
+    const { table, cell, range } = overlay.activeCell;
+    const area = range ? getRangeRect(table, range) : getCellRect(table, cell);
+    const rect = expandBounds(area, -ACTIVE_CELL_INSET / zoom);
     ctx.save();
     ctx.lineWidth = ACTIVE_CELL_LINE_WIDTH / zoom;
-    withFrame(ctx, getElementFrame(table), () => ctx.strokeRect(rect.x, rect.y, rect.width, rect.height));
+    withFrame(ctx, getElementFrame(table), () => {
+      if (range) {
+        ctx.save();
+        ctx.globalAlpha = RANGE_FILL_ALPHA;
+        ctx.fillStyle = theme.canvas.selection;
+        ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
+        ctx.restore();
+      }
+      ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+    });
     ctx.restore();
   }
 

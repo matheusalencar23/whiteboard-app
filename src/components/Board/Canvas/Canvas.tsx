@@ -62,11 +62,11 @@ import {
   setSectionText,
 } from "../../../lib/elements/shapes/compartments";
 import {
-  TITLE_ROW,
   clampCell,
   createTableFromRows,
   getCellText,
-  hasTitle,
+  getMergeRange,
+  getNextCell,
   isTitleCell,
   sameCell,
   getCellAt,
@@ -262,14 +262,6 @@ function getColumnBorderHit(world: Point, zoom: number): { table: TableElement; 
   if (!table) return null;
   const column = getColumnBorderAt(table, toLocal(table, world), COLUMN_BORDER_TOLERANCE / zoom);
   return column === null ? null : { table, column };
-}
-
-function nextCell(table: TableElement, cell: CellPosition, backwards: boolean): CellPosition | null {
-  if (isTitleCell(cell)) return backwards ? null : { row: 0, column: 0 };
-  const columns = table.columns.length;
-  const index = cell.row * columns + cell.column + (backwards ? -1 : 1);
-  if (index < 0) return hasTitle(table) ? { row: TITLE_ROW, column: 0 } : null;
-  return { row: Math.floor(index / columns), column: index % columns };
 }
 
 function editorLayout(editing: Editing, text: string): TextEditorLayout {
@@ -517,7 +509,9 @@ export function Canvas() {
   const activeCell = useMemo(() => {
     const [table, ...rest] = selected;
     if (table?.type !== "table" || rest.length > 0 || tableCell?.elementId !== table.id) return null;
-    return { table, cell: clampCell(table, tableCell) };
+    const cell = clampCell(table, tableCell);
+    const extent = tableCell.extent && clampCell(table, tableCell.extent);
+    return { table, cell, range: extent && !isTitleCell(cell) && !isTitleCell(extent) ? getMergeRange(table, cell, extent) : null };
   }, [selected, tableCell]);
 
   const showBindingTarget = tool === "arrow" || isInteracting;
@@ -641,7 +635,7 @@ export function Canvas() {
   function navigateCell(text: string, backwards: boolean) {
     const current = editing;
     if (current?.kind !== "cell") return;
-    const target = nextCell(current.element, current.cell, backwards);
+    const target = getNextCell(current.element, current.cell, backwards);
     if (!target) {
       finishEditing(text);
       return;
@@ -788,7 +782,13 @@ export function Canvas() {
 
     const hit = getElementAtPoint(store.elements, world, tolerance);
     if (hit?.type === "table") {
-      store.setTableCell({ elementId: hit.id, ...getCellAt(hit, toLocal(hit, world)) });
+      const cell = getCellAt(hit, toLocal(hit, world));
+      const cursor = store.tableCell;
+      if (shiftKey && getSingleTable()?.id === hit.id && cursor?.elementId === hit.id) {
+        store.setTableCell({ elementId: hit.id, row: cursor.row, column: cursor.column, extent: cell });
+        return;
+      }
+      store.setTableCell({ elementId: hit.id, ...cell });
     }
     if (hit) {
       const unit = getSelectionUnit(store.elements, hit, currentEditingGroup(hit));

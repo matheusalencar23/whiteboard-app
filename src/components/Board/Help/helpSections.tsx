@@ -91,7 +91,8 @@ export const HELP_SECTIONS: HelpSection[] = [
         <li>
           Numa tabela, o duplo clique edita a célula sob o cursor. <Keys combos={[["Tab"]]} /> passa para a célula
           seguinte (e cria uma linha depois da última), e <Keys combos={[["Shift", "Tab"]]} /> volta. Colar dados
-          de uma planilha cria uma tabela. O grupo "Tabela" da barra de estilo insere e apaga linhas e colunas, liga
+          de uma planilha cria uma tabela. Com a tabela selecionada, <Keys combos={[["Shift", "clique"]]} /> marca um intervalo de
+          células. O grupo "Tabela" da barra de estilo mescla e separa células, insere e apaga linhas e colunas, liga
           o título acima das colunas e muda o alinhamento da coluna e as cores do cabeçalho, do corpo e da célula
           selecionada; arrastar a borda entre duas colunas muda a largura. As setas ligam nos lados de cada linha.
         </li>

@@ -34,11 +34,13 @@ export function ZoomIndicator() {
         aria-label={`Zoom em ${Math.round(zoom * 100)}%, voltar a 100%`}
         onPointerEnter={showTooltip}
         onPointerLeave={() => setAnchor(null)}
-        onFocus={showTooltip}
+        onFocus={(e) => {
+          if (e.currentTarget.matches(":focus-visible")) showTooltip(e);
+        }}
         onBlur={() => setAnchor(null)}
-        onClick={(e) => {
+        onClick={() => {
           resetZoom();
-          e.currentTarget.blur();
+          setAnchor(null);
         }}
       >
         {Math.round(zoom * 100)}%

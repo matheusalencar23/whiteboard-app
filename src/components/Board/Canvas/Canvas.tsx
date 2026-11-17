@@ -120,6 +120,7 @@ import { adaptColor } from "../../../lib/colors";
 import { StyleBar, type StyleBarPlacement } from "../StyleBar/StyleBar";
 import { isTypingTarget } from "../useShortcuts";
 import { useClipboard } from "./useClipboard";
+import { focusBoard, useBoardRoot } from "../boardRoot";
 import { findLibraryItem } from "../../../lib/elements/library";
 import { LIBRARY_DRAG_TYPE, insertLibraryItem } from "../Library/libraryActions";
 
@@ -364,6 +365,7 @@ function hasSize(element: BoardElement): boolean {
 
 export function Canvas() {
   const boardStore = useBoardStoreApi();
+  const rootRef = useBoardRoot();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const roughRef = useRef<RoughCanvas | null>(null);
   const interactionRef = useRef<Interaction | null>(null);
@@ -450,6 +452,8 @@ export function Canvas() {
   }, [boardStore]);
 
   useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
     function reapplyShift(e: KeyboardEvent) {
       if (e.key !== "Shift" || e.repeat || !lastPointerRef.current) return;
       updateInteractionRef.current(lastPointerRef.current, e.type === "keydown");
@@ -466,19 +470,26 @@ export function Canvas() {
       spacePressedRef.current = true;
       setSpacePressed(true);
     }
-    function handleKeyUp(e: KeyboardEvent) {
-      reapplyShift(e);
-      if (e.code !== "Space") return;
+    function releaseSpace() {
       spacePressedRef.current = false;
       setSpacePressed(false);
     }
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
+    function handleKeyUp(e: KeyboardEvent) {
+      reapplyShift(e);
+      if (e.code === "Space") releaseSpace();
+    }
+    function handleFocusOut(e: FocusEvent) {
+      if (!root?.contains(e.relatedTarget as Node | null)) releaseSpace();
+    }
+    root.addEventListener("keydown", handleKeyDown);
+    root.addEventListener("keyup", handleKeyUp);
+    root.addEventListener("focusout", handleFocusOut);
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
+      root.removeEventListener("keydown", handleKeyDown);
+      root.removeEventListener("keyup", handleKeyUp);
+      root.removeEventListener("focusout", handleFocusOut);
     };
-  }, []);
+  }, [rootRef]);
 
   useClipboard({
     getPastePosition: () => {
@@ -629,6 +640,8 @@ export function Canvas() {
 
   function finishEditing(text: string) {
     const current = editing;
+    const active = document.activeElement;
+    if (isTypingTarget(active) && rootRef.current?.contains(active)) focusBoard(rootRef);
     setEditing(null);
     if (!current) return;
     if (current.kind === "label") finishEditingLabel(current.element.id, text);
@@ -852,10 +865,8 @@ export function Canvas() {
   }
 
   function handlePointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
-    if (editing) {
-      (document.activeElement as HTMLElement | null)?.blur();
-      return;
-    }
+    focusBoard(rootRef);
+    if (editing) return;
 
     const store = boardStore.getState();
     const screen = getScreenPoint(e);

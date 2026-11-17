@@ -63,6 +63,15 @@ export function Popover({ anchor, side = "bottom", boundary = null, onClose, chi
     setPosition(fitToViewport(anchor, side, boundary, size));
   }, [anchor, side, boundary]);
 
+  useLayoutEffect(() => {
+    const popover = ref.current;
+    return () => {
+      if (!popover?.contains(document.activeElement)) return;
+      const button = anchor.matches("button") ? anchor : anchor.querySelector("button");
+      button?.focus({ preventScroll: true });
+    };
+  }, [anchor]);
+
   useEffect(() => {
     function handlePointerDown(e: PointerEvent) {
       const inside = pointerInsideRef.current || anchor.contains(e.target as Node);
@@ -74,11 +83,17 @@ export function Popover({ anchor, side = "bottom", boundary = null, onClose, chi
       e.stopPropagation();
       onClose();
     }
+    function handleOutsideKeyDown(e: KeyboardEvent) {
+      if (ref.current?.contains(e.target as Node)) return;
+      handleKeyDown(e);
+    }
     document.addEventListener("pointerdown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("keydown", handleOutsideKeyDown, true);
     return () => {
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keydown", handleOutsideKeyDown, true);
     };
   }, [anchor, onClose]);
 

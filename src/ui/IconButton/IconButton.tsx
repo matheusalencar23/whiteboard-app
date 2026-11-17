@@ -42,6 +42,10 @@ export function IconButton({
     setAnchor(null);
   }
 
+  function showTooltipOnKeyboardFocus(e: React.FocusEvent<HTMLButtonElement>) {
+    if (e.currentTarget.matches(":focus-visible")) showTooltip(e);
+  }
+
   return (
     <>
       <button
@@ -57,11 +61,11 @@ export function IconButton({
         disabled={disabled}
         onPointerEnter={showTooltip}
         onPointerLeave={hideTooltip}
-        onFocus={showTooltip}
+        onFocus={showTooltipOnKeyboardFocus}
         onBlur={hideTooltip}
-        onClick={(e) => {
+        onClick={() => {
           onClick();
-          e.currentTarget.blur();
+          hideTooltip();
         }}
       >
         <Icon />

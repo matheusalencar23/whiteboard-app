@@ -26,6 +26,7 @@ import {
   type WhiteboardScene,
 } from "../../store/boardStore";
 import { BoardStoreContext, useBoardStore, useBoardStoreApi } from "../../store/boardStoreContext";
+import { BoardRootContext, focusBoard } from "./boardRoot";
 import styles from "./Whiteboard.module.scss";
 
 export interface WhiteboardBackAction {
@@ -68,9 +69,18 @@ export interface WhiteboardProps {
   onChange?: (scene: WhiteboardScene, info: ChangeInfo) => void;
   onPreferencesChange?: (preferences: Preferences) => void;
   back?: WhiteboardBackAction;
+  autoFocus?: boolean;
 }
 
-export function Whiteboard({ ref, initialData, initialPreferences, onChange, onPreferencesChange, back }: WhiteboardProps) {
+export function Whiteboard({
+  ref,
+  initialData,
+  initialPreferences,
+  onChange,
+  onPreferencesChange,
+  back,
+  autoFocus = false,
+}: WhiteboardProps) {
   const [store] = useState(() => createBoardStore({ scene: initialData, preferences: initialPreferences }));
   useImperativeHandle(ref, () => createWhiteboardApi(store), [store]);
   const onChangeRef = useRef(onChange);
@@ -95,7 +105,7 @@ export function Whiteboard({ ref, initialData, initialPreferences, onChange, onP
 
   return (
     <BoardStoreContext value={store}>
-      <WhiteboardView back={back} />
+      <WhiteboardView back={back} autoFocus={autoFocus} />
     </BoardStoreContext>
   );
 }
@@ -104,14 +114,34 @@ function hasFiles(e: React.DragEvent) {
   return e.dataTransfer.types.includes("Files");
 }
 
-function WhiteboardView({ back }: { back?: WhiteboardBackAction }) {
-  useShortcuts();
+function WhiteboardView({ back, autoFocus }: { back?: WhiteboardBackAction; autoFocus: boolean }) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  useShortcuts(rootRef);
   const boardStore = useBoardStoreApi();
   const exportOpen = useBoardStore((s) => s.exportOpen);
   const setExportOpen = useBoardStore((s) => s.setExportOpen);
   const libraryOpen = useBoardStore((s) => s.libraryOpen);
   const [dropping, setDropping] = useState(false);
   const [renaming, setRenaming] = useState(false);
+
+  useEffect(() => {
+    if (autoFocus) focusBoard(rootRef);
+  }, [autoFocus]);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    function handleFocusOut(e: FocusEvent) {
+      if (e.relatedTarget) return;
+      const lost = e.target as Node;
+      requestAnimationFrame(() => {
+        const active = document.activeElement;
+        if (!lost.isConnected && (active === null || active === document.body)) focusBoard(rootRef);
+      });
+    }
+    root.addEventListener("focusout", handleFocusOut);
+    return () => root.removeEventListener("focusout", handleFocusOut);
+  }, []);
 
   function handleDragOver(e: React.DragEvent) {
     if (!hasFiles(e)) return;
@@ -134,40 +164,44 @@ function WhiteboardView({ back }: { back?: WhiteboardBackAction }) {
   }
 
   return (
-    <div
-      className={styles.board}
-      data-dropping={dropping}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-    >
-      <div className={styles.title}>
-        <div className={styles.actions}>
-          {back && (
-            <IconButton icon={LuLayoutGrid} label={back.label} size="sm" tooltipSide="bottom" onClick={back.onClick} />
-          )}
-          <BoardMenu onRename={() => setRenaming(true)} />
+    <BoardRootContext value={rootRef}>
+      <div
+        ref={rootRef}
+        tabIndex={-1}
+        className={styles.board}
+        data-dropping={dropping}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <div className={styles.title}>
+          <div className={styles.actions}>
+            {back && (
+              <IconButton icon={LuLayoutGrid} label={back.label} size="sm" tooltipSide="bottom" onClick={back.onClick} />
+            )}
+            <BoardMenu onRename={() => setRenaming(true)} />
+          </div>
+          <BoardTitle editing={renaming} onEditingChange={setRenaming} />
         </div>
-        <BoardTitle editing={renaming} onEditingChange={setRenaming} />
-      </div>
-      <div className={styles.dock}>
-        <Toolbar />
-      </div>
-      <Canvas />
-      {libraryOpen && (
-        <div className={styles.sidebar}>
-          <LibraryPanel />
+        <div className={styles.dock}>
+          <Toolbar />
         </div>
-      )}
-      <div className={styles.corner}>
-        <ZoomIndicator />
-        <ThemeMenu />
-        <HelpButton />
+        <Canvas />
+        {libraryOpen && (
+          <div className={styles.sidebar}>
+            <LibraryPanel />
+          </div>
+        )}
+        <div className={styles.corner}>
+          <ZoomIndicator />
+          <ThemeMenu />
+          <HelpButton />
+        </div>
+        <div className={styles.notice}>
+          <BoardNotice />
+        </div>
+        {exportOpen && <ExportDialog onClose={() => setExportOpen(false)} />}
       </div>
-      <div className={styles.notice}>
-        <BoardNotice />
-      </div>
-      {exportOpen && <ExportDialog onClose={() => setExportOpen(false)} />}
-    </div>
+    </BoardRootContext>
   );
 }

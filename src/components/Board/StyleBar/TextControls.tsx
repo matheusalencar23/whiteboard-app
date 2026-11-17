@@ -26,6 +26,7 @@ import { getCellTextTarget, type TableTextScope } from "../../../store/boardStor
 import { OpacityField, OptionGroup, type Option } from "./StyleControls";
 import { useStylePreview } from "./useStylePreview";
 import { ALIGN_OPTIONS } from "./alignOptions";
+import { focusBoard, useBoardRoot } from "../boardRoot";
 import { SHORTCUTS, formatShortcut } from "../shortcuts";
 
 const { palette } = lightTheme;
@@ -87,6 +88,7 @@ function FontSizeInput({
   onPreview: (size: number) => void;
   onCommit: () => void;
 }) {
+  const rootRef = useBoardRoot();
   const [draft, setDraft] = useState<string | null>(null);
   const shown = draft ?? (value === "mixed" ? "" : String(Math.round(value)));
 
@@ -108,7 +110,7 @@ function FontSizeInput({
         onCommit();
       }}
       onKeyDown={(e) => {
-        if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "Enter") focusBoard(rootRef);
       }}
     />
   );

@@ -45,6 +45,7 @@ export function Board() {
         onChange={handleChange}
         onPreferencesChange={setAppPreferences}
         back={{ label: "Todos os boards", onClick: () => navigate("/") }}
+        autoFocus
       />
       {saveFailed && (
         <div className={styles.notice}>

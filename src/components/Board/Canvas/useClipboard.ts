@@ -5,6 +5,7 @@ import { cloneElementsAt } from "../../../lib/elements/clone";
 import { parseClipboard, serializeClipboard } from "../../../lib/persistence";
 import type { BoardStore } from "../../../store/boardStore";
 import { useBoardStoreApi } from "../../../store/boardStoreContext";
+import { useBoardRoot } from "../boardRoot";
 import { isTypingTarget } from "../useShortcuts";
 
 interface ClipboardOptions {
@@ -14,13 +15,6 @@ interface ClipboardOptions {
 
 const MIDDLE_BUTTON = 1;
 const MIDDLE_PASTE_WINDOW = 500;
-
-let middleButtonDown = false;
-let middleButtonReleasedAt = -Infinity;
-
-function isMiddleClickPaste(): boolean {
-  return middleButtonDown || performance.now() - middleButtonReleasedAt < MIDDLE_PASTE_WINDOW;
-}
 
 function isBlocked(boardStore: BoardStore, e: ClipboardEvent): boolean {
   const { helpOpen, exportOpen } = boardStore.getState();
@@ -40,6 +34,7 @@ function copySelection(boardStore: BoardStore, e: ClipboardEvent): string[] | nu
 
 export function useClipboard(options: ClipboardOptions) {
   const boardStore = useBoardStoreApi();
+  const rootRef = useBoardRoot();
   const optionsRef = useRef(options);
 
   useEffect(() => {
@@ -47,6 +42,15 @@ export function useClipboard(options: ClipboardOptions) {
   });
 
   useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    let middleButtonDown = false;
+    let middleButtonReleasedAt = -Infinity;
+
+    function isMiddleClickPaste(): boolean {
+      return middleButtonDown || performance.now() - middleButtonReleasedAt < MIDDLE_PASTE_WINDOW;
+    }
+
     function handleCopy(e: ClipboardEvent) {
       copySelection(boardStore, e);
     }
@@ -82,17 +86,17 @@ export function useClipboard(options: ClipboardOptions) {
       boardStore.getState().insertElements(inserted);
     }
 
-    document.addEventListener("copy", handleCopy);
-    document.addEventListener("cut", handleCut);
-    document.addEventListener("paste", handlePaste);
-    document.addEventListener("pointerdown", handlePointerDown, true);
-    document.addEventListener("pointerup", handlePointerUp, true);
+    root.addEventListener("copy", handleCopy);
+    root.addEventListener("cut", handleCut);
+    root.addEventListener("paste", handlePaste);
+    root.addEventListener("pointerdown", handlePointerDown, true);
+    root.addEventListener("pointerup", handlePointerUp, true);
     return () => {
-      document.removeEventListener("pointerdown", handlePointerDown, true);
-      document.removeEventListener("pointerup", handlePointerUp, true);
-      document.removeEventListener("copy", handleCopy);
-      document.removeEventListener("cut", handleCut);
-      document.removeEventListener("paste", handlePaste);
+      root.removeEventListener("pointerdown", handlePointerDown, true);
+      root.removeEventListener("pointerup", handlePointerUp, true);
+      root.removeEventListener("copy", handleCopy);
+      root.removeEventListener("cut", handleCut);
+      root.removeEventListener("paste", handlePaste);
     };
-  }, [boardStore]);
+  }, [boardStore, rootRef]);
 }

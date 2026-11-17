@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import type { BoardStore } from "../../store/boardStore";
+import type { BoardRootRef } from "./boardRoot";
 import { useBoardStoreApi } from "../../store/boardStoreContext";
 import { TOOLS } from "./Toolbar/tools";
 import { selectTextScope, textSelectors } from "./StyleBar/selectors";
@@ -42,10 +43,13 @@ function duplicateSelection(boardStore: BoardStore) {
   insertElements(cloneElements(selected, { x: offset, y: offset }, editingGroupId));
 }
 
-export function useShortcuts() {
+export function useShortcuts(rootRef: BoardRootRef) {
   const boardStore = useBoardStoreApi();
 
   useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
     function handleKeyDown(e: KeyboardEvent) {
       if (isTypingTarget(e.target)) return;
 
@@ -123,7 +127,7 @@ export function useShortcuts() {
       e.preventDefault();
     }
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [boardStore]);
+    root.addEventListener("keydown", handleKeyDown);
+    return () => root.removeEventListener("keydown", handleKeyDown);
+  }, [boardStore, rootRef]);
 }

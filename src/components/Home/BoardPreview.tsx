@@ -2,7 +2,8 @@ import { useMemo } from "react";
 import type { BoardElement } from "../../lib/elements/types";
 import { getExportBounds, renderToCanvas } from "../../lib/export/exportScene";
 import type { ColorScheme } from "../../lib/theme";
-import { useColorScheme } from "../useColorScheme";
+import { useResolvedColorScheme } from "../useColorScheme";
+import { useAppPreferences } from "../../store/appPreferences";
 import styles from "./Home.module.scss";
 
 interface BoardPreviewProps {
@@ -20,7 +21,7 @@ function renderPreview(elements: BoardElement[], scheme: ColorScheme): string | 
 }
 
 export function BoardPreview({ elements }: BoardPreviewProps) {
-  const scheme = useColorScheme();
+  const scheme = useResolvedColorScheme(useAppPreferences((s) => s.themeMode));
   const src = useMemo(() => renderPreview(elements, scheme), [elements, scheme]);
 
   return (

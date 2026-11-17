@@ -1,11 +1,12 @@
 import { useLayoutEffect } from "react";
 import { Outlet } from "react-router";
-import { applyTheme } from "./lib/theme";
-import { useTheme } from "./components/useColorScheme";
+import { applyTheme, getTheme } from "./lib/theme";
+import { useResolvedColorScheme } from "./components/useColorScheme";
+import { useAppPreferences } from "./store/appPreferences";
 import "./App.css";
 
 function App() {
-  const theme = useTheme();
+  const theme = getTheme(useResolvedColorScheme(useAppPreferences((s) => s.themeMode)));
 
   useLayoutEffect(() => applyTheme(theme), [theme]);
 

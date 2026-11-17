@@ -1,101 +1,56 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
-import { LuLayoutGrid } from "react-icons/lu";
-import { Canvas } from "./Canvas/Canvas";
-import { Toolbar } from "./Toolbar/Toolbar";
-import { useShortcuts } from "./useShortcuts";
-import { ZoomIndicator } from "./ZoomIndicator/ZoomIndicator";
-import { HelpButton } from "./Help/HelpButton";
-import { ThemeMenu } from "./ThemeMenu/ThemeMenu";
-import { BoardNotice } from "./BoardNotice";
-import { BoardTitle } from "./BoardTitle/BoardTitle";
-import { BoardMenu } from "./BoardMenu/BoardMenu";
-import { ExportDialog } from "./Export/ExportDialog";
-import { LibraryPanel } from "./Library/LibraryPanel";
-import { importBoard } from "./boardFileActions";
-import { isBoardFileCandidate } from "../../lib/boardFile";
-import { IconButton } from "../../ui/IconButton/IconButton";
-import { useBoardStore, useBoardStoreApi } from "../../store/boardStoreContext";
+import { useCallback, useEffect, useState } from "react";
+import { useLoaderData, useNavigate } from "react-router";
+import { Whiteboard } from "./Whiteboard";
+import type { boardLoader } from "./boardRoute";
+import type { WhiteboardScene } from "../../store/boardStore";
+import { onBoardSaveFailure, scheduleBoardSave } from "../../store/appBoardSaving";
+import { setAppPreferences, useAppPreferences } from "../../store/appPreferences";
+import { Toast } from "../../ui/Toast/Toast";
 import styles from "./Board.module.scss";
 
-function hasFiles(e: React.DragEvent) {
-  return e.dataTransfer.types.includes("Files");
+const STORAGE_FULL = "Não foi possível salvar: o armazenamento do navegador está cheio.";
+
+function pageTitle(name: string) {
+  return `${name} · Whiteboard`;
 }
 
 export function Board() {
-  useShortcuts();
+  const { id, board } = useLoaderData<typeof boardLoader>();
   const navigate = useNavigate();
-  const boardStore = useBoardStoreApi();
-  const name = useBoardStore((s) => s.name);
-  const exportOpen = useBoardStore((s) => s.exportOpen);
-  const setExportOpen = useBoardStore((s) => s.setExportOpen);
-  const libraryOpen = useBoardStore((s) => s.libraryOpen);
-  const [dropping, setDropping] = useState(false);
-  const [renaming, setRenaming] = useState(false);
+  const [initialPreferences] = useState(() => useAppPreferences.getState());
+  const [saveFailed, setSaveFailed] = useState(false);
 
   useEffect(() => {
-    document.title = `${name} · Whiteboard`;
-  }, [name]);
+    document.title = pageTitle(board.name);
+  }, [board]);
 
-  function handleDragOver(e: React.DragEvent) {
-    if (!hasFiles(e)) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
-    setDropping(true);
-  }
+  useEffect(() => onBoardSaveFailure(() => setSaveFailed(true)), []);
 
-  function handleDragLeave(e: React.DragEvent) {
-    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
-    setDropping(false);
-  }
+  const handleChange = useCallback(
+    (scene: WhiteboardScene) => {
+      document.title = pageTitle(scene.name);
+      scheduleBoardSave(id, scene);
+    },
+    [id],
+  );
 
-  function handleDrop(e: React.DragEvent) {
-    if (!hasFiles(e)) return;
-    e.preventDefault();
-    setDropping(false);
-    const file = Array.from(e.dataTransfer.files).find(isBoardFileCandidate) ?? e.dataTransfer.files[0];
-    if (file) void importBoard(boardStore, file);
-  }
+  const dismissSaveFailure = useCallback(() => setSaveFailed(false), []);
 
   return (
-    <div
-      className={styles.board}
-      data-dropping={dropping}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-    >
-      <div className={styles.title}>
-        <div className={styles.actions}>
-          <IconButton
-            icon={LuLayoutGrid}
-            label="Todos os boards"
-            size="sm"
-            tooltipSide="bottom"
-            onClick={() => navigate("/")}
-          />
-          <BoardMenu onRename={() => setRenaming(true)} />
-        </div>
-        <BoardTitle editing={renaming} onEditingChange={setRenaming} />
-      </div>
-      <div className={styles.dock}>
-        <Toolbar />
-      </div>
-      <Canvas />
-      {libraryOpen && (
-        <div className={styles.sidebar}>
-          <LibraryPanel />
+    <>
+      <Whiteboard
+        key={id}
+        initialData={board}
+        initialPreferences={initialPreferences}
+        onChange={handleChange}
+        onPreferencesChange={setAppPreferences}
+        back={{ label: "Todos os boards", onClick: () => navigate("/") }}
+      />
+      {saveFailed && (
+        <div className={styles.notice}>
+          <Toast message={STORAGE_FULL} tone="error" onDismiss={dismissSaveFailure} />
         </div>
       )}
-      <div className={styles.corner}>
-        <ZoomIndicator />
-        <ThemeMenu />
-        <HelpButton />
-      </div>
-      <div className={styles.notice}>
-        <BoardNotice />
-      </div>
-      {exportOpen && <ExportDialog onClose={() => setExportOpen(false)} />}
-    </div>
+    </>
   );
 }

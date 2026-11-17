@@ -1,0 +1,84 @@
+.board {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+}
+
+.title {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.actions {
+    display: flex;
+    gap: 2px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-panel);
+}
+
+.dock {
+    position: absolute;
+    top: 58px;
+    bottom: 58px;
+    left: 12px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+
+    > * {
+        pointer-events: auto;
+    }
+}
+
+.sidebar {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    bottom: 58px;
+    z-index: 10;
+    display: flex;
+    align-items: flex-start;
+    pointer-events: none;
+
+    > * {
+        pointer-events: auto;
+    }
+}
+
+.corner {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.board[data-dropping="true"]::after {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    z-index: 20;
+    border: 2px dashed var(--color-accent);
+    border-radius: var(--radius-lg);
+    background: var(--canvas-selection-fill);
+    pointer-events: none;
+}
+
+.notice {
+    position: absolute;
+    left: 50%;
+    bottom: 16px;
+    z-index: 30;
+    transform: translateX(-50%);
+}

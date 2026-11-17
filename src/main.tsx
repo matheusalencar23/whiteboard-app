@@ -3,8 +3,7 @@ import App from "./App.tsx";
 import "./index.css";
 import { applyTheme, getTheme } from "./lib/theme.ts";
 import { resolveColorScheme } from "./components/useColorScheme.ts";
-import { appBoardStore } from "./store/appBoardStore.ts";
-import { BoardStoreContext } from "./store/boardStoreContext.ts";
+import { useAppPreferences } from "./store/appPreferences.ts";
 
 import { createBrowserRouter, redirect } from "react-router";
 import { RouterProvider } from "react-router/dom";
@@ -25,10 +24,8 @@ const router = createBrowserRouter([
   },
 ]);
 
-applyTheme(getTheme(resolveColorScheme(appBoardStore.getState().themeMode)));
+applyTheme(getTheme(resolveColorScheme(useAppPreferences.getState().themeMode)));
 
 createRoot(document.getElementById("root")!).render(
-  <BoardStoreContext value={appBoardStore}>
-    <RouterProvider router={router} />
-  </BoardStoreContext>,
+  <RouterProvider router={router} />,
 );

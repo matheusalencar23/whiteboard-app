@@ -23,7 +23,7 @@ Valem para todo item novo.
 - Os contêineres (raias e grupo com título) não têm vínculo com o conteúdo, como os frames do Excalidraw ou os contêineres do draw.io. Para mover o contêiner junto com o que está dentro, agrupa-se tudo com os grupos que já existem (`Ctrl+G`).
 - As preferências da grade, do tema e do painel da biblioteca (aberto e grupos recolhidos) valem para todos os boards e não vão no arquivo do board.
 - A persistência continua no `localStorage`. A troca pelo IndexedDB foi avaliada e descartada: o limite de uns 5 MB não incomoda com os boards de hoje, e a persistência vai ficar só neste app (veja a decisão abaixo), então não vale a complexidade de uma API assíncrona.
-- A biblioteca npm não persiste nada. Ela recebe os dados e as preferências (board, viewport, nome, grade, tema, grupos recolhidos da biblioteca) e avisa das mudanças por callbacks; guardar é responsabilidade de quem usa. O `persistence.ts`, a lista de boards e o salvamento com debounce ficam só neste app, que passa a ser um usuário da biblioteca. Código novo não deve ler nem gravar o `localStorage` fora do `persistence.ts` e do `appBoardStore.ts`.
+- A biblioteca npm não persiste nada. Ela recebe os dados e as preferências (board, viewport, nome, grade, tema, grupos recolhidos da biblioteca) e avisa das mudanças por callbacks; guardar é responsabilidade de quem usa. O `persistence.ts`, a lista de boards e o salvamento com debounce ficam só neste app, que passa a ser um usuário da biblioteca. Código novo não deve ler nem gravar o `localStorage` fora do `persistence.ts`, do `appBoardSaving.ts` e do `appPreferences.ts`.
 - Os elementos guardam as cores do tema claro. O tema escuro só muda o desenho (`adaptColor`), e o canvas não é invertido por filtro CSS, porque isso inverteria também a seleção e a grade e faria a cor desenhada não bater com a escolhida.
 - O board vai virar uma biblioteca npm (veja [Publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm)). Código novo do board não deve depender das rotas, do `localStorage`, do `document` inteiro ou do tamanho da janela: navegação e persistência entram por funções e callbacks, os eventos de teclado ficam presos ao board e as medidas vêm do contêiner, não de `100vw`/`100vh`. Cada funcionalidade nova deve poder ser desligada pela configuração da biblioteca: botão, atalho e entrada na ajuda saem de um mesmo lugar (como `tools.ts` e `shortcuts.ts`), para serem escondidos juntos.
 - A biblioteca npm é não controlada com ref imperativo: `initialData`, `onChange(scene, info)` uma vez por passo do histórico e `ref.updateScene(patch, { history: "clear" | "record" })`. O modo controlado (prop `elements`) foi avaliado e adiado: só funciona direito com o histórico por alterações e custaria o dobro sem atender um caso que o `updateScene` não atenda. Ele pode entrar depois como acréscimo, sem quebrar a API. Mudanças vindas de fora nunca são aplicadas no meio de uma interação: esperam o contador de interações da store voltar a zero.
@@ -47,7 +47,7 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
 
 - [ ] **A decidir.** Proposta:
   - **Problema:** hoje cada aba guarda o board na própria store e grava a versão inteira dela. Com duas abas no mesmo board, vale a última gravação, e as edições da outra aba se perdem sem aviso.
-  - **Nível 1, recarregar quando a outra aba salvar (pequeno):** ouvir o evento `storage` do `window`, que o navegador dispara nas outras abas quando uma chave do `localStorage` muda. Se a chave for a do board aberto, recarregar o conteúdo pelo `openStoredBoard` e zerar o histórico, senão o desfazer voltaria ao estado anterior à edição da outra aba. Não aplicar enquanto a aba estiver no meio de um arraste ou editando texto: guardar e aplicar no fim da interação. Limitação: troca o board inteiro, então edições simultâneas nas duas abas ainda se perdem.
+  - **Nível 1, recarregar quando a outra aba salvar (pequeno):** ouvir o evento `storage` do `window`, que o navegador dispara nas outras abas quando uma chave do `localStorage` muda. Se a chave for a do board aberto, recarregar o conteúdo pelo `updateScene` do `Whiteboard` e zerar o histórico, senão o desfazer voltaria ao estado anterior à edição da outra aba. Não aplicar enquanto a aba estiver no meio de um arraste ou editando texto: guardar e aplicar no fim da interação. Limitação: troca o board inteiro, então edições simultâneas nas duas abas ainda se perdem.
   - **Nível 2, mesclar por elemento ao vivo (médio, recomendado):**
     - Cada elemento tem um contador `version`, que sobe a cada alteração, e a posição na ordem de desenho por índice fracionário (os dois entram na 0.1 da biblioteca npm), e apagar vira a marcação `isDeleted` (os elementos marcados ficam fora da renderização, do clique e da exportação, e podem ser limpos ao salvar depois de um tempo). É o modelo do Excalidraw. Pela decisão de não ter migrações, basta ajustar a validação.
     - As mudanças vão pelo `BroadcastChannel` assim que acontecem, sem esperar o debounce do salvamento, com o `boardId` e só os elementos alterados. Cada aba mescla elemento a elemento, ficando com a `version` maior (empate decidido por um número aleatório guardado no elemento, para as duas abas chegarem ao mesmo resultado). Editar elementos diferentes nas duas abas não perde nada, e o conflito só existe quando as duas mexem no mesmo elemento ao mesmo tempo.
@@ -64,7 +64,6 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
 
 - [ ] **O quê:** separar o board (canvas, toolbar, barra de estilo, menu, exportação) num pacote npm que outros projetos React instalam e usam como um componente, por exemplo `<Whiteboard initialData={...} onChange={...} />`. O app atual (lista de boards e rotas) passa a ser um usuário desse pacote.
 - **Problemas de hoje:**
-  - **Persistência e rotas:** o `Board` usa `useNavigate` (botão "Todos os boards") e muda o `document.title`. O salvamento, as preferências, o `pagehide` e o id do board aberto já estão no `appBoardStore.ts`, fora da store. Pela [decisão](#decisões-tomadas), o pacote não persiste nada: o board recebe os dados e avisa das mudanças (`initialData`, `onChange` com os elementos, o viewport e o nome), e quem usa decide onde salvar. As preferências (grade, tema, painel da biblioteca e grupos recolhidos) entram por props com valor inicial e saem por `onPreferencesChange`. O botão de voltar e o título da página viram props ou callbacks opcionais. O `persistence.ts`, a inscrição de salvamento da store e o `homeRoute`/`boardRoute` ficam no app.
   - **Teclado:** `useShortcuts` e o `Canvas` ouvem o `keydown` do `window`, então capturariam teclas da página inteira. No pacote, ouvir só quando o foco estiver dentro do board (listener no contêiner com `tabIndex`) ou com uma prop para ligar os atalhos globais.
   - **Tamanho:** o `.board` usa `100vw`/`100vh`. Passar a ocupar o contêiner pai (`width/height: 100%`), com o canvas medindo o próprio elemento (`ResizeObserver`).
   - **Tema e estilos:** o `applyTheme` grava as variáveis no `document.documentElement`. Gravar no elemento raiz do board, aceitar um tema por prop (o `renderScene` e o `renderElement` já recebem o tema e o esquema de cores) e prefixar as variáveis (`--wb-*`) para não colidir com as do projeto hospedeiro. Os SCSS modules viram um CSS gerado no build, importado pelo usuário (`import "pacote/style.css"`).
@@ -78,7 +77,7 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
 - **Como:**
   - **Estrutura:** monorepo com workspaces do npm: `packages/whiteboard` (o pacote) e `apps/web` (o app atual). Ou uma pasta `src/whiteboard/` com um build de biblioteca à parte, se o monorepo parecer exagero. O `src/lib/` já é TypeScript puro e quase não muda.
   - **Build:** modo biblioteca do Vite (`build.lib`) gerando ESM, com `react`, `react-dom` e `react/jsx-runtime` como `peerDependencies` e externos. Os tipos saem com `vite-plugin-dts` ou com `tsc --emitDeclarationOnly`. `roughjs`, `zustand`, `nanoid` e `react-icons` ficam como dependências comuns.
-  - **Modelo de dados (decidido):** não controlado com ref imperativo, como o Excalidraw (veja as [decisões](#decisões-tomadas)). Assinaturas da 0.1:
+  - **Modelo de dados (decidido):** não controlado com ref imperativo, como o Excalidraw (veja as [decisões](#decisões-tomadas)). Assinaturas da 0.1 (o componente, `initialData`, `initialPreferences`, `onChange`, `onPreferencesChange`, `back`, o `version` e o `lastChange` já existem; faltam o ref, o `onChangeLive` e o `config`):
     ```ts
     interface WhiteboardScene { elements: readonly BoardElement[]; name: string; viewport: Viewport }
     type ChangeReason = "commit" | "undo" | "redo" | "name" | "viewport" | "external";
@@ -86,8 +85,11 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
 
     interface WhiteboardProps {
       initialData?: Partial<WhiteboardScene>;
+      initialPreferences?: Partial<Preferences>;
       onChange?: (scene: WhiteboardScene, info: ChangeInfo) => void;
+      onPreferencesChange?: (preferences: Preferences) => void;
       onChangeLive?: (elements: readonly BoardElement[]) => void;
+      back?: { label: string; onClick: () => void };
       config?: WhiteboardConfig;
     }
 
@@ -105,10 +107,8 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
     - **`initialData`:** só vale na montagem. Mudar depois não tem efeito; para trocar, usar o `updateScene` ou uma `key` (documentar).
     - **Prop `elements` reservada:** o modo controlado e a opção `history: "preserve"` (aplicar de fora mantendo o histórico local) entram numa versão menor depois do histórico por alterações, sem quebrar a API.
   - **Por dentro da store, para a 0.1:**
-    - **`version` em todo elemento:** sobe a cada alteração, num ponto só, embrulhando o `set` da fábrica da store: quando `elements` muda, cada elemento com objeto diferente do anterior do mesmo id ganha `version + 1` e entra no `changedIds`. Como os elementos são imutáveis, a comparação é por referência e cabe no `pointermove`.
     - **Ordem por índice fracionário:** cada elemento guarda a própria posição na ordem de desenho (uma chave que ordena como texto, como o `index` do Excalidraw), e o array continua ordenado por ela. O `reorderElements` só dá índice novo aos elementos movidos, e reordenar vira uma alteração comum de elemento. Entra na 0.1 porque o formato ganha versão nela, e porque a mesclagem entre abas precisa da ordem como propriedade do elemento para as duas convergirem.
     - **Contador de interações:** `beginInteraction()`/`endInteraction()` na store, chamados pelos arrastes do Canvas, pela prévia de estilo (`useStylePreview`), pela da tabela (`TableControls`) e pela edição de texto. Um `updateScene` com o contador acima de zero espera numa fila e é aplicado quando ele volta a zero, depois do `commitHistory` da interação. Isso evita três problemas: o arraste gravar por cima da mudança de fora (calcula a partir do `original`), o desfazer revertê-la (o `before` é anterior) e o cancelamento do ponteiro restaurar os `originals` por cima dela.
-    - **`lastChange: { reason, changedIds, seq }`:** o fim de um passo dá para notar pelo `past`, mas não o motivo (`undo`, `clear` e abrir board também trocam o `past`, e nome e viewport nem passam pelo histórico). O `onChange` dispara quando o `seq` muda.
     - **`sanitizeTransient`:** depois de um `updateScene` (e de qualquer remoção), tirar da seleção, do `editingGroupId` e do `tableCell` os ids que sumiram, e passar pelo `updateBoundArrows` para soltar as setas presas a formas apagadas. Hoje o `deleteElements` já esquece de limpar o `tableCell`.
   - **Depois da 0.1, antes da sincronização de abas:** trocar o histórico de fotos por alterações (`{ id, before?, after? }` por passo), como refatoração interna do `boardStore.ts`: os `pushPast` passam a guardar a diferença entre o antes e o depois (por referência, barato), e os chamadores de `commitHistory` não mudam. O desfazer aplica o inverso só onde o elemento ainda tem a `version` do `after`. Testes com Vitest para `diffElements`, `applyDiff` e `invert`, mais um roteiro manual de desfazer e refazer de cada ação. Com isso entram o `"preserve"` e, se houver demanda, a prop `elements`.
   - **API pública:** o componente `Whiteboard` e o `WhiteboardApi` acima, os tipos do modelo (`BoardElement`, `BoardFile`, `WhiteboardScene`), as funções de arquivo (`serializeBoardFile`/`parseBoardFile`) e as de exportar imagem (`renderToCanvas`, `renderToSvg`). O resto fica interno, para poder mudar sem quebrar quem usa.
@@ -125,11 +125,10 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
   - **Depois da primeira versão:** acessibilidade do canvas (anunciar seleção e criação por `aria-live`) e o app publicado no GitHub Pages como demonstração.
 - **Por quê:** permite usar o quadro branco dentro de outros projetos (documentação, ferramentas internas, apps com diagramas) sem copiar o código, mantendo uma base só.
 - **Ordem:** depende pouco dos outros itens, mas fica mais barato se as decisões acima forem seguidas desde já. O tema ativo hoje sai da store (`themeMode`) e é aplicado no `document.documentElement` pelo `App`; no pacote, passa a ser por instância. Sequência sugerida:
-  1. Componente `<Whiteboard initialData onChange onPreferencesChange>`, com `lastChange` e `version`.
-  2. Ref com `updateScene`, contador de interações, fila e `sanitizeTransient`. O app passa a usar só a API pública.
-  3. Índice fracionário na ordem dos elementos.
-  4. Demais separações (teclado com a área de transferência e os efeitos ao importar, tamanho, tema, fontes, portais e `config` com o modo somente leitura).
-  5. Dicionário de textos, troca do `react-color` e carregamento sob demanda.
-  6. Versão no formato salvo, migrações e os testes delas.
-  7. Checagens de pacote na CI, Changesets, README com três exemplos (só leitura, salvar numa API, trocar a cena por fora) e publicação da `0.1.0`.
-  8. Depois: histórico por alterações e a sincronização de abas (nível 2).
+  1. Ref com `updateScene`, contador de interações, fila e `sanitizeTransient`. O app passa a usar só a API pública.
+  2. Índice fracionário na ordem dos elementos.
+  3. Demais separações (teclado com a área de transferência e os efeitos ao importar, tamanho, tema, fontes, portais e `config` com o modo somente leitura).
+  4. Dicionário de textos, troca do `react-color` e carregamento sob demanda.
+  5. Versão no formato salvo, migrações e os testes delas.
+  6. Checagens de pacote na CI, Changesets, README com três exemplos (só leitura, salvar numa API, trocar a cena por fora) e publicação da `0.1.0`.
+  7. Depois: histórico por alterações e a sincronização de abas (nível 2).

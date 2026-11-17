@@ -284,6 +284,7 @@ function isValidElement(value: unknown): value is BoardElement {
     isNumber(value.height) &&
     isNumber(value.rotation) &&
     isNumber(value.seed) &&
+    (value.version === undefined || (Number.isInteger(value.version) && (value.version as number) >= 0)) &&
     isValidGroupIds(value.groupIds) &&
     isObject(style) &&
     typeof style.strokeColor === "string" &&

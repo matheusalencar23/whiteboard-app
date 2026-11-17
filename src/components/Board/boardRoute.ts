@@ -1,9 +1,12 @@
 import { redirect, type LoaderFunctionArgs, type ShouldRevalidateFunctionArgs } from "react-router";
-import { openStoredBoard } from "../../store/appBoardStore";
+import { loadStoredBoard } from "../../lib/persistence";
+import { flushBoardSave } from "../../store/appBoardSaving";
 
 export function boardLoader({ params }: LoaderFunctionArgs) {
-  if (!params.id || !openStoredBoard(params.id)) throw redirect("/");
-  return null;
+  flushBoardSave();
+  const board = params.id ? loadStoredBoard(params.id) : null;
+  if (!params.id || !board) throw redirect("/");
+  return { id: params.id, board };
 }
 
 export function shouldRevalidateBoard({ currentParams, nextParams }: ShouldRevalidateFunctionArgs) {

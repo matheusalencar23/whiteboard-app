@@ -37,6 +37,7 @@ interface BaseElement {
   rotation: number;
   style: ElementStyle;
   seed: number;
+  version?: number;
   groupIds?: string[];
 }
 

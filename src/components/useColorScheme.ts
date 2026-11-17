@@ -23,10 +23,13 @@ export function resolveColorScheme(mode: ThemeMode): ColorScheme {
   return mode === "system" ? getSystemScheme() : mode;
 }
 
-export function useColorScheme(): ColorScheme {
-  const mode = useBoardStore((s) => s.themeMode);
+export function useResolvedColorScheme(mode: ThemeMode): ColorScheme {
   const system = useSyncExternalStore(subscribeSystemScheme, getSystemScheme);
   return mode === "system" ? system : mode;
+}
+
+export function useColorScheme(): ColorScheme {
+  return useResolvedColorScheme(useBoardStore((s) => s.themeMode));
 }
 
 export function useTheme(): Theme {

@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import type { IconType } from "react-icons";
-import { LuEllipsis, LuLayers, LuTable, LuType } from "react-icons/lu";
+import { LuEllipsis, LuLayers, LuRows3, LuTable, LuType } from "react-icons/lu";
 import styles from "./StyleBar.module.scss";
 import { TRANSPARENT } from "../../../lib/elements/types";
 import type { Bounds } from "../../../lib/geometry/bounds";
@@ -14,6 +14,7 @@ import { ROUTING_OPTIONS } from "./routing";
 import {
   arrowSelectors,
   scopeSupports,
+  selectHasPool,
   selectScope,
   selectSingleTable,
   selectTextScope,
@@ -23,6 +24,7 @@ import { ArrowControls, FillControls, StrokeControls } from "./StyleControls";
 import { TextControls } from "./TextControls";
 import { TableControls } from "./TableControls";
 import { OrderControls } from "./OrderControls";
+import { PoolControls } from "./PoolControls";
 
 const BAR_GAP = 12;
 const VIEWPORT_MARGIN = 8;
@@ -113,6 +115,7 @@ function StyleBarContent({
   const routing = useBoardStore(arrowSelectors.routing) ?? defaultRouting;
   const hasTable = useBoardStore((s) => selectSingleTable(s) !== null);
   const hasSelection = useBoardStore((s) => s.selectedIds.length > 0);
+  const hasPool = useBoardStore(selectHasPool);
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -151,6 +154,11 @@ function StyleBarContent({
       {hasTable && (
         <StyleGroup label="Tabela" icon={LuTable}>
           <TableControls />
+        </StyleGroup>
+      )}
+      {hasPool && (
+        <StyleGroup label="Piscina" icon={LuRows3}>
+          <PoolControls />
         </StyleGroup>
       )}
       {textScope !== "" && (

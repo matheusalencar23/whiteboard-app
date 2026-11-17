@@ -7,8 +7,10 @@ import { createShape } from "./shapes/shape";
 import { createCompartments } from "./shapes/compartments";
 import { createText } from "./shapes/text";
 import { createTable } from "./shapes/table";
+import { laneHorizontalBand } from "./shapes/shapeKinds";
 import { lightTheme } from "../theme";
 import type {
+  ArrowheadPair,
   BoardElement,
   BoxElementType,
   ElementStyle,
@@ -47,6 +49,7 @@ export const LIBRARY_GROUPS: LibraryGroup[] = [
   { id: "er", name: "Entidade-relacionamento" },
   { id: "uml", name: "UML" },
   { id: "umlBehavior", name: "UML: estados e atividades" },
+  { id: "bpmn", name: "BPMN" },
   { id: "architecture", name: "Arquitetura e C4" },
   { id: "wireframe", name: "Wireframe" },
 ];
@@ -100,6 +103,31 @@ function participant(bounds: Bounds, textStyle: TextStyle): LibraryPart[] {
     { element: withLabel(head, textStyle, { text: "Objeto" }) },
     { element: lifeline, style: { strokeStyle: "dashed" } },
   ];
+}
+
+const POOL_LANES = 2;
+
+function pool(bounds: Bounds, textStyle: TextStyle): LibraryPart[] {
+  const band = laneHorizontalBand(bounds).width;
+  const laneHeight = bounds.height / POOL_LANES;
+  const lanes = Array.from({ length: POOL_LANES }, (_, i) => {
+    const lane = createShape("laneHorizontal", {
+      x: bounds.x + band,
+      y: bounds.y + laneHeight * i,
+      width: bounds.width - band,
+      height: laneHeight,
+    });
+    return { element: withLabel(lane, textStyle, { text: `Raia ${i + 1}` }) };
+  });
+  return [{ element: withLabel(createShape("pool", bounds), textStyle, { text: "Piscina" }) }, ...lanes];
+}
+
+function flow(arrowheads: ArrowheadPair, style: Partial<ElementStyle>) {
+  return (bounds: Bounds): LibraryPart[] => {
+    const y = bounds.y + bounds.height / 2;
+    const arrow = createArrow({ x: bounds.x, y }, { x: bounds.x + bounds.width, y }, "straight", arrowheads);
+    return [{ element: arrow, style }];
+  };
 }
 
 const CHECKBOX_SIZE = 20;
@@ -690,6 +718,114 @@ export const LIBRARY_ITEMS: LibraryItem[] = [
     width: 140,
     height: 8,
     create: shape("bar"),
+  },
+  {
+    id: "bpmn.task",
+    name: "Tarefa",
+    group: "bpmn",
+    keywords: ["atividade", "processo", "passo", "ação"],
+    width: 140,
+    height: 80,
+    create: box("rectangle", { label: { text: "Tarefa" }, style: { corners: "round" } }),
+  },
+  {
+    id: "bpmn.startEvent",
+    name: "Evento de início",
+    group: "bpmn",
+    keywords: ["evento", "início", "começo", "círculo"],
+    width: 48,
+    height: 48,
+    create: box("ellipse"),
+  },
+  {
+    id: "bpmn.intermediateEvent",
+    name: "Evento intermediário",
+    group: "bpmn",
+    keywords: ["evento", "intermediário", "espera", "círculo duplo"],
+    width: 48,
+    height: 48,
+    create: shape("doubleEllipse"),
+  },
+  {
+    id: "bpmn.endEvent",
+    name: "Evento de fim",
+    group: "bpmn",
+    keywords: ["evento", "fim", "término", "círculo"],
+    width: 48,
+    height: 48,
+    create: box("ellipse", { style: { strokeWidth: 4 } }),
+  },
+  {
+    id: "bpmn.exclusiveGateway",
+    name: "Gateway exclusivo",
+    group: "bpmn",
+    keywords: ["gateway", "desvio", "decisão", "xor", "ou exclusivo"],
+    width: 64,
+    height: 64,
+    create: shape("gatewayExclusive"),
+  },
+  {
+    id: "bpmn.parallelGateway",
+    name: "Gateway paralelo",
+    group: "bpmn",
+    keywords: ["gateway", "paralelo", "and", "bifurcação", "junção"],
+    width: 64,
+    height: 64,
+    create: shape("gatewayParallel"),
+  },
+  {
+    id: "bpmn.inclusiveGateway",
+    name: "Gateway inclusivo",
+    group: "bpmn",
+    keywords: ["gateway", "inclusivo", "or", "ou"],
+    width: 64,
+    height: 64,
+    create: shape("gatewayInclusive"),
+  },
+  {
+    id: "bpmn.pool",
+    name: "Piscina com raias",
+    group: "bpmn",
+    keywords: ["piscina", "pool", "raia", "lane", "participante", "swimlane"],
+    width: 640,
+    height: 320,
+    create: pool,
+  },
+  {
+    id: "bpmn.dataObject",
+    name: "Objeto de dados",
+    group: "bpmn",
+    keywords: ["dados", "documento", "artefato", "arquivo"],
+    width: 60,
+    height: 76,
+    create: shape("note"),
+  },
+  {
+    id: "bpmn.dataStore",
+    name: "Depósito de dados",
+    group: "bpmn",
+    keywords: ["dados", "banco", "armazenamento", "base"],
+    width: 72,
+    height: 72,
+    create: shape("cylinder"),
+  },
+  {
+    id: "bpmn.messageFlow",
+    name: "Fluxo de mensagem",
+    group: "bpmn",
+    keywords: ["mensagem", "fluxo", "comunicação", "seta tracejada"],
+    width: 180,
+    height: 24,
+    create: flow({ start: "circleOutline", end: "triangleOutline" }, { strokeStyle: "dashed" }),
+  },
+  {
+    id: "bpmn.association",
+    name: "Associação",
+    group: "bpmn",
+    keywords: ["associação", "ligação", "anotação", "pontilhada"],
+    width: 180,
+    height: 24,
+    create: flow({ start: "none", end: "none" }, { strokeStyle: "dotted" }),
   },
   {
     id: "architecture.server",

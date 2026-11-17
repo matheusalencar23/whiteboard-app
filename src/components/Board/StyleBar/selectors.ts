@@ -11,6 +11,7 @@ import {
 import { getTextStyle } from "../../../lib/elements/textStyle";
 import { supportsStyle, type StyleProperty } from "../../../lib/elements/style";
 import { getCellTextTarget, type BoardState } from "../../../store/boardStore";
+import { getPoolTarget } from "../../../lib/elements/pool";
 import { getCellTextStyle } from "../../../lib/elements/shapes/table";
 
 const DRAWING_TOOLS: readonly string[] = [
@@ -35,6 +36,14 @@ export function selectSingleTable(state: BoardState): TableElement | null {
   if (state.selectedIds.length !== 1) return null;
   const element = state.elements.find((el) => el.id === state.selectedIds[0]);
   return element?.type === "table" ? element : null;
+}
+
+export function selectHasPool(state: BoardState): boolean {
+  return getPoolTarget(state.elements, state.selectedIds) !== null;
+}
+
+export function selectPoolLane(state: BoardState): boolean {
+  return getPoolTarget(state.elements, state.selectedIds)?.lane != null;
 }
 
 export function scopeSupports(scope: string, property: StyleProperty): boolean {

@@ -37,6 +37,7 @@ import {
 import { GRID_STYLES, type GridStyle } from "../lib/render/grid";
 import type { ThemeMode } from "../lib/theme";
 import { reorderElements, type OrderDirection } from "../lib/elements/order";
+import { addPoolLane, removePoolLane } from "../lib/elements/pool";
 import { INITIAL_VIEWPORT, nextZoomStep, panBy, zoomAt, zoomTo, type Viewport } from "../lib/viewport";
 
 export type Tool =
@@ -121,6 +122,7 @@ export interface BoardState {
   groupSelection: () => void;
   ungroupSelection: () => void;
   reorderSelection: (direction: OrderDirection) => void;
+  changePoolLanes: (change: "add" | "remove") => void;
   setTool: (tool: Tool) => void;
   setArrowRouting: (routing: ArrowRouting) => void;
   setArrowhead: (end: ArrowEnd, arrowhead: Arrowhead) => void;
@@ -358,6 +360,18 @@ export const useBoardStore = create<BoardState>()((set) => ({
       const elements = reorderElements(state.elements, state.selectedIds, state.editingGroupId, direction);
       if (!elements) return {};
       return { elements, past: pushPast(state.past, state.elements), future: [] };
+    }),
+  changePoolLanes: (change) =>
+    set((state) => {
+      const apply = change === "add" ? addPoolLane : removePoolLane;
+      const result = apply(state.elements, state.selectedIds);
+      if (!result) return {};
+      return {
+        elements: updateBoundArrows(result.elements, result.changedIds, state.elements),
+        selectedIds: result.selectedIds,
+        past: pushPast(state.past, state.elements),
+        future: [],
+      };
     }),
   setTool: (tool) =>
     set(tool === "selection" ? { tool } : { tool, selectedIds: [], editingGroupId: null }),

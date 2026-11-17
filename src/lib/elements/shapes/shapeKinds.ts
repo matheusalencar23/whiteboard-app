@@ -35,12 +35,21 @@ function titleBand(length: number, band: number): number {
   return Math.min(band, length / 2);
 }
 
-function laneHorizontalBand(box: Bounds): Bounds {
+export function laneHorizontalBand(box: Bounds): Bounds {
   return { ...box, width: titleBand(box.width, CONTAINER_BAND) };
 }
 
 function topBand(box: Bounds, band: number): Bounds {
   return { ...box, height: titleBand(box.height, band) };
+}
+
+const GATEWAY_MARK = 0.36;
+
+const GATEWAY_CIRCLE = 0.44;
+
+function gatewayMark(box: Bounds, share: number): Bounds {
+  const size = Math.min(box.width, box.height) * share;
+  return { x: box.x + (box.width - size) / 2, y: box.y + (box.height - size) / 2, width: size, height: size };
 }
 
 function groupRadius(box: Bounds): number {
@@ -479,6 +488,17 @@ function personParts(box: Bounds) {
 function browserBar(box: Bounds): number {
   return Math.min(36, box.height * 0.25);
 }
+
+const LANE_HORIZONTAL: ShapeKindDefinition = {
+  outline: rectFigure,
+  details(box) {
+    const band = laneHorizontalBand(box);
+    const x = band.x + band.width;
+    return [polylineFigure([{ x, y: box.y }, { x, y: box.y + box.height }])];
+  },
+  labelArea: laneHorizontalBand,
+  labelRotation: -Math.PI / 2,
+};
 
 export const SHAPE_KIND_DEFINITIONS: Record<ShapeKind, ShapeKindDefinition> = {
   terminal: {
@@ -1212,16 +1232,9 @@ export const SHAPE_KIND_DEFINITIONS: Record<ShapeKind, ShapeKindDefinition> = {
     labelArea: (box) => box,
   },
 
-  laneHorizontal: {
-    outline: rectFigure,
-    details(box) {
-      const band = laneHorizontalBand(box);
-      const x = band.x + band.width;
-      return [polylineFigure([{ x, y: box.y }, { x, y: box.y + box.height }])];
-    },
-    labelArea: laneHorizontalBand,
-    labelRotation: -Math.PI / 2,
-  },
+  laneHorizontal: LANE_HORIZONTAL,
+
+  pool: LANE_HORIZONTAL,
 
   laneVertical: {
     outline: rectFigure,
@@ -1241,5 +1254,35 @@ export const SHAPE_KIND_DEFINITIONS: Record<ShapeKind, ShapeKindDefinition> = {
       return [polylineFigure([{ x: box.x, y }, { x: box.x + box.width, y }])];
     },
     labelArea: (box) => insetX(topBand(box, GROUP_BAND), groupRadius(box)),
+  },
+
+  gatewayExclusive: {
+    outline: diamondFigure,
+    details(box) {
+      const { x, y, width: w, height: h } = gatewayMark(box, GATEWAY_MARK);
+      return [
+        polylineFigure([{ x, y }, { x: x + w, y: y + h }]),
+        polylineFigure([{ x: x + w, y }, { x, y: y + h }]),
+      ];
+    },
+    labelArea: (box) => centeredArea(box, 0.5, 0.5),
+  },
+
+  gatewayParallel: {
+    outline: diamondFigure,
+    details(box) {
+      const { x, y, width: w, height: h } = gatewayMark(box, GATEWAY_CIRCLE);
+      return [
+        polylineFigure([{ x: x + w / 2, y }, { x: x + w / 2, y: y + h }]),
+        polylineFigure([{ x, y: y + h / 2 }, { x: x + w, y: y + h / 2 }]),
+      ];
+    },
+    labelArea: (box) => centeredArea(box, 0.5, 0.5),
+  },
+
+  gatewayInclusive: {
+    outline: diamondFigure,
+    details: (box) => [{ kind: "ellipse", box: gatewayMark(box, GATEWAY_CIRCLE) }],
+    labelArea: (box) => centeredArea(box, 0.5, 0.5),
   },
 };

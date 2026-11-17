@@ -140,8 +140,12 @@ export const SHAPE_KINDS = [
   "imagePlaceholder",
   "checkbox",
   "laneHorizontal",
+  "pool",
   "laneVertical",
   "titledGroup",
+  "gatewayExclusive",
+  "gatewayParallel",
+  "gatewayInclusive",
 ] as const;
 
 export type ShapeKind = (typeof SHAPE_KINDS)[number];

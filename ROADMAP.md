@@ -6,9 +6,8 @@ Os itens concluídos saem deste arquivo: o que o app já faz está no [README.md
 
 ## Ordem sugerida
 
-1. Biblioteca de formas: [BPMN](#bpmn).
-2. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
-3. Depois: [publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm).
+1. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
+2. Depois: [publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm).
 
 ## Decisões tomadas
 
@@ -31,17 +30,14 @@ Valem para todo item novo.
 
 ### Biblioteca de formas prontas
 
-O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`compartments`) e os grupos de formas básicas, anotações, contêineres (raias e grupo com título, sem vínculo com o conteúdo), fluxograma, entidade-relacionamento, UML, arquitetura e wireframe já existem (veja o [CLAUDE.md](CLAUDE.md)). Um formato novo entra em `SHAPE_KINDS` e em `SHAPE_KIND_DEFINITIONS`, e o item, em `LIBRARY_ITEMS`. Os pacotes abaixo não precisam seguir o draw.io; ele é só inspiração. Silhuetas simples combinam com o traço de esboço; ícones detalhados (como os da AWS) não.
-
-#### BPMN
-
-- [ ] Tarefa, eventos (início, fim, intermediário), gateways (exclusivo, paralelo, inclusivo) e piscina com raias. Grupo grande. As raias já existem (`laneHorizontal` e `laneVertical`, com o título girado pelo `labelRotation`); a piscina com várias raias pode ser um item composto delas.
+O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`compartments`) e os grupos de formas básicas, anotações, contêineres (raias e grupo com título, sem vínculo com o conteúdo), fluxograma, entidade-relacionamento, UML, BPMN, arquitetura e wireframe já existem (veja o [CLAUDE.md](CLAUDE.md)). Um formato novo entra em `SHAPE_KINDS` e em `SHAPE_KIND_DEFINITIONS`, e o item, em `LIBRARY_ITEMS`. Pacotes novos não precisam seguir o draw.io; ele é só inspiração. Silhuetas simples combinam com o traço de esboço; ícones detalhados (como os da AWS) não.
 
 #### A avaliar
 
 - Acrescentar e remover seções dos `compartments` pela interface. Hoje o número de seções vem do item da biblioteca: duas na interface, três na classe.
 - Ligar a linha de vida do participante ao retângulo. Hoje os dois só estão agrupados, porque a folga das pontas ligadas (`BINDING_GAP`) deixaria a linha descolada da caixa; redimensionar o retângulo dentro do grupo não leva a linha junto.
 - Lembrar quais grupos do painel estão recolhidos, quando o catálogo crescer.
+- BPMN: marcadores dentro dos eventos (mensagem, temporizador, erro) e dos tipos de tarefa (usuário, serviço), subprocesso recolhido (com o `+`) e o nome do evento e do gateway fora da forma, embaixo, como na notação. Hoje o rótulo fica dentro, e nas formas pequenas cabe pouco.
 
 ## Persistência
 

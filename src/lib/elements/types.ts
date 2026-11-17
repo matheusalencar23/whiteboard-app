@@ -158,6 +158,21 @@ export interface CompartmentsElement extends BaseElement {
   textStyle: TextStyle;
 }
 
+export interface TableCell {
+  text: string;
+  fill?: string;
+}
+
+export interface TableElement extends BaseElement {
+  type: "table";
+  columns: number[];
+  cells: TableCell[][];
+  textStyle: TextStyle;
+  headerRow: boolean;
+  headerFill: string;
+  columnAligns?: (TextAlign | null)[];
+}
+
 export type ArrowRouting = "straight" | "elbow" | "curved";
 
 export const ARROWHEADS = [
@@ -212,6 +227,7 @@ export interface ArrowBinding {
   elementId: string;
   anchor: Point;
   fixed: boolean;
+  row?: number;
 }
 
 export interface FreedrawElement extends BaseElement {
@@ -231,6 +247,7 @@ export type BoardElement =
   | DiamondElement
   | ShapeElement
   | CompartmentsElement
+  | TableElement
   | ArrowElement
   | FreedrawElement
   | TextElement;

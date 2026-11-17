@@ -1,10 +1,11 @@
 import { FONT_SIZE_PRESETS } from "../text";
 import { setText } from "./shapes/text";
 import { fitCompartments } from "./shapes/compartments";
-import { isLabeledElement, type BoardElement, type TextStyle } from "./types";
+import { clearColumnAligns, fitTable } from "./shapes/table";
+import { isLabeledElement, type BoardElement, type TableElement, type TextStyle } from "./types";
 
 export function getTextStyle(element: BoardElement): TextStyle | null {
-  if (element.type === "text" || element.type === "compartments") return element.textStyle;
+  if (element.type === "text" || element.type === "compartments" || element.type === "table") return element.textStyle;
   if (isLabeledElement(element) && element.label) return element.label.textStyle;
   return null;
 }
@@ -20,6 +21,10 @@ export function applyTextStyle<T extends BoardElement>(element: T, patch: Partia
   if (sameStyle(current, textStyle)) return element;
   if (element.type === "text") return setText(element, element.text, textStyle) as T;
   if (element.type === "compartments") return fitCompartments({ ...element, textStyle }) as T;
+  if (element.type === "table") {
+    const table: TableElement = patch.align === undefined ? element : clearColumnAligns(element);
+    return fitTable({ ...table, textStyle }) as T;
+  }
   if (isLabeledElement(element) && element.label) {
     return { ...element, label: { ...element.label, textStyle } };
   }

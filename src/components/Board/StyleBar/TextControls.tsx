@@ -1,8 +1,5 @@
 import { useState } from "react";
 import {
-  LuAlignCenter,
-  LuAlignLeft,
-  LuAlignRight,
   LuAlignVerticalJustifyCenter,
   LuAlignVerticalJustifyEnd,
   LuAlignVerticalJustifyStart,
@@ -14,7 +11,6 @@ import styles from "./StyleBar.module.scss";
 import {
   FONT_FAMILIES,
   type FontFamily,
-  type TextAlign,
   type VerticalAlign,
 } from "../../../lib/elements/types";
 import { FONT_SIZE_PRESETS, FONT_STACKS } from "../../../lib/text";
@@ -26,6 +22,7 @@ import { AUTO_COLOR, ColorField, type Swatch } from "./ColorField";
 import { selectTextScope, styleSelectors, textSelectors } from "./selectors";
 import { OpacityField, OptionGroup, type Option } from "./StyleControls";
 import { useStylePreview } from "./useStylePreview";
+import { ALIGN_OPTIONS } from "./alignOptions";
 import { SHORTCUTS, formatShortcut } from "../shortcuts";
 
 const { palette } = theme;
@@ -63,12 +60,6 @@ const SIZE_OPTIONS: Option<number>[] = FONT_SIZE_PRESETS.map((size, i) => ({
   label: `${SIZE_LABELS[i]} (${size})`,
   icon: () => <span className={styles.sizeLabel}>{SIZE_NAMES[i]}</span>,
 }));
-
-const ALIGN_OPTIONS: Option<TextAlign>[] = [
-  { value: "left", label: "Alinhar à esquerda", icon: LuAlignLeft },
-  { value: "center", label: "Centralizar", icon: LuAlignCenter },
-  { value: "right", label: "Alinhar à direita", icon: LuAlignRight },
-];
 
 const VERTICAL_ALIGN_OPTIONS: Option<VerticalAlign>[] = [
   { value: "top", label: "Topo", icon: LuAlignVerticalJustifyStart },

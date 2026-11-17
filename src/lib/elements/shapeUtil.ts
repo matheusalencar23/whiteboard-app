@@ -84,18 +84,26 @@ function fillOptions(style: ElementStyle, seed: number): Options {
   };
 }
 
+export function drawFill(
+  ctx: CanvasRenderingContext2D,
+  style: ElementStyle,
+  seed: number,
+  draw: (options: Options) => void,
+) {
+  if (!isFilled(style)) return;
+  ctx.save();
+  ctx.globalAlpha = style.fillOpacity / 100;
+  draw(fillOptions(style, seed));
+  ctx.restore();
+}
+
 export function drawFillAndStroke(
   ctx: CanvasRenderingContext2D,
   style: ElementStyle,
   seed: number,
   draw: (options: Options) => void,
 ) {
-  if (isFilled(style)) {
-    ctx.save();
-    ctx.globalAlpha = style.fillOpacity / 100;
-    draw(fillOptions(style, seed));
-    ctx.restore();
-  }
+  drawFill(ctx, style, seed, draw);
   draw(strokeOptions(style, seed));
 }
 

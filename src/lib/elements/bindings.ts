@@ -4,6 +4,7 @@ import { distance, rotatePoint } from "../geometry/distance";
 import { routeOrthogonal, simplifyPath, type RouteEnd } from "../geometry/orthogonalRoute";
 import { getConnectionAnchors, getElementBounds, isBindable, isInsideShape } from "./registry";
 import { getArrowPoints, getFixedSegments, setArrowPoints, setFixedSegments } from "./shapes/arrow";
+import { getAnchorRow, getRowAnchor } from "./shapes/table";
 import type { ArrowBinding, ArrowElement, ArrowRouting, ArrowSegment, BoardElement } from "./types";
 
 export const BINDING_GAP = 6;
@@ -35,6 +36,10 @@ function nearestAnchor(shape: BoardElement, point: Point): Point | null {
 }
 
 function keepFixedAnchor(shape: BoardElement, binding: ArrowBinding): ArrowBinding {
+  if (shape.type === "table" && binding.row !== undefined) {
+    const anchor = getRowAnchor(shape, binding.row, binding.anchor.x < 0.5 ? "left" : "right");
+    return sameAnchor(anchor, binding.anchor) ? binding : { ...binding, anchor };
+  }
   const anchors = getConnectionAnchors(shape);
   if (anchors.length === 0 || anchors.some((anchor) => sameAnchor(anchor, binding.anchor))) return binding;
   const anchor = nearestAnchor(shape, anchorPoint(shape, binding.anchor));
@@ -77,6 +82,10 @@ function resolveBindings(
 function bindingPoint(shape: BoardElement, binding: ArrowBinding): Point {
   const center = getCenter(shape);
   const border = anchorPoint(shape, binding.anchor);
+  if (binding.row !== undefined) {
+    const outward = rotatePoint({ x: binding.anchor.x < 0.5 ? -1 : 1, y: 0 }, { x: 0, y: 0 }, shape.rotation);
+    return { x: border.x + outward.x * BINDING_GAP, y: border.y + outward.y * BINDING_GAP };
+  }
 
   const dir = { x: border.x - center.x, y: border.y - center.y };
   const length = Math.hypot(dir.x, dir.y);
@@ -409,12 +418,39 @@ export function findBinding(
   if (!anchor) return null;
   const onPoint = distance(anchorPoint(target, anchor), point) <= snapDistance;
   if (!inside && !onPoint) return null;
-  return { elementId: target.id, anchor, fixed: onPoint };
+  const row = onPoint && target.type === "table" ? getAnchorRow(target, anchor) : undefined;
+  return row === undefined ? { elementId: target.id, anchor, fixed: onPoint } : { elementId: target.id, anchor, fixed: true, row };
+}
+
+export function remapTableRowBindings(
+  elements: BoardElement[],
+  tableId: string,
+  mapRow: (row: number) => number | undefined,
+): ArrowElement[] {
+  const remap = (binding: ArrowBinding | null): ArrowBinding | null => {
+    if (binding?.elementId !== tableId || binding.row === undefined) return binding;
+    const row = mapRow(binding.row);
+    if (row === binding.row) return binding;
+    if (row !== undefined) return { ...binding, row };
+    const next = { ...binding };
+    delete next.row;
+    return next;
+  };
+  const changed: ArrowElement[] = [];
+  for (const el of elements) {
+    if (el.type !== "arrow") continue;
+    const startBinding = remap(el.startBinding);
+    const endBinding = remap(el.endBinding);
+    if (startBinding !== el.startBinding || endBinding !== el.endBinding) {
+      changed.push({ ...el, startBinding, endBinding });
+    }
+  }
+  return changed;
 }
 
 export function sameBinding(a: ArrowBinding | null, b: ArrowBinding | null): boolean {
   if (a === null || b === null) return a === b;
-  if (a.elementId !== b.elementId || a.fixed !== b.fixed) return false;
+  if (a.elementId !== b.elementId || a.fixed !== b.fixed || a.row !== b.row) return false;
   return sameAnchor(a.anchor, b.anchor);
 }
 

@@ -61,6 +61,7 @@ const ELEMENT_TYPES: Record<ElementType, true> = {
   diamond: true,
   shape: true,
   compartments: true,
+  table: true,
   arrow: true,
   freedraw: true,
   text: true,
@@ -256,6 +257,7 @@ function isValidBinding(value: unknown): boolean {
   if (value === null) return true;
   if (!isObject(value) || typeof value.elementId !== "string") return false;
   if (typeof value.fixed !== "boolean") return false;
+  if (value.row !== undefined && !(Number.isInteger(value.row) && (value.row as number) >= 0)) return false;
   const { anchor } = value;
   return isObject(anchor) && isNumber(anchor.x) && isNumber(anchor.y);
 }
@@ -318,7 +320,36 @@ function isValidElement(value: unknown): value is BoardElement {
       );
     case "shape":
       return isOneOf(SHAPE_KINDS, value.kind) && isValidLabel(value.label);
+    case "table":
+      return isValidTable(value);
   }
+}
+
+function isValidTable(value: Record<string, unknown>): boolean {
+  const { columns, cells } = value;
+  if (!Array.isArray(columns) || columns.length === 0 || !columns.every((width) => isNumber(width) && width > 0)) {
+    return false;
+  }
+  return (
+    Array.isArray(cells) &&
+    cells.length > 0 &&
+    cells.every(
+      (row) =>
+        Array.isArray(row) &&
+        row.length === columns.length &&
+        row.every(
+          (cell) =>
+            isObject(cell) && typeof cell.text === "string" && (cell.fill === undefined || typeof cell.fill === "string"),
+        ),
+    ) &&
+    (value.columnAligns === undefined ||
+      (Array.isArray(value.columnAligns) &&
+        value.columnAligns.length === columns.length &&
+        value.columnAligns.every((align) => align === null || isOneOf(TEXT_ALIGNS, align)))) &&
+    typeof value.headerRow === "boolean" &&
+    typeof value.headerFill === "string" &&
+    isValidTextStyle(value.textStyle)
+  );
 }
 
 function isValidGroupIds(value: unknown): boolean {

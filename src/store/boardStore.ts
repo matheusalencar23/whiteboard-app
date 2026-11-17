@@ -14,6 +14,7 @@ import {
 } from "../lib/elements/types";
 import { releaseBindings, setArrowRouting, updateBoundArrows, type ArrowEnd } from "../lib/elements/bindings";
 import { translateElement } from "../lib/elements/registry";
+import type { CellPosition } from "../lib/elements/shapes/table";
 import {
   getGroupMembers,
   getParentGroupId,
@@ -54,12 +55,17 @@ export interface Notice {
   tone: "info" | "error";
 }
 
+export interface TableCursor extends CellPosition {
+  elementId: string;
+}
+
 export interface BoardState {
   boardId: string | null;
   name: string;
   elements: BoardElement[];
   selectedIds: string[];
   editingGroupId: string | null;
+  tableCell: TableCursor | null;
   tool: Tool;
   viewport: Viewport;
   viewportSize: { width: number; height: number };
@@ -93,6 +99,7 @@ export interface BoardState {
 
   setSelection: (ids: string[]) => void;
   setEditingGroup: (groupId: string | null) => void;
+  setTableCell: (cursor: TableCursor | null) => void;
   exitEditingGroup: () => boolean;
   groupSelection: () => void;
   ungroupSelection: () => void;
@@ -144,6 +151,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
   elements: [],
   selectedIds: [],
   editingGroupId: null,
+  tableCell: null,
   tool: "selection",
   viewport: INITIAL_VIEWPORT,
   viewportSize: { width: 0, height: 0 },
@@ -301,6 +309,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
 
   setSelection: (selectedIds) => set({ selectedIds }),
   setEditingGroup: (editingGroupId) => set({ editingGroupId }),
+  setTableCell: (tableCell) => set({ tableCell }),
   exitEditingGroup: () => {
     const { elements, editingGroupId } = useBoardStore.getState();
     if (editingGroupId === null) return false;

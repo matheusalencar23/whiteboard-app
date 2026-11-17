@@ -11,6 +11,7 @@ import type {
   BoxElementType,
   LabeledElement,
   CompartmentsElement,
+  TableElement,
   TextElement,
   TextStyle,
 } from "../../../lib/elements/types";
@@ -61,6 +62,20 @@ import {
   setSectionText,
 } from "../../../lib/elements/shapes/compartments";
 import {
+  clampCell,
+  createTableFromRows,
+  getCellAt,
+  getCellTextArea,
+  getCellTextStyle,
+  getColumnBorderAt,
+  insertRow,
+  parseTableText,
+  setCellText,
+  setColumnWidth,
+  getColumnLefts,
+  type CellPosition,
+} from "../../../lib/elements/shapes/table";
+import {
   ROTATION_HANDLE_DISTANCE,
   ROTATION_HANDLE_RADIUS,
   ROTATION_SNAP,
@@ -105,6 +120,7 @@ const HIT_TOLERANCE = 6;
 const FREEDRAW_MIN_DISTANCE = 1;
 const BINDING_TOLERANCE = 8;
 const CONNECTION_SNAP_DISTANCE = 8;
+const COLUMN_BORDER_TOLERANCE = 4;
 
 const BOX_TOOLS: readonly string[] = ["rectangle", "ellipse", "diamond"] satisfies BoxElementType[];
 
@@ -161,6 +177,12 @@ type Interaction =
       original: ArrowElement;
       before: BoardElement[];
     }
+  | {
+      kind: "resizingColumn";
+      column: number;
+      original: TableElement;
+      before: BoardElement[];
+    }
   | { kind: "boxSelecting"; start: Point; initialSelection: string[] };
 
 type Measuring = { kind: "size" } | { kind: "angle"; groupAngle: number; at: Point };
@@ -182,7 +204,8 @@ type Editing =
       isNew: boolean;
     }
   | { kind: "label"; element: LabeledElement }
-  | { kind: "section"; element: CompartmentsElement; index: number };
+  | { kind: "section"; element: CompartmentsElement; index: number }
+  | { kind: "cell"; element: TableElement; cell: CellPosition };
 
 function getScreenPoint(e: { nativeEvent: MouseEvent }): Point {
   return { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY };
@@ -215,7 +238,32 @@ function detachFromStaying(moved: BoardElement[]): BoardElement[] {
 }
 
 function liveEditingElement(editing: Editing, text: string): BoardElement {
-  return editing.kind === "section" ? setSectionText(editing.element, editing.index, text) : editing.element;
+  if (editing.kind === "section") return setSectionText(editing.element, editing.index, text);
+  if (editing.kind === "cell") return setCellText(editing.element, editing.cell, text);
+  return editing.element;
+}
+
+function toLocal(element: BoardElement, world: Point): Point {
+  return rotatePoint(world, getCenter(element), -element.rotation);
+}
+
+function getSingleTable(): TableElement | null {
+  const [element, ...rest] = getSelectedElements();
+  return element?.type === "table" && rest.length === 0 ? element : null;
+}
+
+function getColumnBorderHit(world: Point, zoom: number): { table: TableElement; column: number } | null {
+  const table = getSingleTable();
+  if (!table) return null;
+  const column = getColumnBorderAt(table, toLocal(table, world), COLUMN_BORDER_TOLERANCE / zoom);
+  return column === null ? null : { table, column };
+}
+
+function nextCell(table: TableElement, cell: CellPosition, backwards: boolean): CellPosition | null {
+  const columns = table.columns.length;
+  const index = cell.row * columns + cell.column + (backwards ? -1 : 1);
+  if (index < 0) return null;
+  return { row: Math.floor(index / columns), column: index % columns };
 }
 
 function editorLayout(editing: Editing, text: string): TextEditorLayout {
@@ -229,13 +277,30 @@ function editorLayout(editing: Editing, text: string): TextEditorLayout {
     const live = setSectionText(editing.element, editing.index, text);
     return { kind: "label", area: getSectionTextArea(live, editing.index), rotation, pivot: getCenter(live) };
   }
+  if (editing.kind === "cell") {
+    const live = setCellText(editing.element, editing.cell, text);
+    return { kind: "label", area: getCellTextArea(live, editing.cell), rotation, pivot: getCenter(live) };
+  }
   const area = getLabelArea(editing.element) ?? editing.element;
   return { kind: "label", area, rotation, pivot: getCenter(editing.element) };
+}
+
+function editorKey(editing: Editing): string {
+  if (editing.kind === "section") return `${editing.element.id}:${editing.index}`;
+  if (editing.kind === "cell") return `${editing.element.id}:${editing.cell.row}:${editing.cell.column}`;
+  return editing.element.id;
+}
+
+function activeCellOf(table: TableElement): CellPosition {
+  const { tableCell } = useBoardStore.getState();
+  if (tableCell?.elementId !== table.id) return { row: 0, column: 0 };
+  return clampCell(table, tableCell);
 }
 
 function editorInitialText(editing: Editing): string {
   if (editing.kind === "text") return editing.element.text;
   if (editing.kind === "section") return editing.element.sections[editing.index].text;
+  if (editing.kind === "cell") return editing.element.cells[editing.cell.row][editing.cell.column].text;
   return editing.element.label?.text ?? "";
 }
 
@@ -249,7 +314,13 @@ function createStyledText(position: Point, text = ""): TextElement {
   return withCurrentStyle(createText(position, textStyle, text));
 }
 
-function createPastedText(raw: string, center: Point): TextElement {
+function createPastedText(raw: string, center: Point): BoardElement {
+  const rows = parseTableText(raw);
+  if (rows) {
+    const { currentTextStyle } = useBoardStore.getState();
+    const table = withCurrentStyle(createTableFromRows(rows, center, { ...currentTextStyle, verticalAlign: "middle" }));
+    return { ...table, style: { ...table.style, fillStyle: "solid" } };
+  }
   const text = raw.replace(/\r\n?/g, "\n").replace(/\s+$/, "");
   const element = createStyledText(center, text);
   return { ...element, x: center.x - element.width / 2, y: center.y - element.height / 2 };
@@ -268,6 +339,7 @@ function labelTextStyle(element: LabeledElement): TextStyle {
 function editorTextStyle(editing: Editing): TextStyle {
   if (editing.kind === "text") return editing.element.textStyle;
   if (editing.kind === "section") return getSectionTextStyle(editing.element, editing.index);
+  if (editing.kind === "cell") return getCellTextStyle(editing.element, editing.cell.row, editing.cell.column);
   return getLabelTextStyle(editing.element, labelTextStyle(editing.element));
 }
 
@@ -418,7 +490,7 @@ export function Canvas() {
           ? { ...el, label: { text: editingText, textStyle } }
           : el,
       );
-    } else if (editing?.kind === "section") {
+    } else if (editing?.kind === "section" || editing?.kind === "cell") {
       const live = liveEditingElement(editing, editingText);
       visible = elements.map((el) => (el.id === live.id ? live : el));
     }
@@ -434,6 +506,13 @@ export function Canvas() {
     () => (editingGroupId ? getSelectionBounds(getGroupMembers(elements, editingGroupId)) : null),
     [elements, editingGroupId],
   );
+
+  const tableCell = useBoardStore((s) => s.tableCell);
+  const activeCell = useMemo(() => {
+    const [table, ...rest] = selected;
+    if (table?.type !== "table" || rest.length > 0 || tableCell?.elementId !== table.id) return null;
+    return { table, cell: clampCell(table, tableCell) };
+  }, [selected, tableCell]);
 
   const showBindingTarget = tool === "arrow" || isInteracting;
   const bindingTarget = useMemo(
@@ -472,9 +551,12 @@ export function Canvas() {
             ? { id: editing.element.id, text: "label" }
             : editing?.kind === "section"
               ? { id: editing.element.id, text: editing.index }
-              : null,
+              : editing?.kind === "cell"
+                ? { id: editing.element.id, text: editing.cell }
+                : null,
         editingGroup: editingGroupBounds,
         measurement: getMeasurement(measuring, selected),
+        activeCell,
       },
       viewport,
       dpr,
@@ -493,6 +575,7 @@ export function Canvas() {
     bindingTarget,
     bindingHint,
     editingGroupBounds,
+    activeCell,
     viewport,
     size,
     fontsLoaded,
@@ -515,13 +598,55 @@ export function Canvas() {
     setEditing({ kind: "section", element, index });
   }
 
+  function startEditingCell(element: TableElement, cell: CellPosition) {
+    const store = useBoardStore.getState();
+    store.setSelection([]);
+    store.setTableCell({ elementId: element.id, ...cell });
+    setEditingText(element.cells[cell.row][cell.column].text);
+    setEditing({ kind: "cell", element, cell });
+  }
+
   function finishEditing(text: string) {
     const current = editing;
     setEditing(null);
     if (!current) return;
     if (current.kind === "label") finishEditingLabel(current.element.id, text);
     else if (current.kind === "section") finishEditingSection(current.element.id, current.index, text);
+    else if (current.kind === "cell") finishEditingCell(current.element.id, current.cell, text);
     else finishEditingText(current, text);
+  }
+
+  function commitCellText(id: string, cell: CellPosition, text: string, extend: boolean): TableElement | null {
+    const store = useBoardStore.getState();
+    const table = store.elements.find((el) => el.id === id);
+    if (table?.type !== "table" || cell.row >= table.cells.length || cell.column >= table.columns.length) return null;
+    let updated = setCellText(table, cell, text);
+    if (extend) updated = insertRow(updated, updated.cells.length);
+    if (updated !== table) store.replaceElement(updated);
+    return updated;
+  }
+
+  function finishEditingCell(id: string, cell: CellPosition, text: string) {
+    const store = useBoardStore.getState();
+    if (commitCellText(id, cell, text, false)) store.setSelection([id]);
+    store.setTool("selection");
+  }
+
+  function navigateCell(text: string, backwards: boolean) {
+    const current = editing;
+    if (current?.kind !== "cell") return;
+    const target = nextCell(current.element, current.cell, backwards);
+    if (!target) {
+      finishEditing(text);
+      return;
+    }
+    const extend = target.row >= current.element.cells.length;
+    const updated = commitCellText(current.element.id, current.cell, text, extend);
+    if (!updated) {
+      setEditing(null);
+      return;
+    }
+    startEditingCell(updated, target);
   }
 
   function finishEditingSection(id: string, index: number, text: string) {
@@ -644,7 +769,21 @@ export function Canvas() {
       return;
     }
 
+    const border = !shiftKey && getColumnBorderHit(world, zoom);
+    if (border) {
+      interactionRef.current = {
+        kind: "resizingColumn",
+        column: border.column,
+        original: border.table,
+        before: store.elements,
+      };
+      return;
+    }
+
     const hit = getElementAtPoint(store.elements, world, tolerance);
+    if (hit?.type === "table") {
+      store.setTableCell({ elementId: hit.id, ...getCellAt(hit, toLocal(hit, world)) });
+    }
     if (hit) {
       const unit = getSelectionUnit(store.elements, hit, currentEditingGroup(hit));
       const isSelected = store.selectedIds.includes(hit.id);
@@ -750,6 +889,7 @@ export function Canvas() {
     const handle = boxFrame && getHandleAt(world, boxFrame, zoom);
     if (boxFrame && handle) return setHoverCursor(getHandleCursor(handle, boxFrame.rotation));
 
+    if (getColumnBorderHit(world, zoom)) return setHoverCursor("col-resize");
     const overSelection = frame && frameContains(frame, world, zoom);
     const overElement = getElementAtPoint(store.elements, world, HIT_TOLERANCE / zoom);
     setHoverCursor(overSelection || overElement ? "move" : "default");
@@ -885,6 +1025,13 @@ export function Canvas() {
         break;
       }
 
+      case "resizingColumn": {
+        const { original, column } = interaction;
+        const left = getColumnLefts(original)[column];
+        store.updateElements([setColumnWidth(original, column, toLocal(original, world).x - left)]);
+        break;
+      }
+
       case "boxSelecting": {
         const box = getBounds([interaction.start, world]);
         setSelectionBox(box);
@@ -906,6 +1053,7 @@ export function Canvas() {
     if (!element || rest.length > 0) return false;
     if (element.type === "text") startEditingText(element, false);
     else if (element.type === "compartments") startEditingSection(element, 0);
+    else if (element.type === "table") startEditingCell(element, activeCellOf(element));
     else if (isLabeledElement(element)) startEditingLabel(element);
     else return false;
     return true;
@@ -954,6 +1102,7 @@ export function Canvas() {
       case "draggingPoint":
       case "draggingSegment":
       case "draggingLabel":
+      case "resizingColumn":
         store.commitHistory(interaction.before);
         break;
     }
@@ -971,7 +1120,8 @@ export function Canvas() {
       interaction?.kind === "draggingEndpoint" ||
       interaction?.kind === "draggingPoint" ||
       interaction?.kind === "draggingSegment" ||
-      interaction?.kind === "draggingLabel"
+      interaction?.kind === "draggingLabel" ||
+      interaction?.kind === "resizingColumn"
     ) {
       useBoardStore.getState().updateElements([interaction.original]);
     }
@@ -1016,6 +1166,8 @@ export function Canvas() {
       startEditingText(hit, false);
     } else if (hit?.type === "compartments") {
       startEditingSection(hit, getSectionAt(hit, rotatePoint(world, getCenter(hit), -hit.rotation)));
+    } else if (hit?.type === "table") {
+      startEditingCell(hit, getCellAt(hit, toLocal(hit, world)));
     } else if (shape && isLabeledElement(shape)) {
       startEditingLabel(shape);
     } else if (!hit) {
@@ -1079,7 +1231,7 @@ export function Canvas() {
       {!editing && !isInteracting && <StyleBar placement={styleBarPlacement} viewportWidth={size.width} />}
       {editing && (
         <TextEditor
-          key={editing.kind === "section" ? `${editing.element.id}:${editing.index}` : editing.element.id}
+          key={editorKey(editing)}
           initialText={editorInitialText(editing)}
           textStyle={editorTextStyle(editing)}
           color={resolveTextColor(editorTextStyle(editing), editing.element)}
@@ -1087,6 +1239,7 @@ export function Canvas() {
           viewport={viewport}
           onChange={setEditingText}
           onSubmit={finishEditing}
+          onTab={editing.kind === "cell" ? navigateCell : undefined}
         />
       )}
     </>

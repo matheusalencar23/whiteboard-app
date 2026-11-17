@@ -1,6 +1,7 @@
 import type { RoughCanvas } from "roughjs/bin/canvas";
 import { expandBounds, getCenter, type Bounds } from "../geometry/bounds";
-import type { ArrowElement, BoardElement } from "../elements/types";
+import type { ArrowElement, BoardElement, TableElement } from "../elements/types";
+import { getCellRect, type CellPosition } from "../elements/shapes/table";
 import { getConnectionAnchors, renderElement, type HiddenText } from "../elements/registry";
 import { anchorPoint, isSegmentFixed } from "../elements/bindings";
 import type { Point } from "../types";
@@ -36,6 +37,7 @@ export interface SceneOverlay {
   hiddenText: { id: string; text: HiddenText } | null;
   editingGroup: Bounds | null;
   measurement: Measurement | null;
+  activeCell: { table: TableElement; cell: CellPosition } | null;
 }
 
 const CONNECTION_POINT_RADIUS = 4;
@@ -45,6 +47,10 @@ const SELECTION_LINE_WIDTH = 1.5;
 const BINDING_HIGHLIGHT_PADDING = 4;
 
 const EDITING_GROUP_PADDING = 10;
+
+const ACTIVE_CELL_INSET = 2;
+
+const ACTIVE_CELL_LINE_WIDTH = 2;
 
 function tracePolygon(ctx: CanvasRenderingContext2D, points: Point[]) {
   points.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
@@ -188,6 +194,15 @@ function renderOverlay(ctx: CanvasRenderingContext2D, overlay: SceneOverlay, zoo
     ctx.globalAlpha = 0.5;
     ctx.setLineDash([8 / zoom, 6 / zoom]);
     strokeFrame(ctx, expandBounds(overlay.editingGroup, EDITING_GROUP_PADDING / zoom));
+    ctx.restore();
+  }
+
+  if (overlay.activeCell && overlay.showHandles) {
+    const { table, cell } = overlay.activeCell;
+    const rect = expandBounds(getCellRect(table, cell), -ACTIVE_CELL_INSET / zoom);
+    ctx.save();
+    ctx.lineWidth = ACTIVE_CELL_LINE_WIDTH / zoom;
+    withFrame(ctx, getElementFrame(table), () => ctx.strokeRect(rect.x, rect.y, rect.width, rect.height));
     ctx.restore();
   }
 

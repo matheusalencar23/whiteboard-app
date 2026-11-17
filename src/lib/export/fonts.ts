@@ -21,6 +21,7 @@ export function collectFontUsage(elements: BoardElement[]): FontUsage {
   for (const el of elements) {
     if (el.type === "text") add(el.textStyle.fontFamily, el.text);
     else if (el.type === "compartments") el.sections.forEach((section) => add(el.textStyle.fontFamily, section.text));
+    else if (el.type === "table") el.cells.flat().forEach((cell) => add(el.textStyle.fontFamily, cell.text));
     else if ("label" in el && el.label) add(el.label.textStyle.fontFamily, el.label.text);
   }
   return usage;

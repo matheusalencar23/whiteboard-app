@@ -10,35 +10,17 @@ import {
   type FillStyle,
   type StrokeStyle,
 } from "../../../lib/elements/types";
-import { theme } from "../../../lib/theme";
 import { useBoardStore } from "../../../store/boardStore";
 import { IconButton } from "../../../ui/IconButton/IconButton";
 import { PanelSection } from "../../../ui/Panel/Panel";
 import { ArrowheadPicker } from "./ArrowheadPicker";
-import { ColorField, type Swatch } from "./ColorField";
+import { ColorField } from "./ColorField";
+import { FILL_SWATCHES, STROKE_SWATCHES } from "./swatches";
 import { ROUTING_OPTIONS } from "./routing";
 import { arrowSelectors, scopeSupports, selectScope, styleSelectors } from "./selectors";
 import { CornerStyleIcon, FillStyleIcon, RoughnessIcon, StrokeStyleIcon, StrokeWidthIcon } from "./StyleIcons";
 import { useStylePreview } from "./useStylePreview";
 
-const { palette } = theme;
-
-const STROKE_SWATCHES: Swatch[] = [
-  { color: palette.ink, label: "Preto" },
-  { color: palette.red, label: "Vermelho" },
-  { color: palette.green, label: "Verde" },
-  { color: palette.blue, label: "Azul" },
-  { color: palette.amber, label: "Âmbar" },
-];
-
-const FILL_SWATCHES: Swatch[] = [
-  { color: TRANSPARENT, label: "Sem preenchimento" },
-  { color: palette.paper, label: "Branco" },
-  { color: palette.redLight, label: "Vermelho claro" },
-  { color: palette.greenLight, label: "Verde claro" },
-  { color: palette.blueLight, label: "Azul claro" },
-  { color: palette.amberLight, label: "Âmbar claro" },
-];
 
 export interface Option<T> {
   value: T;

@@ -27,6 +27,7 @@ import { ellipseUtil } from "./shapes/ellipse";
 import { diamondUtil } from "./shapes/diamond";
 import { shapeUtil } from "./shapes/shape";
 import { drawCompartmentsText, compartmentsUtil } from "./shapes/compartments";
+import { drawTableText, tableUtil, type CellPosition } from "./shapes/table";
 import { arrowUtil } from "./shapes/arrow";
 import { freedrawUtil } from "./shapes/freedraw";
 import { resolveTextColor, textUtil } from "./shapes/text";
@@ -37,6 +38,7 @@ const shapeUtils: { [K in ElementType]: ShapeUtil<ElementOfType<K>> } = {
   diamond: diamondUtil,
   shape: shapeUtil,
   compartments: compartmentsUtil,
+  table: tableUtil,
   arrow: arrowUtil,
   freedraw: freedrawUtil,
   text: textUtil,
@@ -159,7 +161,7 @@ function clipOutsideArrowLabel(
   return true;
 }
 
-export type HiddenText = "label" | number | null;
+export type HiddenText = "label" | number | CellPosition | null;
 
 export function renderElement(
   element: BoardElement,
@@ -183,6 +185,7 @@ export function renderElement(
   if (clipped) ctx.restore();
   if (showLabel) drawLabel(element, ctx);
   if (element.type === "compartments") drawCompartmentsText(element, ctx, typeof hiddenText === "number" ? hiddenText : null);
+  if (element.type === "table") drawTableText(element, ctx, typeof hiddenText === "object" ? hiddenText : null);
   ctx.restore();
 }
 

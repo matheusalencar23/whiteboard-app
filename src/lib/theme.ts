@@ -46,6 +46,7 @@ export interface Theme {
   palette: {
     ink: string;
     paper: string;
+    grayLight: string;
     red: string;
     green: string;
     blue: string;
@@ -107,6 +108,7 @@ export const notebookTheme: Theme = {
   palette: {
     ink: "#1f2328",
     paper: "#ffffff",
+    grayLight: "#e6e8ec",
     red: "#c9463d",
     green: "#3a8a5c",
     blue: "#3f6fc4",

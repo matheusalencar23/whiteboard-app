@@ -5,6 +5,7 @@ import {
   type BoardElement,
   type ElementStyle,
   type ElementType,
+  type TableElement,
   type TextStyle,
 } from "../../../lib/elements/types";
 import { getTextStyle } from "../../../lib/elements/textStyle";
@@ -27,6 +28,12 @@ export function selectScope(state: BoardState): string {
     return [...types].sort().join(",");
   }
   return DRAWING_TOOLS.includes(state.tool) ? state.tool : "";
+}
+
+export function selectSingleTable(state: BoardState): TableElement | null {
+  if (state.selectedIds.length !== 1) return null;
+  const element = state.elements.find((el) => el.id === state.selectedIds[0]);
+  return element?.type === "table" ? element : null;
 }
 
 export function scopeSupports(scope: string, property: StyleProperty): boolean {

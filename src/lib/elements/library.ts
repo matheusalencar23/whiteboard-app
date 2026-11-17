@@ -6,6 +6,7 @@ import { createArrow } from "./shapes/arrow";
 import { createShape } from "./shapes/shape";
 import { createCompartments } from "./shapes/compartments";
 import { createText } from "./shapes/text";
+import { createTable } from "./shapes/table";
 import { theme } from "../theme";
 import type {
   BoardElement,
@@ -137,6 +138,13 @@ function card(bounds: Bounds, textStyle: TextStyle): LibraryPart[] {
   ];
 }
 
+const TABLE_ROWS = [["Coluna 1", "Coluna 2", "Coluna 3"], ["", "", ""], ["", "", ""]];
+
+function table(bounds: Bounds, textStyle: TextStyle): LibraryPart[] {
+  const element = createTable(bounds, TABLE_ROWS, { ...textStyle, verticalAlign: "middle" });
+  return [{ element, style: { fillStyle: "solid" } }];
+}
+
 export const LIBRARY_ITEMS: LibraryItem[] = [
   {
     id: "basic.triangle",
@@ -227,6 +235,15 @@ export const LIBRARY_ITEMS: LibraryItem[] = [
     width: 120,
     height: 110,
     create: shape("cube"),
+  },
+  {
+    id: "basic.table",
+    name: "Tabela",
+    group: "basic",
+    keywords: ["planilha", "grade", "linhas", "colunas", "células", "comparação"],
+    width: 360,
+    height: 120,
+    create: table,
   },
   {
     id: "annotations.speechBubble",

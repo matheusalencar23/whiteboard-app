@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import type { IconType } from "react-icons";
-import { LuEllipsis, LuType } from "react-icons/lu";
+import { LuEllipsis, LuTable, LuType } from "react-icons/lu";
 import styles from "./StyleBar.module.scss";
 import { TRANSPARENT } from "../../../lib/elements/types";
 import type { Bounds } from "../../../lib/geometry/bounds";
@@ -9,9 +9,17 @@ import { IconButton } from "../../../ui/IconButton/IconButton";
 import { Panel } from "../../../ui/Panel/Panel";
 import { Popover } from "../../../ui/Popover/Popover";
 import { ROUTING_OPTIONS } from "./routing";
-import { arrowSelectors, scopeSupports, selectScope, selectTextScope, styleSelectors } from "./selectors";
+import {
+  arrowSelectors,
+  scopeSupports,
+  selectScope,
+  selectSingleTable,
+  selectTextScope,
+  styleSelectors,
+} from "./selectors";
 import { ArrowControls, FillControls, StrokeControls } from "./StyleControls";
 import { TextControls } from "./TextControls";
+import { TableControls } from "./TableControls";
 
 const BAR_GAP = 12;
 const VIEWPORT_MARGIN = 8;
@@ -98,6 +106,7 @@ function StyleBarContent({
   const fillColor = useBoardStore(styleSelectors.fillColor);
   const defaultRouting = useBoardStore((s) => s.arrowRouting);
   const routing = useBoardStore(arrowSelectors.routing) ?? defaultRouting;
+  const hasTable = useBoardStore((s) => selectSingleTable(s) !== null);
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -131,6 +140,11 @@ function StyleBarContent({
       {scopeSupports(scope, "fillColor") && (
         <StyleGroup label="Preenchimento" icon={fillIcon}>
           <FillControls />
+        </StyleGroup>
+      )}
+      {hasTable && (
+        <StyleGroup label="Tabela" icon={LuTable}>
+          <TableControls />
         </StyleGroup>
       )}
       {textScope !== "" && (

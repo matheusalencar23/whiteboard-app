@@ -6,9 +6,9 @@ Os itens concluídos saem deste arquivo: o que o app já faz está no [README.md
 
 ## Ordem sugerida
 
-1. A decidir: [tabelas](#tabelas). Também serviria à entidade ER.
-2. [Tema escuro](#tema-escuro).
-3. Biblioteca de formas: [contêineres só de desenho](#contêineres).
+1. [Tema escuro](#tema-escuro).
+2. Biblioteca de formas: [contêineres só de desenho](#contêineres).
+3. A decidir: [entidade ER como tabela](#tabelas).
 4. Depois: [contêineres com conteúdo vinculado](#contêineres) e [BPMN](#bpmn).
 5. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
 6. Depois: [publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm).
@@ -51,18 +51,10 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
 
 ### Tabelas
 
-- [ ] **A decidir.** Proposta:
-  - **O quê:** uma tabela de verdade, com linhas e colunas, para comparações, listas, planilhas pequenas e entidades de banco com colunas (chave, nome, tipo), como a tabela do draw.io. Inserida pela biblioteca (3×3) e criada ao colar dados de uma planilha.
-  - **Nome do tipo:** `table`. Os compartimentos, que usavam esse nome, já foram renomeados para `compartments`.
-  - **Modelo:** larguras das colunas (`columns: number[]`), células (`cells: { text }[][]`), um `textStyle` para a tabela inteira e `headerRow` (a primeira linha em negrito e com o preenchimento). A altura de cada linha não é guardada: sai do texto mais alto da linha, como as seções da entidade (a última linha fica com a sobra). Largura do elemento é a soma das colunas; redimensionar escala as colunas.
-  - **Desenho:** contorno e linhas internas com o roughjs (um traço por borda, com `seed` derivado), texto com o `drawTextLines`. Clique em qualquer ponto da tabela seleciona, como a entidade.
-  - **Edição:** duplo clique edita a célula sob o cursor, com o mesmo `<textarea>` dos rótulos. `Tab` e `Shift+Tab` passam para a célula seguinte e a anterior (criando uma linha nova depois da última célula, como em editores de texto); `Ctrl+Enter` e `Esc` terminam.
-  - **Estrutura:** com a tabela selecionada, a barra de estilo ganha um grupo "Tabela" (inserir linha acima ou abaixo, coluna à esquerda ou à direita, apagar linha ou coluna), que age sobre a última célula clicada (um cursor de célula guardado no Canvas). Arrastar uma borda interna entre colunas muda a largura (uma `Interaction` nova).
-  - **Colar:** texto separado por tabulações (o que planilhas e tabelas HTML colocam na área de transferência) vira uma tabela no `useClipboard`, em vez de um texto solto. Pequeno e muito útil.
-  - **Ligações:** de início, as setas ligam nos meios dos lados da tabela. Depois, pontos de conexão por linha (esquerda e direita de cada linha), para ligar chaves estrangeiras no ER; isso esbarra no mesmo problema de pontos que mudam de fração quando as linhas mudam de altura, e talvez peça guardar o índice da linha na ligação.
-  - **Fora do escopo:** mesclar células, estilo por célula e fórmulas.
-  - **Custo:** médio a grande, em etapas: (1) modelo, desenho, edição com `Tab`, item na biblioteca e colar de planilha; (2) inserir e apagar linhas e colunas e redimensionar colunas; (3) cabeçalho destacado e alinhamento por coluna; (4) pontos de conexão por linha.
-  - **Relação com a entidade:** a entidade ER poderia virar uma tabela de duas ou três colunas, e os compartimentos ficariam para a classe UML.
+A tabela (`table`) está completa (veja o [CLAUDE.md](CLAUDE.md)). Fica:
+
+- [ ] **A decidir:** a entidade ER passar a ser uma tabela de duas ou três colunas (chave, nome, tipo), agora que as setas ligam em cada linha, deixando os compartimentos só para a classe e a interface UML.
+- **Fora do escopo:** mesclar células, estilo de texto por célula e fórmulas.
 
 ## Visual
 

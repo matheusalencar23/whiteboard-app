@@ -25,6 +25,7 @@ interface TextEditorProps {
   viewport: Viewport;
   onChange?: (text: string) => void;
   onSubmit: (text: string) => void;
+  onTab?: (text: string, backwards: boolean) => void;
 }
 
 export function TextEditor({
@@ -35,6 +36,7 @@ export function TextEditor({
   viewport,
   onChange,
   onSubmit,
+  onTab,
 }: TextEditorProps) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const submittedRef = useRef(false);
@@ -54,6 +56,13 @@ export function TextEditor({
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Tab" && onTab && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      if (submittedRef.current) return;
+      submittedRef.current = true;
+      onTab(text, e.shiftKey);
+      return;
+    }
     if (e.key === "Escape" || (e.key === "Enter" && (e.ctrlKey || e.metaKey))) {
       e.preventDefault();
       submit();

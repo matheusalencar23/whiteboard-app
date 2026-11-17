@@ -11,6 +11,13 @@ const DUPLICATE_OFFSET = 20;
 const NUDGE_STEP = 1;
 const NUDGE_STEP_FAR = 10;
 
+const ORDER_KEYS = new Map([
+  ["]", true],
+  ["}", true],
+  ["[", false],
+  ["{", false],
+]);
+
 const NUDGE_DIRECTIONS: Record<string, Point> = {
   arrowup: { x: 0, y: -1 },
   arrowdown: { x: 0, y: 1 },
@@ -53,6 +60,9 @@ export function useShortcuts() {
           store.setTextStyle({ underline: textSelectors.underline(store) !== true });
         } else if (hasText && e.shiftKey && (e.code === "Period" || e.code === "Comma")) {
           store.stepTextSize(e.code === "Period" ? 1 : -1);
+        } else if (ORDER_KEYS.has(key)) {
+          const up = ORDER_KEYS.get(key);
+          store.reorderSelection(e.shiftKey ? (up ? "front" : "back") : up ? "forward" : "backward");
         } else if (key === "=" || key === "+") store.stepZoom(1);
         else if (key === "-" || key === "_") store.stepZoom(-1);
         else if (key === "0") store.resetZoom();

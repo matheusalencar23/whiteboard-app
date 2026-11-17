@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import type { IconType } from "react-icons";
-import { LuEllipsis, LuTable, LuType } from "react-icons/lu";
+import { LuEllipsis, LuLayers, LuTable, LuType } from "react-icons/lu";
 import styles from "./StyleBar.module.scss";
 import { TRANSPARENT } from "../../../lib/elements/types";
 import type { Bounds } from "../../../lib/geometry/bounds";
@@ -22,6 +22,7 @@ import {
 import { ArrowControls, FillControls, StrokeControls } from "./StyleControls";
 import { TextControls } from "./TextControls";
 import { TableControls } from "./TableControls";
+import { OrderControls } from "./OrderControls";
 
 const BAR_GAP = 12;
 const VIEWPORT_MARGIN = 8;
@@ -111,6 +112,7 @@ function StyleBarContent({
   const defaultRouting = useBoardStore((s) => s.arrowRouting);
   const routing = useBoardStore(arrowSelectors.routing) ?? defaultRouting;
   const hasTable = useBoardStore((s) => selectSingleTable(s) !== null);
+  const hasSelection = useBoardStore((s) => s.selectedIds.length > 0);
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -159,6 +161,11 @@ function StyleBarContent({
       {scope.split(",").includes("arrow") && (
         <StyleGroup label="Seta" icon={routingIcon}>
           <ArrowControls />
+        </StyleGroup>
+      )}
+      {hasSelection && (
+        <StyleGroup label="Ordem" icon={LuLayers}>
+          <OrderControls />
         </StyleGroup>
       )}
     </div>

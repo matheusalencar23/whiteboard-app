@@ -6,10 +6,9 @@ Os itens concluídos saem deste arquivo: o que o app já faz está no [README.md
 
 ## Ordem sugerida
 
-1. [Ordem de desenho](#ordem-de-desenho).
-2. Biblioteca de formas: [BPMN](#bpmn).
-3. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
-4. Depois: [publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm).
+1. Biblioteca de formas: [BPMN](#bpmn).
+2. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
+3. Depois: [publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm).
 
 ## Decisões tomadas
 
@@ -27,19 +26,6 @@ Valem para todo item novo.
 - Os elementos guardam as cores do tema claro. O tema escuro só muda o desenho (`adaptColor`), e o canvas não é invertido por filtro CSS, porque isso inverteria também a seleção e a grade e faria a cor desenhada não bater com a escolhida.
 - O board vai virar uma biblioteca npm (veja [Publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm)). Código novo do board não deve depender das rotas, do `localStorage`, do `document` inteiro ou do tamanho da janela: navegação e persistência entram por funções e callbacks, os eventos de teclado ficam presos ao board e as medidas vêm do contêiner, não de `100vw`/`100vh`. Cada funcionalidade nova deve poder ser desligada pela configuração da biblioteca: botão, atalho e entrada na ajuda saem de um mesmo lugar (como `tools.ts` e `shortcuts.ts`), para serem escondidos juntos.
 - O atalho de exportar imagem é `Ctrl+Shift+E`, como no Excalidraw, mesmo abrindo o monitor de rede no Firefox (a página não consegue impedir). Lá, vale o botão.
-
-## Edição
-
-### Ordem de desenho
-
-- [ ] **O quê:** trazer para frente, levar para trás, trazer um passo e levar um passo, sobre a seleção.
-- **Como:**
-  - **Modelo:** a ordem de desenho já é a ordem do array `elements`, então não há campo novo nem mudança na persistência. Quatro ações na store, cada uma num passo do histórico, que devolvem um array novo com os elementos selecionados reposicionados, mantendo a ordem relativa entre eles.
-  - **Grupos:** o agrupamento junta os membros na ordem de desenho, então a ordem trabalha com as unidades da seleção (`getSelectionUnit`): um grupo anda como um bloco e não é partido. Dentro de um grupo (`editingGroupId`), a ordem só muda entre os membros dele, sem sair da faixa do grupo.
-  - **Um passo:** pula a próxima unidade que se sobrepõe à seleção (pela caixa, `getElementBounds`), como no Excalidraw. Pular uma unidade que nem encosta na seleção não muda nada na tela e parece que o comando falhou.
-  - **Pontos de entrada:** um grupo "Ordem" na barra de estilo, com os quatro botões, e os atalhos do Excalidraw (`Ctrl+Shift+]` e `Ctrl+Shift+[` para a frente e o fundo, `Ctrl+]` e `Ctrl+[` para um passo), no `shortcuts.ts`, no `useShortcuts` e na ajuda. Os atalhos usam o `e.code` (`BracketRight`/`BracketLeft`), porque o caractere dos colchetes muda com o layout do teclado (no ABNT2 fica em outra tecla e com outro `e.key` com Shift).
-  - **Lápis e setas:** sem tratamento especial. As setas ligadas não dependem da ordem.
-- **Por quê:** os contêineres (raias e grupo com título) costumam ficar atrás das formas. Hoje um contêiner preenchido, ou inserido depois das formas, cobre o que já estava no quadro, e não há como mandá-lo para trás. Vale também para qualquer sobreposição de formas.
 
 ## Diagramas
 

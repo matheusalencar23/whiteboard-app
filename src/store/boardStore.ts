@@ -36,6 +36,7 @@ import {
 } from "../lib/persistence";
 import { GRID_STYLES, type GridStyle } from "../lib/render/grid";
 import type { ThemeMode } from "../lib/theme";
+import { reorderElements, type OrderDirection } from "../lib/elements/order";
 import { INITIAL_VIEWPORT, nextZoomStep, panBy, zoomAt, zoomTo, type Viewport } from "../lib/viewport";
 
 export type Tool =
@@ -119,6 +120,7 @@ export interface BoardState {
   exitEditingGroup: () => boolean;
   groupSelection: () => void;
   ungroupSelection: () => void;
+  reorderSelection: (direction: OrderDirection) => void;
   setTool: (tool: Tool) => void;
   setArrowRouting: (routing: ArrowRouting) => void;
   setArrowhead: (end: ArrowEnd, arrowhead: Arrowhead) => void;
@@ -348,6 +350,12 @@ export const useBoardStore = create<BoardState>()((set) => ({
   ungroupSelection: () =>
     set((state) => {
       const elements = ungroupElements(state.elements, state.selectedIds, state.editingGroupId);
+      if (!elements) return {};
+      return { elements, past: pushPast(state.past, state.elements), future: [] };
+    }),
+  reorderSelection: (direction) =>
+    set((state) => {
+      const elements = reorderElements(state.elements, state.selectedIds, state.editingGroupId, direction);
       if (!elements) return {};
       return { elements, past: pushPast(state.past, state.elements), future: [] };
     }),

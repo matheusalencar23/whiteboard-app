@@ -1,7 +1,7 @@
 .divider {
     display: block;
     flex-shrink: 0;
-    background: var(--color-border);
+    background: var(--wb-color-border);
 
     &[data-orientation="horizontal"] {
         width: 100%;

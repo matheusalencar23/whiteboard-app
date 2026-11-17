@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
+import { usePortalContainer } from "../portal";
 import { LuX } from "react-icons/lu";
 import styles from "./Modal.module.scss";
 import { IconButton } from "../IconButton/IconButton";
@@ -34,6 +35,7 @@ function trapFocus(e: React.KeyboardEvent, container: HTMLElement) {
 }
 
 export function Modal({ title, onClose, closeKeys = ["Escape"], className, children }: ModalProps) {
+  const portalContainer = usePortalContainer();
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
 
@@ -80,6 +82,6 @@ export function Modal({ title, onClose, closeKeys = ["Escape"], className, child
         <div className={styles.body}>{children}</div>
       </div>
     </div>,
-    document.body,
+    portalContainer,
   );
 }

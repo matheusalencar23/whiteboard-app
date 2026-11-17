@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import type { BoardStore } from "../../store/boardStore";
 import type { BoardRootRef } from "./boardRoot";
+import { isInPortal } from "../../ui/portal";
 import { useBoardStoreApi } from "../../store/boardStoreContext";
 import { TOOLS } from "./Toolbar/tools";
 import { selectTextScope, textSelectors } from "./StyleBar/selectors";
@@ -51,7 +52,7 @@ export function useShortcuts(rootRef: BoardRootRef) {
     if (!root) return;
 
     function handleKeyDown(e: KeyboardEvent) {
-      if (isTypingTarget(e.target)) return;
+      if (isTypingTarget(e.target) || isInPortal(e.target)) return;
 
       const store = boardStore.getState();
       const key = e.key.toLowerCase();

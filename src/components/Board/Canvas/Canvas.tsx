@@ -121,6 +121,7 @@ import { StyleBar, type StyleBarPlacement } from "../StyleBar/StyleBar";
 import { isTypingTarget } from "../useShortcuts";
 import { useClipboard } from "./useClipboard";
 import { focusBoard, useBoardRoot } from "../boardRoot";
+import { isInPortal } from "../../../ui/portal";
 import { findLibraryItem } from "../../../lib/elements/library";
 import { LIBRARY_DRAG_TYPE, insertLibraryItem } from "../Library/libraryActions";
 
@@ -460,7 +461,7 @@ export function Canvas() {
     }
     function handleKeyDown(e: KeyboardEvent) {
       reapplyShift(e);
-      if (isTypingTarget(e.target)) return;
+      if (isTypingTarget(e.target) || isInPortal(e.target)) return;
       if (e.key === "Enter" && !(e.target instanceof HTMLButtonElement) && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
         if (editSelectionRef.current()) e.preventDefault();
         return;

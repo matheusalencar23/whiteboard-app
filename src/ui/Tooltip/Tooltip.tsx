@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { usePortalContainer } from "../portal";
 import styles from "./Tooltip.module.scss";
 
 export type TooltipSide = "top" | "right" | "bottom" | "left";
@@ -56,6 +57,7 @@ function crossAxisShift(rect: DOMRect, side: TooltipSide): { x: number; y: numbe
 }
 
 export function Tooltip({ anchor, side, label, shortcut }: TooltipProps) {
+  const portalContainer = usePortalContainer();
   const ref = useRef<HTMLDivElement>(null);
   const [placedSide, setPlacedSide] = useState(side);
   const [shift, setShift] = useState<{ x: number; y: number } | null>(null);
@@ -78,6 +80,6 @@ export function Tooltip({ anchor, side, label, shortcut }: TooltipProps) {
       <span>{label}</span>
       {shortcut && <kbd className={styles.shortcut}>{shortcut}</kbd>}
     </div>,
-    document.body,
+    portalContainer,
   );
 }

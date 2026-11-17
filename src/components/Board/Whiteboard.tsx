@@ -1,4 +1,4 @@
-import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
+import { useEffect, useImperativeHandle, useMemo, useRef, useState, type CSSProperties, type Ref } from "react";
 import { LuLayoutGrid } from "react-icons/lu";
 import { Canvas } from "./Canvas/Canvas";
 import { Toolbar } from "./Toolbar/Toolbar";
@@ -27,6 +27,9 @@ import {
 } from "../../store/boardStore";
 import { BoardStoreContext, useBoardStore, useBoardStoreApi } from "../../store/boardStoreContext";
 import { BoardRootContext, focusBoard } from "./boardRoot";
+import { themeVariables } from "../../lib/theme";
+import { PortalContainerContext } from "../../ui/portal";
+import { useTheme } from "../useColorScheme";
 import styles from "./Whiteboard.module.scss";
 
 export interface WhiteboardBackAction {
@@ -116,6 +119,9 @@ function hasFiles(e: React.DragEvent) {
 
 function WhiteboardView({ back, autoFocus }: { back?: WhiteboardBackAction; autoFocus: boolean }) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const [portalContainer, setPortalContainer] = useState<HTMLDivElement | null>(null);
+  const theme = useTheme();
+  const themeStyle = useMemo(() => ({ ...themeVariables(theme), colorScheme: theme.scheme }) as CSSProperties, [theme]);
   useShortcuts(rootRef);
   const boardStore = useBoardStoreApi();
   const exportOpen = useBoardStore((s) => s.exportOpen);
@@ -165,43 +171,47 @@ function WhiteboardView({ back, autoFocus }: { back?: WhiteboardBackAction; auto
 
   return (
     <BoardRootContext value={rootRef}>
-      <div
-        ref={rootRef}
-        tabIndex={-1}
-        className={styles.board}
-        data-dropping={dropping}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        <div className={styles.title}>
-          <div className={styles.actions}>
-            {back && (
-              <IconButton icon={LuLayoutGrid} label={back.label} size="sm" tooltipSide="bottom" onClick={back.onClick} />
-            )}
-            <BoardMenu onRename={() => setRenaming(true)} />
+      <PortalContainerContext value={portalContainer}>
+        <div
+          ref={rootRef}
+          tabIndex={-1}
+          className={styles.board}
+          style={themeStyle}
+          data-dropping={dropping}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          <div className={styles.title}>
+            <div className={styles.actions}>
+              {back && (
+                <IconButton icon={LuLayoutGrid} label={back.label} size="sm" tooltipSide="bottom" onClick={back.onClick} />
+              )}
+              <BoardMenu onRename={() => setRenaming(true)} />
+            </div>
+            <BoardTitle editing={renaming} onEditingChange={setRenaming} />
           </div>
-          <BoardTitle editing={renaming} onEditingChange={setRenaming} />
-        </div>
-        <div className={styles.dock}>
-          <Toolbar />
-        </div>
-        <Canvas />
-        {libraryOpen && (
-          <div className={styles.sidebar}>
-            <LibraryPanel />
+          <div className={styles.dock}>
+            <Toolbar />
           </div>
-        )}
-        <div className={styles.corner}>
-          <ZoomIndicator />
-          <ThemeMenu />
-          <HelpButton />
+          <Canvas />
+          {libraryOpen && (
+            <div className={styles.sidebar}>
+              <LibraryPanel />
+            </div>
+          )}
+          <div className={styles.corner}>
+            <ZoomIndicator />
+            <ThemeMenu />
+            <HelpButton />
+          </div>
+          <div className={styles.notice}>
+            <BoardNotice />
+          </div>
+          {exportOpen && <ExportDialog onClose={() => setExportOpen(false)} />}
+          <div ref={setPortalContainer} data-portal-container="" />
         </div>
-        <div className={styles.notice}>
-          <BoardNotice />
-        </div>
-        {exportOpen && <ExportDialog onClose={() => setExportOpen(false)} />}
-      </div>
+      </PortalContainerContext>
     </BoardRootContext>
   );
 }

@@ -37,7 +37,7 @@ export function Board() {
   const dismissSaveFailure = useCallback(() => setSaveFailed(false), []);
 
   return (
-    <>
+    <div className={styles.page}>
       <Whiteboard
         key={id}
         initialData={board}
@@ -52,6 +52,6 @@ export function Board() {
           <Toast message={STORAGE_FULL} tone="error" onDismiss={dismissSaveFailure} />
         </div>
       )}
-    </>
+    </div>
   );
 }

@@ -1,14 +1,15 @@
 .title,
 .input {
-    max-width: min(420px, calc(100vw - 32px));
+    min-width: 0;
+    max-width: 420px;
     height: 34px;
     padding: 0 12px;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    background: var(--color-surface);
-    box-shadow: var(--shadow-panel);
-    color: var(--color-text);
-    font-family: var(--font-ui);
+    border: 1px solid var(--wb-color-border);
+    border-radius: var(--wb-radius-lg);
+    background: var(--wb-color-surface);
+    box-shadow: var(--wb-shadow-panel);
+    color: var(--wb-color-text);
+    font-family: var(--wb-font-ui);
     font-size: 14px;
     font-weight: 600;
     line-height: 32px;
@@ -24,6 +25,6 @@
 
 .input {
     outline: none;
-    border-color: var(--color-accent);
-    box-shadow: 0 0 0 3px var(--color-accent-soft), var(--shadow-panel);
+    border-color: var(--wb-color-accent);
+    box-shadow: 0 0 0 3px var(--wb-color-accent-soft), var(--wb-shadow-panel);
 }

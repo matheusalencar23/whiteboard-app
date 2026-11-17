@@ -181,12 +181,18 @@ function toKebab(name: string) {
   return name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 }
 
-export function applyTheme(target: Theme, root: HTMLElement = document.documentElement) {
-  root.style.colorScheme = target.scheme;
+export function themeVariables(target: Theme): Record<string, string> {
+  const variables: Record<string, string> = {};
   for (const [group, tokens] of Object.entries(target)) {
     if (typeof tokens !== "object") continue;
     for (const [name, value] of Object.entries(tokens as Record<string, string>)) {
-      root.style.setProperty(`--${group}-${toKebab(name)}`, value);
+      variables[`--wb-${group}-${toKebab(name)}`] = value;
     }
   }
+  return variables;
+}
+
+export function applyTheme(target: Theme, root: HTMLElement = document.documentElement) {
+  root.style.colorScheme = target.scheme;
+  for (const [name, value] of Object.entries(themeVariables(target))) root.style.setProperty(name, value);
 }

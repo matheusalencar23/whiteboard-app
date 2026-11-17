@@ -4,9 +4,9 @@
     place-items: center;
     flex-shrink: 0;
     border: none;
-    border-radius: var(--radius-md);
+    border-radius: var(--wb-radius-md);
     background: transparent;
-    color: var(--color-text);
+    color: var(--wb-color-text);
     cursor: pointer;
     transition: background-color 120ms ease, color 120ms ease;
 
@@ -23,12 +23,12 @@
     }
 
     &:hover:not(:disabled) {
-        background: var(--color-surface-hover);
+        background: var(--wb-color-surface-hover);
     }
 
     &[data-active="true"] {
-        background: var(--color-accent-soft);
-        color: var(--color-accent);
+        background: var(--wb-color-accent-soft);
+        color: var(--wb-color-accent);
 
         &[data-marker="true"]::before {
             content: "";
@@ -38,17 +38,17 @@
             bottom: 8px;
             width: 3px;
             border-radius: 0 2px 2px 0;
-            background: var(--color-accent);
+            background: var(--wb-color-accent);
         }
     }
 
     &:disabled {
-        color: var(--color-text-disabled);
+        color: var(--wb-color-text-disabled);
         cursor: default;
     }
 
     &:focus-visible {
-        outline: 2px solid var(--color-accent);
+        outline: 2px solid var(--wb-color-accent);
         outline-offset: 1px;
     }
 }
@@ -57,13 +57,13 @@
     position: absolute;
     right: 3px;
     bottom: 2px;
-    font-family: var(--font-mono);
+    font-family: var(--wb-font-mono);
     font-size: 9px;
     line-height: 1;
-    color: var(--color-text-muted);
+    color: var(--wb-color-text-muted);
 
     .button[data-active="true"] & {
-        color: var(--color-accent);
+        color: var(--wb-color-accent);
     }
 }
 
@@ -73,10 +73,10 @@
     bottom: 3px;
     width: 5px;
     height: 5px;
-    background: var(--color-text-muted);
+    background: var(--wb-color-text-muted);
     clip-path: polygon(100% 0, 100% 100%, 0 100%);
 
     .button[data-active="true"] & {
-        background: var(--color-accent);
+        background: var(--wb-color-accent);
     }
 }

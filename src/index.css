@@ -6,9 +6,9 @@
 
 body {
   overflow: hidden;
-  background: var(--color-background);
-  color: var(--color-text);
-  font-family: var(--font-ui);
+  background: var(--wb-color-background);
+  color: var(--wb-color-text);
+  font-family: var(--wb-font-ui);
   -webkit-font-smoothing: antialiased;
 }
 

@@ -64,10 +64,8 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
 
 - [ ] **O quê:** separar o board (canvas, toolbar, barra de estilo, menu, exportação) num pacote npm que outros projetos React instalam e usam como um componente, por exemplo `<Whiteboard initialData={...} onChange={...} />`. O app atual (lista de boards e rotas) passa a ser um usuário desse pacote.
 - **Problemas de hoje:**
-  - **Tamanho:** o `.board` usa `100vw`/`100vh`. Passar a ocupar o contêiner pai (`width/height: 100%`), com o canvas medindo o próprio elemento (`ResizeObserver`).
-  - **Tema e estilos:** o `applyTheme` grava as variáveis no `document.documentElement`. Gravar no elemento raiz do board, aceitar um tema por prop (o `renderScene` e o `renderElement` já recebem o tema e o esquema de cores) e prefixar as variáveis (`--wb-*`) para não colidir com as do projeto hospedeiro. Os SCSS modules viram um CSS gerado no build, importado pelo usuário (`import "pacote/style.css"`).
+  - **Tema e estilos:** as variáveis (`--wb-*`) já ficam na raiz do board, e o board ocupa o contêiner pai. Falta aceitar um tema próprio por prop (cores, raios, sombras; o `renderScene` e o `renderElement` já recebem o tema e o esquema de cores), provavelmente junto com o `config`, e os SCSS modules virarem um CSS gerado no build, importado pelo usuário (`import "pacote/style.css"`). Avaliar também se o fundo escurecido do `Modal` deve cobrir só o board quando ele não ocupa a tela toda (hoje cobre a janela).
   - **Fontes:** hoje vêm do `<link>` do `index.html`. O pacote pode documentar o `<link>` necessário, trazer as fontes no CSS (`@font-face` com os arquivos no pacote) ou aceitar as famílias por prop. Decidir na hora.
-  - **Portais:** `Popover`, `Tooltip`, `Modal` e `Toast` vão para o `document.body`. Funciona, mas os estilos e o tema precisam valer lá também (variáveis no portal, ou portal dentro da raiz do board).
   - **SSR:** nenhum módulo do board toca no `window` ou no `document` fora de efeitos e handlers (só o `appBoardSaving.ts`, que é do app), e isso precisa continuar assim. Falta o README documentar o uso com `"use client"` ou importação dinâmica.
   - **Idioma da interface:** há perto de 300 textos fixos em português (rótulos, tooltips, menus, ajuda, avisos). Juntar todos num dicionário (`messages`), com o pt-BR como padrão e uma prop `locale`/`messages` para trocar, e trazer pelo menos o inglês. Os nomes de `tools.ts`, `shortcuts.ts` e do catálogo da biblioteca (inclusive as palavras de busca) passam a ser chaves do dicionário.
   - **`react-color`:** está sem manutenção há anos e não declara suporte ao React 19, o que gera aviso de peer dependency em quem instala. É usado só no `ColorPicker`: trocar por um seletor próprio (saturação e matiz) ou pelo `react-colorful`.
@@ -120,7 +118,7 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
   - **Depois da primeira versão:** acessibilidade do canvas (anunciar seleção e criação por `aria-live`) e o app publicado no GitHub Pages como demonstração.
 - **Por quê:** permite usar o quadro branco dentro de outros projetos (documentação, ferramentas internas, apps com diagramas) sem copiar o código, mantendo uma base só.
 - **Ordem:** depende pouco dos outros itens, mas fica mais barato se as decisões acima forem seguidas desde já. O tema ativo hoje sai da store (`themeMode`) e é aplicado no `document.documentElement` pelo `App`; no pacote, passa a ser por instância. Sequência sugerida:
-  1. Demais separações (tamanho, tema, fontes, portais e `config` com o modo somente leitura).
+  1. Demais separações (fontes e `config` com o modo somente leitura e o tema por prop).
   2. Dicionário de textos, troca do `react-color` e carregamento sob demanda.
   3. Versão no formato salvo, migrações e os testes delas.
   4. Checagens de pacote na CI, Changesets, README com três exemplos (só leitura, salvar numa API, trocar a cena por fora) e publicação da `0.1.0`.

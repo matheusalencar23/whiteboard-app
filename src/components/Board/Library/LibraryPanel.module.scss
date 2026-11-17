@@ -5,10 +5,10 @@
     width: 276px;
     max-height: 100%;
     padding: 8px 8px 10px;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-panel);
+    background: var(--wb-color-surface);
+    border: 1px solid var(--wb-color-border);
+    border-radius: var(--wb-radius-lg);
+    box-shadow: var(--wb-shadow-panel);
 }
 
 .header {
@@ -21,7 +21,7 @@
 .title {
     font-size: 13px;
     font-weight: 600;
-    color: var(--color-text);
+    color: var(--wb-color-text);
 }
 
 .search {
@@ -29,13 +29,13 @@
     align-items: center;
     gap: 6px;
     padding: 0 8px;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    color: var(--color-text-muted);
+    border: 1px solid var(--wb-color-border);
+    border-radius: var(--wb-radius-sm);
+    color: var(--wb-color-text-muted);
     font-size: 14px;
 
     &:focus-within {
-        border-color: var(--color-accent);
+        border-color: var(--wb-color-accent);
     }
 
     input {
@@ -44,7 +44,7 @@
         padding: 6px 0;
         border: none;
         background: transparent;
-        color: var(--color-text);
+        color: var(--wb-color-text);
         font: inherit;
         font-size: 13px;
         outline: none;
@@ -73,9 +73,9 @@
     gap: 6px;
     padding: 6px;
     border: none;
-    border-radius: var(--radius-sm);
+    border-radius: var(--wb-radius-sm);
     background: transparent;
-    color: var(--color-text-muted);
+    color: var(--wb-color-text-muted);
     font: inherit;
     font-size: 10px;
     font-weight: 600;
@@ -84,7 +84,7 @@
     cursor: pointer;
 
     &:hover:not(:disabled) {
-        background: var(--color-surface-hover);
+        background: var(--wb-color-surface-hover);
     }
 
     &:disabled {
@@ -92,7 +92,7 @@
     }
 
     &:focus-visible {
-        outline: 2px solid var(--color-accent);
+        outline: 2px solid var(--wb-color-accent);
         outline-offset: -2px;
     }
 }
@@ -108,7 +108,7 @@
 
 .count {
     margin-left: auto;
-    font-family: var(--font-mono);
+    font-family: var(--wb-font-mono);
     font-weight: 500;
     letter-spacing: 0;
 }
@@ -128,16 +128,16 @@
     width: 100%;
     padding: 4px 2px 6px;
     border: 1px solid transparent;
-    border-radius: var(--radius-md);
+    border-radius: var(--wb-radius-md);
     background: transparent;
-    color: var(--color-text);
+    color: var(--wb-color-text);
     font: inherit;
     cursor: grab;
     transition: background-color 120ms ease, border-color 120ms ease;
 
     &:hover {
-        background: var(--color-surface-hover);
-        border-color: var(--color-border);
+        background: var(--wb-color-surface-hover);
+        border-color: var(--wb-color-border);
     }
 
     &:active {
@@ -145,7 +145,7 @@
     }
 
     &:focus-visible {
-        outline: 2px solid var(--color-accent);
+        outline: 2px solid var(--wb-color-accent);
         outline-offset: -2px;
     }
 }
@@ -159,11 +159,11 @@
     font-size: 11px;
     line-height: 1.25;
     text-align: center;
-    color: var(--color-text-muted);
+    color: var(--wb-color-text-muted);
     overflow-wrap: break-word;
 
     .tile:hover & {
-        color: var(--color-text);
+        color: var(--wb-color-text);
     }
 }
 
@@ -171,12 +171,12 @@
     padding: 16px 6px;
     font-size: 12px;
     text-align: center;
-    color: var(--color-text-muted);
+    color: var(--wb-color-text-muted);
 }
 
 .hint {
     padding: 0 6px;
     font-size: 11px;
     line-height: 1.4;
-    color: var(--color-text-muted);
+    color: var(--wb-color-text-muted);
 }

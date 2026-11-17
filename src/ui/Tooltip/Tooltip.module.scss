@@ -5,10 +5,10 @@
     align-items: center;
     gap: 8px;
     padding: 5px 8px;
-    border-radius: var(--radius-sm);
-    background: var(--color-text);
-    color: var(--color-surface);
-    box-shadow: var(--shadow-tooltip);
+    border-radius: var(--wb-radius-sm);
+    background: var(--wb-color-text);
+    color: var(--wb-color-surface);
+    box-shadow: var(--wb-shadow-tooltip);
     font-size: 12px;
     font-weight: 500;
     white-space: nowrap;
@@ -16,7 +16,7 @@
 }
 
 .shortcut {
-    font-family: var(--font-mono);
+    font-family: var(--wb-font-mono);
     font-size: 11px;
-    color: var(--color-text-disabled);
+    color: var(--wb-color-text-disabled);
 }

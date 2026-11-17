@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { usePortalContainer } from "../portal";
 import styles from "./Popover.module.scss";
 
 export type PopoverSide = "bottom" | "right";
@@ -54,6 +55,7 @@ function fitToViewport(
 }
 
 export function Popover({ anchor, side = "bottom", boundary = null, onClose, children }: PopoverProps) {
+  const portalContainer = usePortalContainer();
   const ref = useRef<HTMLDivElement>(null);
   const pointerInsideRef = useRef(false);
   const [position, setPosition] = useState(() => preferredPosition(anchor, side, boundary));
@@ -108,6 +110,6 @@ export function Popover({ anchor, side = "bottom", boundary = null, onClose, chi
     >
       {children}
     </div>,
-    document.body,
+    portalContainer,
   );
 }

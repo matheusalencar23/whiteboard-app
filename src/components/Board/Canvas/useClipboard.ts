@@ -6,6 +6,7 @@ import { parseClipboard, serializeClipboard } from "../../../lib/persistence";
 import type { BoardStore } from "../../../store/boardStore";
 import { useBoardStoreApi } from "../../../store/boardStoreContext";
 import { useBoardRoot } from "../boardRoot";
+import { isInPortal } from "../../../ui/portal";
 import { isTypingTarget } from "../useShortcuts";
 
 interface ClipboardOptions {
@@ -18,7 +19,7 @@ const MIDDLE_PASTE_WINDOW = 500;
 
 function isBlocked(boardStore: BoardStore, e: ClipboardEvent): boolean {
   const { helpOpen, exportOpen } = boardStore.getState();
-  return isTypingTarget(e.target) || helpOpen || exportOpen;
+  return isTypingTarget(e.target) || isInPortal(e.target) || helpOpen || exportOpen;
 }
 
 function copySelection(boardStore: BoardStore, e: ClipboardEvent): string[] | null {

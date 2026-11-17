@@ -6,8 +6,8 @@ Os itens concluídos saem deste arquivo: o que o app já faz está no [README.md
 
 ## Ordem sugerida
 
-1. Biblioteca de formas: [contêineres só de desenho](#contêineres).
-2. Depois: [contêineres com conteúdo vinculado](#contêineres) e [BPMN](#bpmn).
+1. [Ordem de desenho](#ordem-de-desenho).
+2. Biblioteca de formas: [BPMN](#bpmn).
 3. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
 4. Depois: [publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm).
 
@@ -22,25 +22,34 @@ Valem para todo item novo.
 - Depois de criar uma forma, uma seta ou um texto, a ferramenta volta para a seleção com o elemento novo selecionado. O lápis continua ativo.
 - A grade de fundo é só visual. O encaixe na grade e as guias de alinhamento foram testados e descartados.
 - Enquanto o projeto está em desenvolvimento, o formato salvo (no navegador e no `.whiteboard.json`) não tem número de versão nem migrações, para não poluir o código. Um board num formato antigo não passa na validação e não abre. As versões e migrações voltam quando houver usuários com dados a preservar.
+- Os contêineres (raias e grupo com título) não têm vínculo com o conteúdo, como os frames do Excalidraw ou os contêineres do draw.io. Para mover o contêiner junto com o que está dentro, agrupa-se tudo com os grupos que já existem (`Ctrl+G`).
 - As preferências da grade e do tema valem para todos os boards e não vão no arquivo do board.
 - Os elementos guardam as cores do tema claro. O tema escuro só muda o desenho (`adaptColor`), e o canvas não é invertido por filtro CSS, porque isso inverteria também a seleção e a grade e faria a cor desenhada não bater com a escolhida.
 - O board vai virar uma biblioteca npm (veja [Publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm)). Código novo do board não deve depender das rotas, do `localStorage`, do `document` inteiro ou do tamanho da janela: navegação e persistência entram por funções e callbacks, os eventos de teclado ficam presos ao board e as medidas vêm do contêiner, não de `100vw`/`100vh`. Cada funcionalidade nova deve poder ser desligada pela configuração da biblioteca: botão, atalho e entrada na ajuda saem de um mesmo lugar (como `tools.ts` e `shortcuts.ts`), para serem escondidos juntos.
 - O atalho de exportar imagem é `Ctrl+Shift+E`, como no Excalidraw, mesmo abrindo o monitor de rede no Firefox (a página não consegue impedir). Lá, vale o botão.
 
+## Edição
+
+### Ordem de desenho
+
+- [ ] **O quê:** trazer para frente, levar para trás, trazer um passo e levar um passo, sobre a seleção.
+- **Como:**
+  - **Modelo:** a ordem de desenho já é a ordem do array `elements`, então não há campo novo nem mudança na persistência. Quatro ações na store, cada uma num passo do histórico, que devolvem um array novo com os elementos selecionados reposicionados, mantendo a ordem relativa entre eles.
+  - **Grupos:** o agrupamento junta os membros na ordem de desenho, então a ordem trabalha com as unidades da seleção (`getSelectionUnit`): um grupo anda como um bloco e não é partido. Dentro de um grupo (`editingGroupId`), a ordem só muda entre os membros dele, sem sair da faixa do grupo.
+  - **Um passo:** pula a próxima unidade que se sobrepõe à seleção (pela caixa, `getElementBounds`), como no Excalidraw. Pular uma unidade que nem encosta na seleção não muda nada na tela e parece que o comando falhou.
+  - **Pontos de entrada:** um grupo "Ordem" na barra de estilo, com os quatro botões, e os atalhos do Excalidraw (`Ctrl+Shift+]` e `Ctrl+Shift+[` para a frente e o fundo, `Ctrl+]` e `Ctrl+[` para um passo), no `shortcuts.ts`, no `useShortcuts` e na ajuda. Os atalhos usam o `e.code` (`BracketRight`/`BracketLeft`), porque o caractere dos colchetes muda com o layout do teclado (no ABNT2 fica em outra tecla e com outro `e.key` com Shift).
+  - **Lápis e setas:** sem tratamento especial. As setas ligadas não dependem da ordem.
+- **Por quê:** os contêineres (raias e grupo com título) costumam ficar atrás das formas. Hoje um contêiner preenchido, ou inserido depois das formas, cobre o que já estava no quadro, e não há como mandá-lo para trás. Vale também para qualquer sobreposição de formas.
+
 ## Diagramas
 
 ### Biblioteca de formas prontas
 
-O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`compartments`) e os grupos de formas básicas, anotações, fluxograma, entidade-relacionamento, UML, arquitetura e wireframe já existem (veja o [CLAUDE.md](CLAUDE.md)). Um formato novo entra em `SHAPE_KINDS` e em `SHAPE_KIND_DEFINITIONS`, e o item, em `LIBRARY_ITEMS`. Os pacotes abaixo não precisam seguir o draw.io; ele é só inspiração. Silhuetas simples combinam com o traço de esboço; ícones detalhados (como os da AWS) não.
-
-#### Contêineres
-
-- [ ] **Só desenho:** raia horizontal e vertical e grupo com título (faixa de título e área). Pequeno.
-- [ ] **Com conteúdo vinculado:** mover o contêiner leva o que está dentro, como no draw.io (ou os frames do Excalidraw). É uma funcionalidade à parte: um vínculo de pai e filhos que mexe na seleção, no movimento, no redimensionamento, no histórico e na ordem de desenho. Grande; avaliar quando os contêineres simples estiverem em uso.
+O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`compartments`) e os grupos de formas básicas, anotações, contêineres (raias e grupo com título, sem vínculo com o conteúdo), fluxograma, entidade-relacionamento, UML, arquitetura e wireframe já existem (veja o [CLAUDE.md](CLAUDE.md)). Um formato novo entra em `SHAPE_KINDS` e em `SHAPE_KIND_DEFINITIONS`, e o item, em `LIBRARY_ITEMS`. Os pacotes abaixo não precisam seguir o draw.io; ele é só inspiração. Silhuetas simples combinam com o traço de esboço; ícones detalhados (como os da AWS) não.
 
 #### BPMN
 
-- [ ] Tarefa, eventos (início, fim, intermediário), gateways (exclusivo, paralelo, inclusivo) e raia. Grupo grande; depende dos contêineres.
+- [ ] Tarefa, eventos (início, fim, intermediário), gateways (exclusivo, paralelo, inclusivo) e piscina com raias. Grupo grande. As raias já existem (`laneHorizontal` e `laneVertical`, com o título girado pelo `labelRotation`); a piscina com várias raias pode ser um item composto delas.
 
 #### A avaliar
 

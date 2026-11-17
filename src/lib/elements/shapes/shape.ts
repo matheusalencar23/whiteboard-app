@@ -107,4 +107,6 @@ export const shapeUtil: ShapeUtil<ShapeElement> = {
   getConnectionPoints: (el) => [...(SHAPE_KIND_DEFINITIONS[el.kind].connectionPoints ?? SIDE_MIDPOINTS)],
 
   getLabelArea: (el) => SHAPE_KIND_DEFINITIONS[el.kind].labelArea(el, el.style.strokeWidth),
+
+  getLabelRotation: (el) => SHAPE_KIND_DEFINITIONS[el.kind].labelRotation ?? 0,
 };

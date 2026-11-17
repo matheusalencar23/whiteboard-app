@@ -21,6 +21,7 @@ export interface ShapeUtil<T extends BoardElement> {
   getBorderOffset?(element: T, direction: Point): Point;
   getConnectionPoints?(element: T): Point[];
   getLabelArea?(element: T): Bounds;
+  getLabelRotation?(element: T): number;
 }
 
 export function centeredArea(el: Bounds, fx: number, fy: number): Bounds {

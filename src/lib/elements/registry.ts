@@ -93,6 +93,7 @@ export interface LabelLayout {
   textStyle: TextStyle;
   area: Bounds;
   box: Bounds;
+  rotation: number;
 }
 
 export function getLabelTextStyle(element: LabeledElement, textStyle: TextStyle): TextStyle {
@@ -116,12 +117,21 @@ function alignInArea(area: Bounds, size: { width: number; height: number }, styl
   return { x, y, ...size };
 }
 
+export function getLabelRotation(element: BoardElement): number {
+  return getShapeUtil(element).getLabelRotation?.(element) ?? 0;
+}
+
+function isSideways(rotation: number): boolean {
+  return Math.abs(Math.sin(rotation)) > Math.SQRT1_2;
+}
+
 export function getLabelArea(element: BoardElement): Bounds | null {
   const area = getShapeUtil(element).getLabelArea?.(element);
   if (!area) return null;
   const inner = expandBounds(area, -LABEL_PADDING);
-  const width = Math.max(inner.width, 1);
-  const height = Math.max(inner.height, 0);
+  const sideways = isSideways(getLabelRotation(element));
+  const width = Math.max(sideways ? inner.height : inner.width, 1);
+  const height = Math.max(sideways ? inner.width : inner.height, 0);
   const center = getCenter(area);
   return { x: center.x - width / 2, y: center.y - height / 2, width, height };
 }
@@ -135,14 +145,22 @@ export function getLabelLayout(element: BoardElement, keepEmpty = false): LabelL
   const textStyle = getLabelTextStyle(element, element.label.textStyle);
   const { lines, width, height } = layoutText(element.label.text, textStyle, area.width);
   const box = alignInArea(area, { width, height }, textStyle);
-  return { lines, textStyle, area, box };
+  return { lines, textStyle, area, box, rotation: getLabelRotation(element) };
 }
 
 function drawLabel(element: BoardElement, ctx: CanvasRenderingContext2D) {
   const layout = getLabelLayout(element);
   if (!layout) return;
-  const { lines, textStyle, box } = layout;
+  const { lines, textStyle, box, area, rotation } = layout;
+  ctx.save();
+  if (rotation !== 0) {
+    const center = getCenter(area);
+    ctx.translate(center.x, center.y);
+    ctx.rotate(rotation);
+    ctx.translate(-center.x, -center.y);
+  }
   drawTextLines(ctx, lines, textStyle, resolveTextColor(textStyle, element), box, box.y);
+  ctx.restore();
 }
 
 function clipOutsideArrowLabel(
@@ -197,7 +215,9 @@ export function hitTestElement(element: BoardElement, point: Point, tolerance: n
   const local = rotatePoint(point, getCenter(element), -element.rotation);
   if (getShapeUtil(element).hitTest(element, local, tolerance)) return true;
   const label = getLabelLayout(element);
-  return label !== null && containsPoint(expandBounds(label.box, tolerance), local);
+  if (!label) return false;
+  const inLabel = rotatePoint(local, getCenter(label.area), -label.rotation);
+  return containsPoint(expandBounds(label.box, tolerance), inLabel);
 }
 
 export function isInsideShape(element: BoardElement, point: Point, tolerance: number): boolean {

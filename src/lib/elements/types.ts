@@ -139,6 +139,9 @@ export const SHAPE_KINDS = [
   "browserWindow",
   "imagePlaceholder",
   "checkbox",
+  "laneHorizontal",
+  "laneVertical",
+  "titledGroup",
 ] as const;
 
 export type ShapeKind = (typeof SHAPE_KINDS)[number];

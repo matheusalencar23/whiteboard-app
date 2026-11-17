@@ -24,6 +24,27 @@ export interface ShapeKindDefinition {
   connectionPoints?: readonly Point[];
   bindToBox?: boolean;
   solid?: boolean;
+  labelRotation?: number;
+}
+
+const CONTAINER_BAND = 48;
+
+const GROUP_BAND = 40;
+
+function titleBand(length: number, band: number): number {
+  return Math.min(band, length / 2);
+}
+
+function laneHorizontalBand(box: Bounds): Bounds {
+  return { ...box, width: titleBand(box.width, CONTAINER_BAND) };
+}
+
+function topBand(box: Bounds, band: number): Bounds {
+  return { ...box, height: titleBand(box.height, band) };
+}
+
+function groupRadius(box: Bounds): number {
+  return Math.min(8, box.width * 0.05, box.height * 0.05);
 }
 
 const PARALLELOGRAM_SKEW = 0.2;
@@ -1189,5 +1210,36 @@ export const SHAPE_KIND_DEFINITIONS: Record<ShapeKind, ShapeKindDefinition> = {
       ]),
     ],
     labelArea: (box) => box,
+  },
+
+  laneHorizontal: {
+    outline: rectFigure,
+    details(box) {
+      const band = laneHorizontalBand(box);
+      const x = band.x + band.width;
+      return [polylineFigure([{ x, y: box.y }, { x, y: box.y + box.height }])];
+    },
+    labelArea: laneHorizontalBand,
+    labelRotation: -Math.PI / 2,
+  },
+
+  laneVertical: {
+    outline: rectFigure,
+    details(box) {
+      const band = topBand(box, CONTAINER_BAND);
+      const y = band.y + band.height;
+      return [polylineFigure([{ x: box.x, y }, { x: box.x + box.width, y }])];
+    },
+    labelArea: (box) => topBand(box, CONTAINER_BAND),
+  },
+
+  titledGroup: {
+    outline: (box) => roundedRectFigure(box, groupRadius(box)),
+    details(box) {
+      const band = topBand(box, GROUP_BAND);
+      const y = band.y + band.height;
+      return [polylineFigure([{ x: box.x, y }, { x: box.x + box.width, y }])];
+    },
+    labelArea: (box) => insetX(topBand(box, GROUP_BAND), groupRadius(box)),
   },
 };

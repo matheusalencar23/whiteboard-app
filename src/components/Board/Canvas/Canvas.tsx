@@ -31,6 +31,7 @@ import {
   getElementAtPoint,
   getLabelArea,
   getLabelLayout,
+  getLabelRotation,
   getLabelTextStyle,
   getLabelTargetAt,
   getElementBounds,
@@ -282,7 +283,11 @@ function editorLayout(editing: Editing, text: string): TextEditorLayout {
     return { kind: "label", area: getCellTextArea(live, editing.cell), rotation, pivot: getCenter(live) };
   }
   const area = getLabelArea(editing.element) ?? editing.element;
-  return { kind: "label", area, rotation, pivot: getCenter(editing.element) };
+  const labelRotation = getLabelRotation(editing.element);
+  if (labelRotation === 0) return { kind: "label", area, rotation, pivot: getCenter(editing.element) };
+  const pivot = rotatePoint(getCenter(area), getCenter(editing.element), rotation);
+  const turned = { ...area, x: pivot.x - area.width / 2, y: pivot.y - area.height / 2 };
+  return { kind: "label", area: turned, rotation: rotation + labelRotation, pivot };
 }
 
 function editorKey(editing: Editing): string {

@@ -6,11 +6,10 @@ Os itens concluídos saem deste arquivo: o que o app já faz está no [README.md
 
 ## Ordem sugerida
 
-1. [Tema escuro](#tema-escuro).
-2. Biblioteca de formas: [contêineres só de desenho](#contêineres).
-3. Depois: [contêineres com conteúdo vinculado](#contêineres) e [BPMN](#bpmn).
-4. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
-5. Depois: [publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm).
+1. Biblioteca de formas: [contêineres só de desenho](#contêineres).
+2. Depois: [contêineres com conteúdo vinculado](#contêineres) e [BPMN](#bpmn).
+3. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
+4. Depois: [publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm).
 
 ## Decisões tomadas
 
@@ -23,7 +22,8 @@ Valem para todo item novo.
 - Depois de criar uma forma, uma seta ou um texto, a ferramenta volta para a seleção com o elemento novo selecionado. O lápis continua ativo.
 - A grade de fundo é só visual. O encaixe na grade e as guias de alinhamento foram testados e descartados.
 - Enquanto o projeto está em desenvolvimento, o formato salvo (no navegador e no `.whiteboard.json`) não tem número de versão nem migrações, para não poluir o código. Um board num formato antigo não passa na validação e não abre. As versões e migrações voltam quando houver usuários com dados a preservar.
-- As preferências da grade valem para todos os boards e não vão no arquivo do board.
+- As preferências da grade e do tema valem para todos os boards e não vão no arquivo do board.
+- Os elementos guardam as cores do tema claro. O tema escuro só muda o desenho (`adaptColor`), e o canvas não é invertido por filtro CSS, porque isso inverteria também a seleção e a grade e faria a cor desenhada não bater com a escolhida.
 - O board vai virar uma biblioteca npm (veja [Publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm)). Código novo do board não deve depender das rotas, do `localStorage`, do `document` inteiro ou do tamanho da janela: navegação e persistência entram por funções e callbacks, os eventos de teclado ficam presos ao board e as medidas vêm do contêiner, não de `100vw`/`100vh`. Cada funcionalidade nova deve poder ser desligada pela configuração da biblioteca: botão, atalho e entrada na ajuda saem de um mesmo lugar (como `tools.ts` e `shortcuts.ts`), para serem escondidos juntos.
 - O atalho de exportar imagem é `Ctrl+Shift+E`, como no Excalidraw, mesmo abrindo o monitor de rede no Firefox (a página não consegue impedir). Lá, vale o botão.
 
@@ -44,23 +44,9 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
 
 #### A avaliar
 
-- Acrescentar e remover seções dos `compartments` pela interface. Hoje o número de seções vem do item da biblioteca: duas na entidade e na interface, três na classe.
+- Acrescentar e remover seções dos `compartments` pela interface. Hoje o número de seções vem do item da biblioteca: duas na interface, três na classe.
 - Ligar a linha de vida do participante ao retângulo. Hoje os dois só estão agrupados, porque a folga das pontas ligadas (`BINDING_GAP`) deixaria a linha descolada da caixa; redimensionar o retângulo dentro do grupo não leva a linha junto.
 - Lembrar quais grupos do painel estão recolhidos, quando o catálogo crescer.
-
-## Visual
-
-### Tema escuro
-
-- [ ] **O quê:** um tema escuro para a interface e o quadro, à escolha do usuário (claro, escuro ou seguir o sistema), com os desenhos continuando legíveis nos dois temas.
-- **Como:**
-  - **Interface:** um `darkTheme` em `src/lib/theme.ts`, com os mesmos tokens do `notebookTheme` (superfícies, bordas, texto, destaque, sombras, grade, seleção, medidas). O `applyTheme` já transforma os tokens em variáveis CSS, então basta chamá-lo de novo na troca. Nenhuma cor da interface está fora do tema hoje.
-  - **Tema ativo no canvas:** o canvas e o `renderScene` leem `theme` direto, como constante. Trocar por uma referência ao tema ativo (uma função `getTheme()` ou o tema passado ao `renderScene`) e redesenhar quando ele mudar.
-  - **Preferência:** `themeMode` (`light`, `dark` ou `system`) na store, salvo junto das preferências da grade. No `system`, ouvir o `matchMedia("(prefers-color-scheme: dark)")`. Um botão no canto (perto da ajuda) ou na toolbar alterna o tema, e o atalho entra no `shortcuts.ts` e no `useShortcuts`.
-  - **Cores dos elementos:** os elementos guardam cores absolutas (o padrão é `palette.ink`, quase preto), que somem no fundo escuro. O modelo continua guardando a cor do tema claro, e o escuro desenha uma versão adaptada: uma função pura `adaptColor` inverte a luminosidade (HSL) e mantém o matiz e a saturação, de modo que o quase preto vira cinza claro e um preenchimento claro vira escuro. Aplicar no `renderElement`, com uma cópia do estilo adaptada (com cache por elemento, para não criar objetos a cada quadro), cobrindo contorno, preenchimento e a cor do texto (`resolveTextColor`). O `<textarea>` do `TextEditor` e as amostras do seletor de cor mostram a cor adaptada, mas o valor escolhido e salvo continua o claro. Assim o mesmo board abre certo nos dois temas e o `.whiteboard.json` não muda.
-  - **Exportação:** PNG e SVG continuam claros por padrão. O diálogo ganha a opção "Fundo escuro", que usa as cores adaptadas e um token `canvas.exportBackground` do tema escuro.
-  - **Descartado:** inverter o canvas com um filtro CSS (`invert` + `hue-rotate`, como o Excalidraw). É mais simples, mas inverte também a seleção e a grade, muda o tom das cores e faz a cor desenhada não bater com a escolhida no seletor.
-- **Por quê:** quadros brancos são muito usados por muito tempo seguido e em ambientes escuros. O tema já é a fonte única das cores, então o custo fica concentrado na adaptação das cores dos elementos.
 
 ## Persistência
 
@@ -99,7 +85,7 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
   - **Persistência e rotas:** o `Board` usa `useNavigate` (botão "Todos os boards"), a store salva no `localStorage` sozinha e escuta o `pagehide`, e o `Board` muda o `document.title`. No pacote, o board recebe os dados e avisa das mudanças (`initialData`, `onChange` com os elementos, o viewport e o nome), e quem usa decide onde salvar. O botão de voltar, o título da página e as preferências da grade viram props ou callbacks opcionais. O `persistence.ts` e o `homeRoute`/`boardRoute` ficam no app.
   - **Teclado:** `useShortcuts` e o `Canvas` ouvem o `keydown` do `window`, então capturariam teclas da página inteira. No pacote, ouvir só quando o foco estiver dentro do board (listener no contêiner com `tabIndex`) ou com uma prop para ligar os atalhos globais.
   - **Tamanho:** o `.board` usa `100vw`/`100vh`. Passar a ocupar o contêiner pai (`width/height: 100%`), com o canvas medindo o próprio elemento (`ResizeObserver`).
-  - **Tema e estilos:** o `applyTheme` grava as variáveis no `document.documentElement`. Gravar no elemento raiz do board, aceitar um tema por prop (combina com o [tema escuro](#tema-escuro)) e prefixar as variáveis (`--wb-*`) para não colidir com as do projeto hospedeiro. Os SCSS modules viram um CSS gerado no build, importado pelo usuário (`import "pacote/style.css"`).
+  - **Tema e estilos:** o `applyTheme` grava as variáveis no `document.documentElement`. Gravar no elemento raiz do board, aceitar um tema por prop (o `renderScene` e o `renderElement` já recebem o tema e o esquema de cores) e prefixar as variáveis (`--wb-*`) para não colidir com as do projeto hospedeiro. Os SCSS modules viram um CSS gerado no build, importado pelo usuário (`import "pacote/style.css"`).
   - **Fontes:** hoje vêm do `<link>` do `index.html`. O pacote pode documentar o `<link>` necessário, trazer as fontes no CSS (`@font-face` com os arquivos no pacote) ou aceitar as famílias por prop. Decidir na hora.
   - **Portais:** `Popover`, `Tooltip`, `Modal` e `Toast` vão para o `document.body`. Funciona, mas os estilos e o tema precisam valer lá também (variáveis no portal, ou portal dentro da raiz do board).
 - **Como:**
@@ -114,4 +100,4 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
   - **Formato salvo:** quem usar o pacote guarda os dados, então a decisão de [não ter versão nem migrações](#decisões-tomadas) precisa ser revista antes da primeira versão publicada: o `.whiteboard.json` ganha um campo de versão e as migrações voltam.
   - **Publicação:** versionamento semântico, `CHANGELOG` e um exemplo mínimo de uso no README do pacote. Começar como `0.x` enquanto a API muda.
 - **Por quê:** permite usar o quadro branco dentro de outros projetos (documentação, ferramentas internas, apps com diagramas) sem copiar o código, mantendo uma base só.
-- **Ordem:** depende pouco dos outros itens, mas fica mais barato se as decisões acima forem seguidas desde já. O tema escuro e a troca pelo IndexedDB mexem nas mesmas partes (tema por instância, persistência fora do board), então vale fazê-los já pensando no pacote.
+- **Ordem:** depende pouco dos outros itens, mas fica mais barato se as decisões acima forem seguidas desde já. A troca pelo IndexedDB mexe na persistência, então vale fazê-la já pensando no pacote. O tema ativo hoje sai da store (`themeMode`) e é aplicado no `document.documentElement` pelo `App`; no pacote, passa a ser por instância.

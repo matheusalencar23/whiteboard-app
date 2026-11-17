@@ -4,6 +4,7 @@ import { getCenter, unionBounds } from "../../../lib/geometry/bounds";
 import { createLibraryElements, type LibraryItem } from "../../../lib/elements/library";
 import { getElementBounds, renderElement } from "../../../lib/elements/registry";
 import { DEFAULT_STYLE, DEFAULT_TEXT_STYLE } from "../../../lib/elements/types";
+import { useColorScheme } from "../../useColorScheme";
 import styles from "./LibraryPanel.module.scss";
 
 const PREVIEW_WIDTH = 64;
@@ -20,6 +21,7 @@ interface LibraryPreviewProps {
 
 export function LibraryPreview({ item, fontsVersion }: LibraryPreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const scheme = useColorScheme();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -52,8 +54,8 @@ export function LibraryPreview({ item, fontsVersion }: LibraryPreviewProps) {
     ctx.translate(-center.x, -center.y);
 
     const rc = rough.canvas(canvas);
-    for (const element of elements) renderElement({ ...element, seed: PREVIEW_SEED }, rc, ctx);
-  }, [item, fontsVersion]);
+    for (const element of elements) renderElement({ ...element, seed: PREVIEW_SEED }, rc, ctx, null, scheme);
+  }, [item, fontsVersion, scheme]);
 
   return (
     <canvas

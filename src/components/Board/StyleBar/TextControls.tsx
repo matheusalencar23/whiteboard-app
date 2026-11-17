@@ -16,7 +16,7 @@ import {
   type VerticalAlign,
 } from "../../../lib/elements/types";
 import { FONT_SIZE_PRESETS, FONT_STACKS } from "../../../lib/text";
-import { theme } from "../../../lib/theme";
+import { lightTheme } from "../../../lib/theme";
 import { useBoardStore } from "../../../store/boardStore";
 import { IconButton } from "../../../ui/IconButton/IconButton";
 import { PanelSection } from "../../../ui/Panel/Panel";
@@ -28,7 +28,7 @@ import { useStylePreview } from "./useStylePreview";
 import { ALIGN_OPTIONS } from "./alignOptions";
 import { SHORTCUTS, formatShortcut } from "../shortcuts";
 
-const { palette } = theme;
+const { palette } = lightTheme;
 
 const TEXT_SWATCHES: Swatch[] = [
   { color: AUTO_COLOR, label: "Automática (cor do contorno)" },

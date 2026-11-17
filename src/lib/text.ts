@@ -1,4 +1,4 @@
-import { theme } from "./theme";
+import { lightTheme } from "./theme";
 import type { FontFamily, TextStyle } from "./elements/types";
 
 export const LINE_HEIGHT = 1.25;
@@ -6,9 +6,9 @@ export const LINE_HEIGHT = 1.25;
 export const FONT_SIZE_PRESETS = [16, 24, 32, 48] as const;
 
 export const FONT_STACKS: Record<FontFamily, string> = {
-  hand: theme.font.hand,
-  sans: theme.font.ui,
-  mono: theme.font.mono,
+  hand: lightTheme.font.hand,
+  sans: lightTheme.font.ui,
+  mono: lightTheme.font.mono,
 };
 
 export type FontSpec = Pick<TextStyle, "fontFamily" | "fontSize" | "bold" | "italic">;

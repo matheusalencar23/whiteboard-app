@@ -1,7 +1,7 @@
 import { getCenter, type Bounds } from "../geometry/bounds";
 import { rotatePoint } from "../geometry/distance";
 import { padFrame, type SelectionFrame } from "../selection";
-import { theme } from "../theme";
+import type { Theme } from "../theme";
 import type { Point } from "../types";
 
 export type Measurement =
@@ -56,6 +56,7 @@ export function renderMeasurement(
   measurement: Measurement,
   frame: SelectionFrame | null,
   zoom: number,
+  theme: Theme,
 ) {
   const text = measurementText(measurement);
   ctx.save();

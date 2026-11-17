@@ -12,9 +12,10 @@ Tudo roda no navegador, sem servidor. Os boards ficam salvos no próprio navegad
 - **Tabelas:** tabela com título opcional, cabeçalho, edição célula a célula com `Tab`, inserir e apagar linhas e colunas, largura das colunas por arraste, alinhamento por coluna, células mescladas, estilo de texto por célula (negrito, itálico, sublinhado, cor e alinhamento), cores do cabeçalho, do corpo e de cada célula, e setas ligadas a cada linha (que acompanham a linha quando a tabela muda). Colar dados de uma planilha cria uma tabela.
 - **Estilo:** barra flutuante acima da seleção com cor, espessura e tipo do contorno, preenchimento (hachura, hachura cruzada ou sólido), opacidade, intensidade do esboço e cantos retos ou arredondados (no retângulo e no losango).
 - **Navegação:** pan e zoom pela roda, pelo trackpad ou pelo indicador de zoom, e grade de fundo em pontos ou linhas.
+- **Tema:** claro, escuro ou seguindo o sistema, pelo botão no canto inferior direito (`Alt+Shift+D` alterna). No escuro, as cores dos desenhos são adaptadas para continuar legíveis, sem mudar o que fica salvo.
 - **Vários boards:** a página inicial lista os boards salvos, com miniatura, e permite criar, renomear, duplicar e apagar. Cada board tem um endereço próprio (`/board/:id`).
 - **Arquivos:** salvar e abrir o board como `.whiteboard.json` pelo menu ao lado do nome do board (`Ctrl+S` e `Ctrl+O`, ou arrastando o arquivo para o quadro).
-- **Exportar imagem:** PNG ou SVG, do board inteiro ou só da seleção, com fundo branco ou transparente (`Ctrl+Shift+E`). O PNG também pode ser copiado para a área de transferência. O SVG leva as fontes embutidas e abre igual em qualquer lugar.
+- **Exportar imagem:** PNG ou SVG, do board inteiro ou só da seleção, com fundo branco, escuro (com as cores do tema escuro) ou transparente (`Ctrl+Shift+E`). O PNG também pode ser copiado para a área de transferência. O SVG leva as fontes embutidas e abre igual em qualquer lugar.
 - **Ajuda:** o botão `?` no canto inferior direito (ou a tecla `?`) explica as ferramentas e lista todos os atalhos.
 
 ## Como rodar
@@ -77,4 +78,4 @@ Os detalhes da arquitetura e as convenções do código estão no [CLAUDE.md](CL
 
 ## Roadmap
 
-O que falta fazer e as decisões que orientam o projeto ficam no [ROADMAP.md](ROADMAP.md). Entre os próximos itens estão as formas extras da biblioteca e o tema escuro. A troca do `localStorage` pelo IndexedDB e a sincronização entre abas estão registradas para decidir depois.
+O que falta fazer e as decisões que orientam o projeto ficam no [ROADMAP.md](ROADMAP.md). Entre os próximos itens estão os contêineres e o BPMN na biblioteca de formas. A troca do `localStorage` pelo IndexedDB e a sincronização entre abas estão registradas para decidir depois.

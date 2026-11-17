@@ -31,6 +31,8 @@ import { drawTableText, tableUtil, type CellPosition } from "./shapes/table";
 import { arrowUtil } from "./shapes/arrow";
 import { freedrawUtil } from "./shapes/freedraw";
 import { resolveTextColor, textUtil } from "./shapes/text";
+import { adaptElementColors } from "./elementColors";
+import type { ColorScheme } from "../theme";
 
 const shapeUtils: { [K in ElementType]: ShapeUtil<ElementOfType<K>> } = {
   rectangle: rectangleUtil,
@@ -164,11 +166,13 @@ function clipOutsideArrowLabel(
 export type HiddenText = "label" | number | CellPosition | null;
 
 export function renderElement(
-  element: BoardElement,
+  original: BoardElement,
   rc: RoughCanvas,
   ctx: CanvasRenderingContext2D,
   hiddenText: HiddenText = null,
+  scheme: ColorScheme = "light",
 ) {
+  const element = adaptElementColors(original, scheme);
   const showLabel = hiddenText !== "label";
   const util = getShapeUtil(element);
   ctx.save();

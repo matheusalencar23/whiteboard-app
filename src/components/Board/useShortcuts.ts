@@ -3,6 +3,7 @@ import { useBoardStore } from "../../store/boardStore";
 import { TOOLS } from "./Toolbar/tools";
 import { selectTextScope, textSelectors } from "./StyleBar/selectors";
 import { exportBoard, importBoard } from "./boardFileActions";
+import { toggleColorScheme } from "../useColorScheme";
 import { cloneElements } from "../../lib/elements/clone";
 import type { Point } from "../../lib/types";
 
@@ -74,7 +75,12 @@ export function useShortcuts() {
         return;
       }
 
-      if (e.altKey) return;
+      if (e.altKey) {
+        if (!e.shiftKey || e.code !== "KeyD") return;
+        toggleColorScheme();
+        e.preventDefault();
+        return;
+      }
 
       if (e.key === "?") {
         store.setHelpOpen(!store.helpOpen);

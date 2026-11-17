@@ -2,12 +2,13 @@ import rough from "roughjs";
 import { expandBounds, unionBounds, type Bounds } from "../geometry/bounds";
 import { getElementBounds, renderElement } from "../elements/registry";
 import type { BoardElement } from "../elements/types";
-import { theme } from "../theme";
+import { getTheme, type ColorScheme } from "../theme";
 import { SvgContext, escapeXml } from "./svgContext";
 import { buildFontStyles, collectFontUsage } from "./fonts";
 
 export interface ExportOptions {
   background: boolean;
+  scheme: ColorScheme;
   scale: number;
 }
 
@@ -47,12 +48,12 @@ export function renderToCanvas(elements: BoardElement[], options: ExportOptions)
   if (!ctx) return null;
 
   if (options.background) {
-    ctx.fillStyle = theme.canvas.exportBackground;
+    ctx.fillStyle = getTheme(options.scheme).canvas.exportBackground;
     ctx.fillRect(0, 0, size.width, size.height);
   }
   ctx.setTransform(size.scale, 0, 0, size.scale, -bounds.x * size.scale, -bounds.y * size.scale);
   const rc = rough.canvas(canvas);
-  for (const element of elements) renderElement(element, rc, ctx);
+  for (const element of elements) renderElement(element, rc, ctx, null, options.scheme);
   return canvas;
 }
 
@@ -64,7 +65,7 @@ export function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
 
 export async function renderToSvg(
   elements: BoardElement[],
-  options: Pick<ExportOptions, "background">,
+  options: Pick<ExportOptions, "background" | "scheme">,
 ): Promise<string | null> {
   const bounds = getExportBounds(elements);
   if (!bounds) return null;
@@ -72,11 +73,11 @@ export async function renderToSvg(
   svg.translate(-bounds.x, -bounds.y);
   const ctx = svg as unknown as CanvasRenderingContext2D;
   const rc = rough.canvas({ getContext: () => ctx } as unknown as HTMLCanvasElement);
-  for (const element of elements) renderElement(element, rc, ctx);
+  for (const element of elements) renderElement(element, rc, ctx, null, options.scheme);
 
   const fontStyles = await buildFontStyles(collectFontUsage(elements));
   return svg.toSvg(bounds.width, bounds.height, {
     defs: fontStyles ? `<style>${escapeXml(fontStyles)}</style>` : "",
-    background: options.background ? theme.canvas.exportBackground : undefined,
+    background: options.background ? getTheme(options.scheme).canvas.exportBackground : undefined,
   });
 }

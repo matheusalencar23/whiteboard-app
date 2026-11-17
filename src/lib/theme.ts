@@ -1,4 +1,11 @@
+export type ColorScheme = "light" | "dark";
+
+export type ThemeMode = ColorScheme | "system";
+
+export const THEME_MODES: ThemeMode[] = ["light", "dark", "system"];
+
 export interface Theme {
+  scheme: ColorScheme;
   color: {
     background: string;
     surface: string;
@@ -60,7 +67,8 @@ export interface Theme {
 
 const accent = "#5a82d6";
 
-export const notebookTheme: Theme = {
+export const lightTheme: Theme = {
+  scheme: "light",
   color: {
     background: "#f8f9fb",
     surface: "#ffffff",
@@ -120,14 +128,63 @@ export const notebookTheme: Theme = {
   },
 };
 
-export const theme: Theme = notebookTheme;
+const darkAccent = "#7c9ee6";
+
+export const darkTheme: Theme = {
+  scheme: "dark",
+  color: {
+    background: "#17191d",
+    surface: "#212429",
+    surfaceHover: "#2a2e34",
+    surfaceSunken: "#1b1d21",
+    border: "#30343b",
+    borderStrong: "#454a53",
+    text: "#e3e5e9",
+    textMuted: "#959ba5",
+    textDisabled: "#555b64",
+    accent: darkAccent,
+    accentSoft: "#26304a",
+    accentContrast: "#10131a",
+    danger: "#e0716a",
+    dangerSoft: "#3b2524",
+    backdrop: "rgba(0, 0, 0, 0.55)",
+  },
+  canvas: {
+    selection: darkAccent,
+    selectionFill: "rgba(124, 158, 230, 0.1)",
+    handleFill: "#212429",
+    gridDotMinor: "rgba(200, 210, 230, 0.14)",
+    gridDotMajor: "rgba(200, 210, 230, 0.3)",
+    gridLineMinor: "rgba(200, 210, 230, 0.05)",
+    gridLineMajor: "rgba(200, 210, 230, 0.1)",
+    measurementFill: darkAccent,
+    measurementText: "#10131a",
+    exportBackground: "#17191d",
+  },
+  font: lightTheme.font,
+  radius: lightTheme.radius,
+  shadow: {
+    panel: "0 1px 0 rgba(0, 0, 0, 0.2), 0 8px 20px -12px rgba(0, 0, 0, 0.6)",
+    tooltip: "0 4px 12px -4px rgba(0, 0, 0, 0.6)",
+    modal: "0 2px 0 rgba(0, 0, 0, 0.2), 0 24px 48px -16px rgba(0, 0, 0, 0.7)",
+  },
+  palette: lightTheme.palette,
+};
+
+const THEMES: Record<ColorScheme, Theme> = { light: lightTheme, dark: darkTheme };
+
+export function getTheme(scheme: ColorScheme): Theme {
+  return THEMES[scheme];
+}
 
 function toKebab(name: string) {
   return name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 }
 
 export function applyTheme(target: Theme, root: HTMLElement = document.documentElement) {
+  root.style.colorScheme = target.scheme;
   for (const [group, tokens] of Object.entries(target)) {
+    if (typeof tokens !== "object") continue;
     for (const [name, value] of Object.entries(tokens as Record<string, string>)) {
       root.style.setProperty(`--${group}-${toKebab(name)}`, value);
     }

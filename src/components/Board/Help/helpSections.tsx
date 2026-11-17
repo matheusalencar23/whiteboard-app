@@ -149,6 +149,11 @@ export const HELP_SECTIONS: HelpSection[] = [
         <li>
           A grade de fundo pode ser de pontos ou de linhas, nos botões do fim da barra de ferramentas. Ela é só visual.
         </li>
+        <li>
+          O botão do sol (ou da lua), no canto inferior direito, escolhe o tema claro, o escuro ou o do sistema, e{" "}
+          <Keys combos={[["Alt", "Shift", "D"]]} /> alterna entre os dois. No tema escuro, as cores dos desenhos são
+          adaptadas para continuar legíveis, mas o board guarda as cores originais.
+        </li>
       </ul>
     ),
   },

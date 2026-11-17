@@ -13,6 +13,12 @@ interface ExportDialogProps {
 
 type Scope = "all" | "selection";
 
+type Background = "light" | "dark" | "transparent";
+
+function backgroundOptions(background: Background): Omit<ExportOptions, "scale"> {
+  return { background: background !== "transparent", scheme: background === "dark" ? "dark" : "light" };
+}
+
 const SCALES = [1, 2, 3] as const;
 
 const PREVIEW_WIDTH = 560;
@@ -55,7 +61,7 @@ export function ExportDialog({ onClose }: ExportDialogProps) {
   const hasSelection = selectedIds.length > 0;
 
   const [scope, setScope] = useState<Scope>(hasSelection ? "selection" : "all");
-  const [background, setBackground] = useState(true);
+  const [background, setBackground] = useState<Background>("light");
   const [scale, setScale] = useState<number>(2);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<{ message: string; error: boolean } | null>(null);
@@ -66,7 +72,7 @@ export function ExportDialog({ onClose }: ExportDialogProps) {
     return allElements.filter((el) => ids.has(el.id));
   }, [allElements, selectedIds, scope, hasSelection]);
 
-  const options: ExportOptions = { background, scale };
+  const options: ExportOptions = { ...backgroundOptions(background), scale };
   const bounds = getExportBounds(elements);
   const pngSize = bounds ? getPngSize(bounds, scale) : null;
 
@@ -74,7 +80,8 @@ export function ExportDialog({ onClose }: ExportDialogProps) {
     const exportBounds = getExportBounds(elements);
     if (!exportBounds) return null;
     const fit = Math.min(PREVIEW_WIDTH / exportBounds.width, PREVIEW_HEIGHT / exportBounds.height, 2);
-    return renderToCanvas(elements, { background, scale: fit * window.devicePixelRatio })?.toDataURL() ?? null;
+    const previewOptions = { ...backgroundOptions(background), scale: fit * window.devicePixelRatio };
+    return renderToCanvas(elements, previewOptions)?.toDataURL() ?? null;
   }, [elements, background]);
 
   async function run(action: () => Promise<void>, success?: string) {
@@ -96,7 +103,7 @@ export function ExportDialog({ onClose }: ExportDialogProps) {
   return (
     <Modal title="Exportar imagem" onClose={onClose} className={styles.dialog}>
       <div className={styles.content}>
-        <div className={styles.preview} data-transparent={!background}>
+        <div className={styles.preview} data-transparent={background === "transparent"}>
           {preview ? (
             <img src={preview} alt="Prévia da imagem exportada" className={styles.previewImage} />
           ) : (
@@ -114,14 +121,15 @@ export function ExportDialog({ onClose }: ExportDialogProps) {
             ]}
             onChange={setScope}
           />
-          <Segmented<"on" | "off">
+          <Segmented<Background>
             label="Fundo"
-            value={background ? "on" : "off"}
+            value={background}
             options={[
-              { value: "on", label: "Branco" },
-              { value: "off", label: "Transparente" },
+              { value: "light", label: "Branco" },
+              { value: "dark", label: "Escuro" },
+              { value: "transparent", label: "Transparente" },
             ]}
-            onChange={(value) => setBackground(value === "on")}
+            onChange={setBackground}
           />
           <Segmented<number>
             label="Escala do PNG"

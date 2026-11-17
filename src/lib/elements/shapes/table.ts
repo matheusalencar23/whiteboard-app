@@ -2,7 +2,7 @@ import type { Point } from "../../types";
 import { containsPoint, expandBounds, getCenter, type Bounds } from "../../geometry/bounds";
 import { rotatePoint } from "../../geometry/distance";
 import { drawTextLines, layoutText, lineHeight, measureText } from "../../text";
-import { theme } from "../../theme";
+import { lightTheme } from "../../theme";
 import { baseFields, drawFill, scaleToBorder, strokeOptions, type ShapeUtil } from "../shapeUtil";
 import { CELL_TEXT_KEYS, type CellTextStyle, type TableCell, type TableElement, type TextAlign, type TextStyle } from "../types";
 import { resolveTextColor } from "./text";
@@ -15,7 +15,7 @@ const PASTED_COLUMN_SLACK = 4;
 
 export const MIN_COLUMN_WIDTH = 30;
 
-export const DEFAULT_HEADER_FILL = theme.palette.grayLight;
+export const DEFAULT_HEADER_FILL = lightTheme.palette.grayLight;
 
 export interface CellPosition {
   row: number;

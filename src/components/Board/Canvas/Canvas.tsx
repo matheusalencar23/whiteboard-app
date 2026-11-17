@@ -113,6 +113,8 @@ import { screenToWorld, worldToScreen } from "../../../lib/viewport";
 import { lineHeight } from "../../../lib/text";
 import { useBoardStore } from "../../../store/boardStore";
 import { TextEditor, type TextEditorLayout } from "../TextEditor/TextEditor";
+import { useTheme } from "../../useColorScheme";
+import { adaptColor } from "../../../lib/colors";
 import { StyleBar, type StyleBarPlacement } from "../StyleBar/StyleBar";
 import { isTypingTarget } from "../useShortcuts";
 import { useClipboard } from "./useClipboard";
@@ -366,6 +368,7 @@ export function Canvas() {
   const viewport = useBoardStore((s) => s.viewport);
   const showGrid = useBoardStore((s) => s.showGrid);
   const gridStyle = useBoardStore((s) => s.gridStyle);
+  const theme = useTheme();
   const tool = useBoardStore((s) => s.tool);
   const editingGroupId = useBoardStore((s) => s.editingGroupId);
 
@@ -561,6 +564,7 @@ export function Canvas() {
       viewport,
       dpr,
       showGrid ? { size: GRID_SIZE, style: gridStyle } : null,
+      theme,
     );
   }, [
     scene,
@@ -579,6 +583,7 @@ export function Canvas() {
     viewport,
     size,
     fontsLoaded,
+    theme,
   ]);
 
   function startEditingText(element: TextElement, isNew: boolean) {
@@ -1240,7 +1245,7 @@ export function Canvas() {
           key={editorKey(editing)}
           initialText={editorInitialText(editing)}
           textStyle={editorTextStyle(editing)}
-          color={resolveTextColor(editorTextStyle(editing), editing.element)}
+          color={adaptColor(resolveTextColor(editorTextStyle(editing), editing.element), theme.scheme)}
           layout={editorLayout(editing, editingText)}
           viewport={viewport}
           onChange={setEditingText}

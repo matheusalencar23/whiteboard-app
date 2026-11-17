@@ -35,6 +35,7 @@ import {
   type BoardContent,
 } from "../lib/persistence";
 import { GRID_STYLES, type GridStyle } from "../lib/render/grid";
+import type { ThemeMode } from "../lib/theme";
 import { INITIAL_VIEWPORT, nextZoomStep, panBy, zoomAt, zoomTo, type Viewport } from "../lib/viewport";
 
 export type Tool =
@@ -89,6 +90,7 @@ export interface BoardState {
   showGrid: boolean;
   gridStyle: GridStyle;
   libraryOpen: boolean;
+  themeMode: ThemeMode;
   helpOpen: boolean;
   exportOpen: boolean;
   notice: Notice | null;
@@ -128,6 +130,7 @@ export interface BoardState {
   setGridStyle: (style: GridStyle) => void;
   cycleGridStyle: () => void;
   setLibraryOpen: (open: boolean) => void;
+  setThemeMode: (mode: ThemeMode) => void;
   setViewportSize: (size: { width: number; height: number }) => void;
   setHelpOpen: (open: boolean) => void;
   setExportOpen: (open: boolean) => void;
@@ -177,6 +180,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
   showGrid: preferences.showGrid,
   gridStyle: preferences.gridStyle,
   libraryOpen: preferences.libraryOpen,
+  themeMode: preferences.themeMode,
   helpOpen: false,
   exportOpen: false,
   notice: null,
@@ -454,6 +458,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
       return { gridStyle: GRID_STYLES[(index + 1) % GRID_STYLES.length], showGrid: true };
     }),
   setLibraryOpen: (libraryOpen) => set({ libraryOpen }),
+  setThemeMode: (themeMode) => set({ themeMode }),
   setViewportSize: (viewportSize) => set({ viewportSize }),
   setHelpOpen: (helpOpen) => set({ helpOpen }),
   setExportOpen: (exportOpen) => set({ exportOpen }),
@@ -491,9 +496,15 @@ const unsubscribe = useBoardStore.subscribe((state, prev) => {
   if (
     state.showGrid !== prev.showGrid ||
     state.gridStyle !== prev.gridStyle ||
-    state.libraryOpen !== prev.libraryOpen
+    state.libraryOpen !== prev.libraryOpen ||
+    state.themeMode !== prev.themeMode
   ) {
-    savePreferences({ showGrid: state.showGrid, gridStyle: state.gridStyle, libraryOpen: state.libraryOpen });
+    savePreferences({
+      showGrid: state.showGrid,
+      gridStyle: state.gridStyle,
+      libraryOpen: state.libraryOpen,
+      themeMode: state.themeMode,
+    });
   }
   if (state.boardId === null || state.boardId !== prev.boardId) return;
   const changed =

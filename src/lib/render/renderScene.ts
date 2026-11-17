@@ -23,7 +23,7 @@ import {
 } from "../selection";
 import type { Viewport } from "../viewport";
 import { drawGrid, type GridStyle } from "./grid";
-import { theme } from "../theme";
+import type { Theme } from "../theme";
 import { renderMeasurement, type Measurement } from "./measurement";
 
 export interface SceneOverlay {
@@ -104,6 +104,7 @@ function renderConnectionPoints(
   active: Point | null,
   fixed: boolean,
   zoom: number,
+  colors: Theme["canvas"],
 ) {
   for (const anchor of getConnectionAnchors(shape)) {
     const p = anchorPoint(shape, anchor);
@@ -111,13 +112,13 @@ function renderConnectionPoints(
     const radius = isActive && fixed ? CONNECTION_POINT_RADIUS * 1.5 : CONNECTION_POINT_RADIUS;
     ctx.beginPath();
     ctx.arc(p.x, p.y, radius / zoom, 0, Math.PI * 2);
-    ctx.fillStyle = isActive ? theme.canvas.selection : theme.canvas.handleFill;
+    ctx.fillStyle = isActive ? colors.selection : colors.handleFill;
     ctx.fill();
     ctx.stroke();
   }
 }
 
-function renderArrowHandles(ctx: CanvasRenderingContext2D, arrow: ArrowElement, zoom: number) {
+function renderArrowHandles(ctx: CanvasRenderingContext2D, arrow: ArrowElement, zoom: number, colors: Theme["canvas"]) {
   for (const handle of getArrowHandles(arrow, zoom)) {
     const p = handle.position;
     ctx.beginPath();
@@ -126,7 +127,7 @@ function renderArrowHandles(ctx: CanvasRenderingContext2D, arrow: ArrowElement, 
       ctx.save();
       ctx.globalAlpha =
         handle.kind === "segment" && isSegmentFixed(arrow, handle.index) ? 0.9 : 0.45;
-      ctx.fillStyle = theme.canvas.selection;
+      ctx.fillStyle = colors.selection;
       ctx.fill();
       ctx.restore();
       continue;
@@ -135,7 +136,7 @@ function renderArrowHandles(ctx: CanvasRenderingContext2D, arrow: ArrowElement, 
     const bound =
       handle.kind === "end" &&
       (handle.end === "start" ? arrow.startBinding : arrow.endBinding) !== null;
-    ctx.fillStyle = bound ? theme.canvas.selection : theme.canvas.handleFill;
+    ctx.fillStyle = bound ? colors.selection : colors.handleFill;
     ctx.fill();
     ctx.stroke();
   }
@@ -155,8 +156,8 @@ function withFrame(ctx: CanvasRenderingContext2D, frame: SelectionFrame, draw: (
   ctx.restore();
 }
 
-function renderFrameHandles(ctx: CanvasRenderingContext2D, box: Bounds, zoom: number) {
-  ctx.fillStyle = theme.canvas.handleFill;
+function renderFrameHandles(ctx: CanvasRenderingContext2D, box: Bounds, zoom: number, colors: Theme["canvas"]) {
+  ctx.fillStyle = colors.handleFill;
   for (const rect of Object.values(getHandleRects(box, zoom))) {
     const center = getCenter(rect);
     ctx.beginPath();
@@ -172,14 +173,15 @@ function renderFrameHandles(ctx: CanvasRenderingContext2D, box: Bounds, zoom: nu
   ctx.stroke();
   ctx.beginPath();
   ctx.arc(knob.x, knob.y, ROTATION_HANDLE_RADIUS / zoom, 0, Math.PI * 2);
-  ctx.fillStyle = theme.canvas.selection;
+  ctx.fillStyle = colors.selection;
   ctx.fill();
 }
 
-function renderOverlay(ctx: CanvasRenderingContext2D, overlay: SceneOverlay, zoom: number) {
+function renderOverlay(ctx: CanvasRenderingContext2D, overlay: SceneOverlay, zoom: number, theme: Theme) {
+  const colors = theme.canvas;
   ctx.save();
   ctx.lineWidth = SELECTION_LINE_WIDTH / zoom;
-  ctx.strokeStyle = theme.canvas.selection;
+  ctx.strokeStyle = colors.selection;
 
   if (overlay.bindingTarget) {
     ctx.save();
@@ -188,7 +190,7 @@ function renderOverlay(ctx: CanvasRenderingContext2D, overlay: SceneOverlay, zoo
     traceOutline(ctx, overlay.bindingTarget, BINDING_HIGHLIGHT_PADDING / zoom);
     ctx.stroke();
     ctx.restore();
-    renderConnectionPoints(ctx, overlay.bindingTarget, overlay.bindingAnchor, overlay.bindingFixed, zoom);
+    renderConnectionPoints(ctx, overlay.bindingTarget, overlay.bindingAnchor, overlay.bindingFixed, zoom, colors);
   }
 
   if (overlay.editingGroup) {
@@ -209,7 +211,7 @@ function renderOverlay(ctx: CanvasRenderingContext2D, overlay: SceneOverlay, zoo
       if (range) {
         ctx.save();
         ctx.globalAlpha = RANGE_FILL_ALPHA;
-        ctx.fillStyle = theme.canvas.selection;
+        ctx.fillStyle = colors.selection;
         ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
         ctx.restore();
       }
@@ -221,7 +223,7 @@ function renderOverlay(ctx: CanvasRenderingContext2D, overlay: SceneOverlay, zoo
   const frame = overlay.frameOverride ?? getSelectionFrame(overlay.selected);
   const singleArrow = getSingleArrow(overlay.selected);
   if (singleArrow) {
-    renderArrowHandles(ctx, singleArrow, zoom);
+    renderArrowHandles(ctx, singleArrow, zoom, colors);
   } else if (frame) {
     if (overlay.selected.length > 1) {
       ctx.setLineDash([4 / zoom, 4 / zoom]);
@@ -234,20 +236,20 @@ function renderOverlay(ctx: CanvasRenderingContext2D, overlay: SceneOverlay, zoo
 
     withFrame(ctx, frame, () => {
       strokeFrame(ctx, padFrame(frame.box, zoom));
-      if (overlay.showHandles) renderFrameHandles(ctx, frame.box, zoom);
+      if (overlay.showHandles) renderFrameHandles(ctx, frame.box, zoom, colors);
     });
   }
 
   if (overlay.selectionBox) {
     const b = overlay.selectionBox;
-    ctx.fillStyle = theme.canvas.selectionFill;
+    ctx.fillStyle = colors.selectionFill;
     ctx.fillRect(b.x, b.y, b.width, b.height);
     ctx.lineWidth = 1 / zoom;
     ctx.setLineDash([5 / zoom, 3 / zoom]);
     strokeFrame(ctx, b);
   }
 
-  if (overlay.measurement) renderMeasurement(ctx, overlay.measurement, frame, zoom);
+  if (overlay.measurement) renderMeasurement(ctx, overlay.measurement, frame, zoom, theme);
 
   ctx.restore();
 }
@@ -260,6 +262,7 @@ export function renderScene(
   viewport: Viewport,
   dpr: number,
   grid: { size: number; style: GridStyle } | null,
+  theme: Theme,
 ) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -268,11 +271,12 @@ export function renderScene(
   ctx.setTransform(scale, 0, 0, scale, viewport.offsetX * dpr, viewport.offsetY * dpr);
 
   if (grid) {
-    drawGrid(ctx, viewport, grid.size, grid.style, ctx.canvas.width / dpr, ctx.canvas.height / dpr);
+    drawGrid(ctx, viewport, grid.size, grid.style, ctx.canvas.width / dpr, ctx.canvas.height / dpr, theme.canvas);
   }
 
   for (const element of elements) {
-    renderElement(element, rc, ctx, element.id === overlay.hiddenText?.id ? overlay.hiddenText.text : null);
+    const hidden = element.id === overlay.hiddenText?.id ? overlay.hiddenText.text : null;
+    renderElement(element, rc, ctx, hidden, theme.scheme);
   }
-  renderOverlay(ctx, overlay, viewport.zoom);
+  renderOverlay(ctx, overlay, viewport.zoom, theme);
 }

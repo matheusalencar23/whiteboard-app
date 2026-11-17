@@ -73,7 +73,10 @@ export function Home() {
       <div className={styles.inner}>
         <header className={styles.header}>
           <div>
-            <h1 className={styles.brand}>Whiteboard</h1>
+            <h1 className={styles.brand}>
+              <img className={styles.logo} src="/favicon.svg" alt="" />
+              Whiteboard
+            </h1>
             <p className={styles.subtitle}>
               {boards.length === 0
                 ? "Seus boards ficam salvos neste navegador."

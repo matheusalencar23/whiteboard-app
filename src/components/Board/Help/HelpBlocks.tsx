@@ -71,6 +71,7 @@ const SHORTCUT_GROUPS: { title: string; rows: ShortcutRow[] }[] = [
       SHORTCUTS.library,
       SHORTCUTS.toggleGrid,
       SHORTCUTS.cycleGrid,
+      SHORTCUTS.toggleTheme,
       SHORTCUTS.help,
     ].map(fromShortcut),
   },

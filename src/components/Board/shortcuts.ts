@@ -20,6 +20,7 @@ export const SHORTCUTS = {
   library: { label: "Mostrar ou esconder a biblioteca de formas", keys: ["Shift", "L"] },
   toggleGrid: { label: "Mostrar ou esconder a grade", keys: ["G"] },
   cycleGrid: { label: "Alternar a grade entre pontos e linhas", keys: ["Shift", "G"] },
+  toggleTheme: { label: "Alternar entre o tema claro e o escuro", keys: ["Alt", "Shift", "D"] },
   zoomIn: { label: "Aumentar zoom", keys: ["Ctrl", "+"] },
   zoomOut: { label: "Diminuir zoom", keys: ["Ctrl", "−"] },
   zoomReset: { label: "Voltar a 100%", keys: ["Ctrl", "0"] },

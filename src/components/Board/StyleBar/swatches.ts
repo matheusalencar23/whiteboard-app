@@ -1,8 +1,8 @@
 import { TRANSPARENT } from "../../../lib/elements/types";
-import { theme } from "../../../lib/theme";
+import { lightTheme } from "../../../lib/theme";
 import type { Swatch } from "./ColorField";
 
-const { palette } = theme;
+const { palette } = lightTheme;
 
 export const STROKE_SWATCHES: Swatch[] = [
   { color: palette.ink, label: "Preto" },

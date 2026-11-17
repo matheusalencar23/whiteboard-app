@@ -7,7 +7,7 @@ import { createShape } from "./shapes/shape";
 import { createCompartments } from "./shapes/compartments";
 import { createText } from "./shapes/text";
 import { createTable } from "./shapes/table";
-import { theme } from "../theme";
+import { lightTheme } from "../theme";
 import type {
   BoardElement,
   BoxElementType,
@@ -292,7 +292,7 @@ export const LIBRARY_ITEMS: LibraryItem[] = [
     keywords: ["nota", "lembrete", "adesivo", "amarelo"],
     width: 150,
     height: 150,
-    create: shape("note", undefined, { fillColor: theme.palette.amberLight, fillStyle: "solid" }),
+    create: shape("note", undefined, { fillColor: lightTheme.palette.amberLight, fillStyle: "solid" }),
   },
   {
     id: "annotations.brace",
@@ -589,7 +589,7 @@ export const LIBRARY_ITEMS: LibraryItem[] = [
     keywords: ["sequência", "execução", "foco de controle"],
     width: 18,
     height: 90,
-    create: box("rectangle", { style: { fillColor: theme.palette.paper, fillStyle: "solid" } }),
+    create: box("rectangle", { style: { fillColor: lightTheme.palette.paper, fillStyle: "solid" } }),
   },
   {
     id: "uml.component",

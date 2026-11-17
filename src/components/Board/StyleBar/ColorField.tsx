@@ -7,6 +7,8 @@ import { IconButton } from "../../../ui/IconButton/IconButton";
 import { Panel, PanelSection } from "../../../ui/Panel/Panel";
 import { Popover } from "../../../ui/Popover/Popover";
 import { ColorPicker } from "./ColorPicker";
+import { adaptColor } from "../../../lib/colors";
+import { useColorScheme } from "../../useColorScheme";
 
 export const AUTO_COLOR = "auto";
 
@@ -16,13 +18,14 @@ export interface Swatch {
 }
 
 function Swatch({ color }: { color: string }) {
+  const scheme = useColorScheme();
   const special = color === TRANSPARENT || color === AUTO_COLOR;
   return (
     <span
       className={styles.swatch}
       data-transparent={color === TRANSPARENT}
       data-auto={color === AUTO_COLOR}
-      style={special ? undefined : { background: color }}
+      style={special ? undefined : { background: adaptColor(color, scheme) }}
     />
   );
 }

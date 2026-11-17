@@ -1,5 +1,5 @@
 import { screenToWorld, type Viewport } from "../viewport";
-import { theme } from "../theme";
+import type { Theme } from "../theme";
 
 export const GRID_SIZE = 20;
 
@@ -25,7 +25,11 @@ function isMajorLine(value: number, step: number) {
   return Math.round(value / step) % MAJOR_EVERY === 0;
 }
 
-function drawDots(ctx: CanvasRenderingContext2D, { step, zoom, startX, startY, endX, endY }: GridArea) {
+function drawDots(
+  ctx: CanvasRenderingContext2D,
+  { step, zoom, startX, startY, endX, endY }: GridArea,
+  colors: Theme["canvas"],
+) {
   const minorSize = MINOR_DOT_SIZE / zoom;
   const majorSize = MAJOR_DOT_SIZE / zoom;
   const minor = new Path2D();
@@ -39,13 +43,17 @@ function drawDots(ctx: CanvasRenderingContext2D, { step, zoom, startX, startY, e
     }
   }
 
-  ctx.fillStyle = theme.canvas.gridDotMinor;
+  ctx.fillStyle = colors.gridDotMinor;
   ctx.fill(minor);
-  ctx.fillStyle = theme.canvas.gridDotMajor;
+  ctx.fillStyle = colors.gridDotMajor;
   ctx.fill(major);
 }
 
-function drawLines(ctx: CanvasRenderingContext2D, { step, zoom, startX, startY, endX, endY }: GridArea) {
+function drawLines(
+  ctx: CanvasRenderingContext2D,
+  { step, zoom, startX, startY, endX, endY }: GridArea,
+  colors: Theme["canvas"],
+) {
   const minor = new Path2D();
   const major = new Path2D();
   for (let i = 0, x = startX; x <= endX; x = startX + ++i * step) {
@@ -60,9 +68,9 @@ function drawLines(ctx: CanvasRenderingContext2D, { step, zoom, startX, startY, 
   }
 
   ctx.lineWidth = 1 / zoom;
-  ctx.strokeStyle = theme.canvas.gridLineMinor;
+  ctx.strokeStyle = colors.gridLineMinor;
   ctx.stroke(minor);
-  ctx.strokeStyle = theme.canvas.gridLineMajor;
+  ctx.strokeStyle = colors.gridLineMajor;
   ctx.stroke(major);
 }
 
@@ -73,6 +81,7 @@ export function drawGrid(
   style: GridStyle,
   screenWidth: number,
   screenHeight: number,
+  colors: Theme["canvas"],
 ) {
   const { zoom } = viewport;
   let step = gridSize;
@@ -90,7 +99,7 @@ export function drawGrid(
   };
 
   ctx.save();
-  if (style === "dots") drawDots(ctx, area);
-  else drawLines(ctx, area);
+  if (style === "dots") drawDots(ctx, area, colors);
+  else drawLines(ctx, area, colors);
   ctx.restore();
 }

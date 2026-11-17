@@ -14,6 +14,7 @@ import { updateBoundArrows } from "./elements/bindings";
 import { nanoid } from "nanoid";
 import { INITIAL_VIEWPORT, MAX_ZOOM, MIN_ZOOM, type Viewport } from "./viewport";
 import { GRID_STYLES, type GridStyle } from "./render/grid";
+import { THEME_MODES, type ThemeMode } from "./theme";
 
 const INDEX_KEY = "whiteboard:boards";
 const BOARD_KEY_PREFIX = "whiteboard:board:";
@@ -36,6 +37,7 @@ export interface Preferences {
   showGrid: boolean;
   gridStyle: GridStyle;
   libraryOpen: boolean;
+  themeMode: ThemeMode;
 }
 
 const FILE_TYPE = "whiteboard";
@@ -53,6 +55,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   showGrid: true,
   gridStyle: "dots",
   libraryOpen: false,
+  themeMode: "system",
 };
 
 const ELEMENT_TYPES: Record<ElementType, true> = {
@@ -174,6 +177,7 @@ export function loadPreferences(): Preferences {
     showGrid: typeof data.showGrid === "boolean" ? data.showGrid : DEFAULT_PREFERENCES.showGrid,
     gridStyle: GRID_STYLES.find((style) => style === data.gridStyle) ?? DEFAULT_PREFERENCES.gridStyle,
     libraryOpen: typeof data.libraryOpen === "boolean" ? data.libraryOpen : DEFAULT_PREFERENCES.libraryOpen,
+    themeMode: THEME_MODES.find((mode) => mode === data.themeMode) ?? DEFAULT_PREFERENCES.themeMode,
   };
 }
 

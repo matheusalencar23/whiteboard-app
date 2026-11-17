@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { IconType } from "react-icons";
+import { LuCheck } from "react-icons/lu";
 import styles from "./Menu.module.scss";
 import { Popover } from "../Popover/Popover";
 
@@ -8,6 +9,7 @@ export interface MenuItem {
   label: string;
   icon: IconType;
   shortcut?: string;
+  checked?: boolean;
   onSelect: () => void;
 }
 
@@ -51,7 +53,7 @@ export function Menu({ label, anchor, entries, onClose }: MenuProps) {
     if (!NAVIGATION_KEYS.includes(e.key)) return;
     e.preventDefault();
     e.stopPropagation();
-    const items = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+    const items = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('[role^="menuitem"]'));
     const current = items.indexOf(document.activeElement as HTMLElement);
     items[nextIndex(e.key, current, items.length)]?.focus();
   }
@@ -66,7 +68,8 @@ export function Menu({ label, anchor, entries, onClose }: MenuProps) {
             <button
               key={entry.id}
               type="button"
-              role="menuitem"
+              role={entry.checked === undefined ? "menuitem" : "menuitemradio"}
+              aria-checked={entry.checked}
               className={styles.item}
               onClick={() => {
                 onClose();
@@ -76,6 +79,7 @@ export function Menu({ label, anchor, entries, onClose }: MenuProps) {
               <entry.icon className={styles.icon} aria-hidden="true" />
               <span className={styles.label}>{entry.label}</span>
               {entry.shortcut && <kbd className={styles.shortcut}>{entry.shortcut}</kbd>}
+              {entry.checked && <LuCheck className={styles.check} aria-hidden="true" />}
             </button>
           ),
         )}

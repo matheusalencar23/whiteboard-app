@@ -1,5 +1,5 @@
 import type { Point } from "../types";
-import { theme } from "../theme";
+import { lightTheme } from "../theme";
 
 export const FILL_STYLES = ["hachure", "cross-hatch", "solid"] as const;
 
@@ -281,7 +281,7 @@ export function isLabeledElement(element: BoardElement): element is LabeledEleme
 }
 
 export const DEFAULT_STYLE: Required<ElementStyle> = {
-  strokeColor: theme.palette.ink,
+  strokeColor: lightTheme.palette.ink,
   strokeWidth: 2,
   strokeStyle: "solid",
   strokeRoughness: 1,

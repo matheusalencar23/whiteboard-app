@@ -6,6 +6,7 @@ import { Toolbar } from "./Toolbar/Toolbar";
 import { useShortcuts } from "./useShortcuts";
 import { ZoomIndicator } from "./ZoomIndicator/ZoomIndicator";
 import { HelpButton } from "./Help/HelpButton";
+import { ThemeMenu } from "./ThemeMenu/ThemeMenu";
 import { BoardNotice } from "./BoardNotice";
 import { BoardTitle } from "./BoardTitle/BoardTitle";
 import { BoardMenu } from "./BoardMenu/BoardMenu";
@@ -89,6 +90,7 @@ export function Board() {
       )}
       <div className={styles.corner}>
         <ZoomIndicator />
+        <ThemeMenu />
         <HelpButton />
       </div>
       <div className={styles.notice}>

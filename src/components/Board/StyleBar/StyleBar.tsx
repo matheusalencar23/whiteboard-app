@@ -5,6 +5,8 @@ import styles from "./StyleBar.module.scss";
 import { TRANSPARENT } from "../../../lib/elements/types";
 import type { Bounds } from "../../../lib/geometry/bounds";
 import { useBoardStore } from "../../../store/boardStore";
+import { adaptColor } from "../../../lib/colors";
+import { useColorScheme } from "../../useColorScheme";
 import { IconButton } from "../../../ui/IconButton/IconButton";
 import { Panel } from "../../../ui/Panel/Panel";
 import { Popover } from "../../../ui/Popover/Popover";
@@ -25,15 +27,17 @@ const BAR_GAP = 12;
 const VIEWPORT_MARGIN = 8;
 
 function StrokeSwatch({ color }: { color: string }) {
-  return <span className={styles.strokeSwatch} style={{ borderColor: color }} />;
+  const scheme = useColorScheme();
+  return <span className={styles.strokeSwatch} style={{ borderColor: adaptColor(color, scheme) }} />;
 }
 
 function FillSwatch({ color }: { color: string }) {
+  const scheme = useColorScheme();
   return (
     <span
       className={styles.swatch}
       data-transparent={color === TRANSPARENT}
-      style={color === TRANSPARENT ? undefined : { background: color }}
+      style={color === TRANSPARENT ? undefined : { background: adaptColor(color, scheme) }}
     />
   );
 }

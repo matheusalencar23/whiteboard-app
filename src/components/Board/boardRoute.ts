@@ -1,8 +1,8 @@
 import { redirect, type LoaderFunctionArgs, type ShouldRevalidateFunctionArgs } from "react-router";
-import { useBoardStore } from "../../store/boardStore";
+import { openStoredBoard } from "../../store/appBoardStore";
 
 export function boardLoader({ params }: LoaderFunctionArgs) {
-  if (!params.id || !useBoardStore.getState().loadStoredBoard(params.id)) throw redirect("/");
+  if (!params.id || !openStoredBoard(params.id)) throw redirect("/");
   return null;
 }
 

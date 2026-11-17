@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useBoardStore } from "../../store/boardStore";
+import { useBoardStore } from "../../store/boardStoreContext";
 import { Toast } from "../../ui/Toast/Toast";
 
 export function BoardNotice() {

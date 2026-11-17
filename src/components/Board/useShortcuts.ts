@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { useBoardStore } from "../../store/boardStore";
+import type { BoardStore } from "../../store/boardStore";
+import { useBoardStoreApi } from "../../store/boardStoreContext";
 import { TOOLS } from "./Toolbar/tools";
 import { selectTextScope, textSelectors } from "./StyleBar/selectors";
 import { exportBoard, importBoard } from "./boardFileActions";
@@ -33,8 +34,8 @@ export function isTypingTarget(target: EventTarget | null): boolean {
   );
 }
 
-function duplicateSelection() {
-  const { elements, selectedIds, editingGroupId, viewport, insertElements } = useBoardStore.getState();
+function duplicateSelection(boardStore: BoardStore) {
+  const { elements, selectedIds, editingGroupId, viewport, insertElements } = boardStore.getState();
   const ids = new Set(selectedIds);
   const selected = elements.filter((el) => ids.has(el.id));
   const offset = DUPLICATE_OFFSET / viewport.zoom;
@@ -42,11 +43,13 @@ function duplicateSelection() {
 }
 
 export function useShortcuts() {
+  const boardStore = useBoardStoreApi();
+
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (isTypingTarget(e.target)) return;
 
-      const store = useBoardStore.getState();
+      const store = boardStore.getState();
       const key = e.key.toLowerCase();
       const mod = e.ctrlKey || e.metaKey;
 
@@ -66,10 +69,10 @@ export function useShortcuts() {
         } else if (key === "=" || key === "+") store.stepZoom(1);
         else if (key === "-" || key === "_") store.stepZoom(-1);
         else if (key === "0") store.resetZoom();
-        else if (key === "s" && !e.shiftKey) exportBoard();
+        else if (key === "s" && !e.shiftKey) exportBoard(boardStore);
         else if (key === "e" && e.shiftKey) store.setExportOpen(true);
-        else if (key === "o" && !e.shiftKey) void importBoard();
-        else if (key === "d" && !e.shiftKey) duplicateSelection();
+        else if (key === "o" && !e.shiftKey) void importBoard(boardStore);
+        else if (key === "d" && !e.shiftKey) duplicateSelection(boardStore);
         else if (key === "g") {
           if (e.shiftKey) store.ungroupSelection();
           else store.groupSelection();
@@ -87,7 +90,7 @@ export function useShortcuts() {
 
       if (e.altKey) {
         if (!e.shiftKey || e.code !== "KeyD") return;
-        toggleColorScheme();
+        toggleColorScheme(boardStore);
         e.preventDefault();
         return;
       }
@@ -122,5 +125,5 @@ export function useShortcuts() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [boardStore]);
 }

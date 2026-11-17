@@ -1,4 +1,4 @@
-import { create } from "zustand";
+import { createStore, type StoreApi } from "zustand";
 import { applyStyle } from "../lib/elements/style";
 import { applyTextStyle, getTextStyle, stepFontSize } from "../lib/elements/textStyle";
 import {
@@ -26,13 +26,10 @@ import {
 import type { Point } from "../lib/types";
 import {
   DEFAULT_BOARD_NAME,
-  debounce,
-  loadPreferences,
-  loadStoredBoard,
+  DEFAULT_PREFERENCES,
   normalizeBoardName,
-  savePreferences,
-  saveStoredBoard,
   type BoardContent,
+  type Preferences,
 } from "../lib/persistence";
 import { GRID_STYLES, type GridStyle } from "../lib/render/grid";
 import type { ThemeMode } from "../lib/theme";
@@ -105,7 +102,7 @@ export interface BoardState {
   translateElements: (ids: string[], dx: number, dy: number, options?: { record?: boolean }) => void;
   replaceElement: (element: BoardElement) => void;
   deleteElements: (ids: string[]) => void;
-  loadStoredBoard: (id: string) => boolean;
+  loadBoard: (id: string, board: BoardContent) => void;
   openBoard: (board: BoardContent) => void;
   setBoardName: (name: string) => void;
 
@@ -157,401 +154,348 @@ function pushPast(past: BoardElement[][], snapshot: BoardElement[]) {
   return [...past, snapshot].slice(-HISTORY_LIMIT);
 }
 
-const SAVE_DELAY = 300;
-
-function screenCenter(): Point {
-  const { width, height } = useBoardStore.getState().viewportSize;
-  return { x: width / 2, y: height / 2 };
+function screenCenter({ viewportSize }: BoardState): Point {
+  return { x: viewportSize.width / 2, y: viewportSize.height / 2 };
 }
 
-const preferences = loadPreferences();
+export type BoardStore = StoreApi<BoardState>;
 
-let noticeCount = 0;
+export interface BoardStoreInit {
+  preferences?: Preferences;
+}
 
-export const useBoardStore = create<BoardState>()((set) => ({
-  boardId: null,
-  name: DEFAULT_BOARD_NAME,
-  elements: [],
-  selectedIds: [],
-  editingGroupId: null,
-  tableCell: null,
-  tableTextScope: "table",
-  tool: "selection",
-  viewport: INITIAL_VIEWPORT,
-  viewportSize: { width: 0, height: 0 },
-  arrowRouting: "straight",
-  arrowheads: DEFAULT_ARROWHEADS,
-  currentStyle: DEFAULT_STYLE,
-  currentTextStyle: DEFAULT_TEXT_STYLE,
-  showGrid: preferences.showGrid,
-  gridStyle: preferences.gridStyle,
-  libraryOpen: preferences.libraryOpen,
-  themeMode: preferences.themeMode,
-  collapsedLibraryGroups: preferences.collapsedLibraryGroups,
-  helpOpen: false,
-  exportOpen: false,
-  notice: null,
-  past: [],
-  future: [],
+export function createBoardStore({ preferences = DEFAULT_PREFERENCES }: BoardStoreInit = {}): BoardStore {
+  let noticeCount = 0;
+  return createStore<BoardState>()((set, get) => ({
+    boardId: null,
+    name: DEFAULT_BOARD_NAME,
+    elements: [],
+    selectedIds: [],
+    editingGroupId: null,
+    tableCell: null,
+    tableTextScope: "table",
+    tool: "selection",
+    viewport: INITIAL_VIEWPORT,
+    viewportSize: { width: 0, height: 0 },
+    arrowRouting: "straight",
+    arrowheads: DEFAULT_ARROWHEADS,
+    currentStyle: DEFAULT_STYLE,
+    currentTextStyle: DEFAULT_TEXT_STYLE,
+    showGrid: preferences.showGrid,
+    gridStyle: preferences.gridStyle,
+    libraryOpen: preferences.libraryOpen,
+    themeMode: preferences.themeMode,
+    collapsedLibraryGroups: preferences.collapsedLibraryGroups,
+    helpOpen: false,
+    exportOpen: false,
+    notice: null,
+    past: [],
+    future: [],
 
-  addElement: (element, options) =>
-    set((state) => ({
-      elements: [...state.elements, element],
-      selectedIds: options?.select ? [element.id] : state.selectedIds,
-      past: pushPast(state.past, state.elements),
-      future: [],
-    })),
+    addElement: (element, options) =>
+      set((state) => ({
+        elements: [...state.elements, element],
+        selectedIds: options?.select ? [element.id] : state.selectedIds,
+        past: pushPast(state.past, state.elements),
+        future: [],
+      })),
 
-  insertElements: (inserted) =>
-    set((state) => {
-      if (inserted.length === 0) return {};
-      const ids = inserted.map((el) => el.id);
-      return {
-        elements: updateBoundArrows([...state.elements, ...inserted], ids),
-        selectedIds: ids,
-        editingGroupId: inserted.every((el) => isInGroup(el, state.editingGroupId)) ? state.editingGroupId : null,
+    insertElements: (inserted) =>
+      set((state) => {
+        if (inserted.length === 0) return {};
+        const ids = inserted.map((el) => el.id);
+        return {
+          elements: updateBoundArrows([...state.elements, ...inserted], ids),
+          selectedIds: ids,
+          editingGroupId: inserted.every((el) => isInGroup(el, state.editingGroupId)) ? state.editingGroupId : null,
+          tool: "selection",
+          past: pushPast(state.past, state.elements),
+          future: [],
+        };
+      }),
+
+    translateElements: (ids, dx, dy, options) =>
+      set((state) => {
+        const moving = new Set(ids);
+        const moved = releaseBindings(
+          state.elements.filter((el) => moving.has(el.id)).map((el) => translateElement(el, dx, dy)),
+          moving,
+        );
+        if (moved.length === 0) return {};
+        const byId = new Map(moved.map((el) => [el.id, el]));
+        const elements = updateBoundArrows(
+          state.elements.map((el) => byId.get(el.id) ?? el),
+          moving,
+          state.elements,
+        );
+        if (options?.record === false) return { elements };
+        return { elements, past: pushPast(state.past, state.elements), future: [] };
+      }),
+
+    replaceElement: (element) =>
+      set((state) => ({
+        elements: updateBoundArrows(
+          state.elements.map((el) => (el.id === element.id ? element : el)),
+          [element.id],
+          state.elements,
+        ),
+        past: pushPast(state.past, state.elements),
+        future: [],
+      })),
+
+    deleteElements: (ids) =>
+      set((state) => {
+        const toDelete = new Set(ids);
+        const remaining = state.elements.filter((el) => !toDelete.has(el.id));
+        if (remaining.length === state.elements.length) return {};
+        const elements = updateBoundArrows(remaining, []);
+        return {
+          elements,
+          selectedIds: keepExisting(state.selectedIds, elements),
+          editingGroupId: keepEditingGroup(state.editingGroupId, elements),
+          past: pushPast(state.past, state.elements),
+          future: [],
+        };
+      }),
+
+    loadBoard: (id, board) =>
+      set({
+        boardId: id,
+        name: board.name,
+        elements: board.elements,
+        viewport: board.viewport,
+        selectedIds: [],
+        editingGroupId: null,
+        tool: "selection",
+        helpOpen: false,
+        exportOpen: false,
+        notice: null,
+        past: [],
+        future: [],
+      }),
+
+    openBoard: (board) =>
+      set((state) => ({
+        name: board.name,
+        elements: board.elements,
+        viewport: board.viewport,
+        selectedIds: [],
+        editingGroupId: null,
         tool: "selection",
         past: pushPast(state.past, state.elements),
         future: [],
-      };
-    }),
+      })),
 
-  translateElements: (ids, dx, dy, options) =>
-    set((state) => {
-      const moving = new Set(ids);
-      const moved = releaseBindings(
-        state.elements.filter((el) => moving.has(el.id)).map((el) => translateElement(el, dx, dy)),
-        moving,
-      );
-      if (moved.length === 0) return {};
-      const byId = new Map(moved.map((el) => [el.id, el]));
-      const elements = updateBoundArrows(
-        state.elements.map((el) => byId.get(el.id) ?? el),
-        moving,
-        state.elements,
-      );
-      if (options?.record === false) return { elements };
-      return { elements, past: pushPast(state.past, state.elements), future: [] };
-    }),
+    setBoardName: (value) => set({ name: normalizeBoardName(value) ?? DEFAULT_BOARD_NAME }),
 
-  replaceElement: (element) =>
-    set((state) => ({
-      elements: updateBoundArrows(
-        state.elements.map((el) => (el.id === element.id ? element : el)),
-        [element.id],
-        state.elements,
+    updateElements: (updated) =>
+      set((state) => {
+        const byId = new Map(updated.map((el) => [el.id, el]));
+        const elements = state.elements.map((el) => byId.get(el.id) ?? el);
+        return { elements: updateBoundArrows(elements, byId.keys(), state.elements) };
+      }),
+
+    commitHistory: (before) =>
+      set((state) =>
+        before === state.elements ? {} : { past: pushPast(state.past, before), future: [] },
       ),
-      past: pushPast(state.past, state.elements),
-      future: [],
-    })),
 
-  deleteElements: (ids) =>
-    set((state) => {
-      const toDelete = new Set(ids);
-      const remaining = state.elements.filter((el) => !toDelete.has(el.id));
-      if (remaining.length === state.elements.length) return {};
-      const elements = updateBoundArrows(remaining, []);
-      return {
-        elements,
-        selectedIds: keepExisting(state.selectedIds, elements),
-        editingGroupId: keepEditingGroup(state.editingGroupId, elements),
-        past: pushPast(state.past, state.elements),
-        future: [],
-      };
-    }),
+    undo: () =>
+      set((state) => {
+        const previous = state.past.at(-1);
+        if (!previous) return {};
+        return {
+          elements: previous,
+          selectedIds: keepExisting(state.selectedIds, previous),
+          editingGroupId: keepEditingGroup(state.editingGroupId, previous),
+          past: state.past.slice(0, -1),
+          future: [...state.future, state.elements],
+        };
+      }),
 
-  loadStoredBoard: (id) => {
-    flushBoardSave();
-    const board = loadStoredBoard(id);
-    if (!board) return false;
-    set({
-      boardId: id,
-      name: board.name,
-      elements: board.elements,
-      viewport: board.viewport,
-      selectedIds: [],
-      editingGroupId: null,
-      tool: "selection",
-      helpOpen: false,
-      exportOpen: false,
-      notice: null,
-      past: [],
-      future: [],
-    });
-    return true;
-  },
+    redo: () =>
+      set((state) => {
+        const next = state.future.at(-1);
+        if (!next) return {};
+        return {
+          elements: next,
+          selectedIds: keepExisting(state.selectedIds, next),
+          editingGroupId: keepEditingGroup(state.editingGroupId, next),
+          past: pushPast(state.past, state.elements),
+          future: state.future.slice(0, -1),
+        };
+      }),
 
-  openBoard: (board) =>
-    set((state) => ({
-      name: board.name,
-      elements: board.elements,
-      viewport: board.viewport,
-      selectedIds: [],
-      editingGroupId: null,
-      tool: "selection",
-      past: pushPast(state.past, state.elements),
-      future: [],
-    })),
-
-  setBoardName: (value) => set({ name: normalizeBoardName(value) ?? DEFAULT_BOARD_NAME }),
-
-  updateElements: (updated) =>
-    set((state) => {
-      const byId = new Map(updated.map((el) => [el.id, el]));
-      const elements = state.elements.map((el) => byId.get(el.id) ?? el);
-      return { elements: updateBoundArrows(elements, byId.keys(), state.elements) };
-    }),
-
-  commitHistory: (before) =>
-    set((state) =>
-      before === state.elements ? {} : { past: pushPast(state.past, before), future: [] },
-    ),
-
-  undo: () =>
-    set((state) => {
-      const previous = state.past.at(-1);
-      if (!previous) return {};
-      return {
-        elements: previous,
-        selectedIds: keepExisting(state.selectedIds, previous),
-        editingGroupId: keepEditingGroup(state.editingGroupId, previous),
-        past: state.past.slice(0, -1),
-        future: [...state.future, state.elements],
-      };
-    }),
-
-  redo: () =>
-    set((state) => {
-      const next = state.future.at(-1);
-      if (!next) return {};
-      return {
-        elements: next,
-        selectedIds: keepExisting(state.selectedIds, next),
-        editingGroupId: keepEditingGroup(state.editingGroupId, next),
-        past: pushPast(state.past, state.elements),
-        future: state.future.slice(0, -1),
-      };
-    }),
-
-  setSelection: (selectedIds) => set({ selectedIds }),
-  setEditingGroup: (editingGroupId) => set({ editingGroupId }),
-  setTableCell: (tableCell) => set({ tableCell }),
-  setTableTextScope: (tableTextScope) => set({ tableTextScope }),
-  exitEditingGroup: () => {
-    const { elements, editingGroupId } = useBoardStore.getState();
-    if (editingGroupId === null) return false;
-    set({
-      editingGroupId: getParentGroupId(elements, editingGroupId),
-      selectedIds: getGroupMembers(elements, editingGroupId).map((el) => el.id),
-    });
-    return true;
-  },
-  groupSelection: () =>
-    set((state) => {
-      const elements = groupElements(state.elements, state.selectedIds, state.editingGroupId);
-      if (!elements) return {};
-      return { elements, past: pushPast(state.past, state.elements), future: [] };
-    }),
-  ungroupSelection: () =>
-    set((state) => {
-      const elements = ungroupElements(state.elements, state.selectedIds, state.editingGroupId);
-      if (!elements) return {};
-      return { elements, past: pushPast(state.past, state.elements), future: [] };
-    }),
-  reorderSelection: (direction) =>
-    set((state) => {
-      const elements = reorderElements(state.elements, state.selectedIds, state.editingGroupId, direction);
-      if (!elements) return {};
-      return { elements, past: pushPast(state.past, state.elements), future: [] };
-    }),
-  changePoolLanes: (change) =>
-    set((state) => {
-      const apply = change === "add" ? addPoolLane : removePoolLane;
-      const result = apply(state.elements, state.selectedIds);
-      if (!result) return {};
-      return {
-        elements: updateBoundArrows(result.elements, result.changedIds, state.elements),
-        selectedIds: result.selectedIds,
-        past: pushPast(state.past, state.elements),
-        future: [],
-      };
-    }),
-  setTool: (tool) =>
-    set(tool === "selection" ? { tool } : { tool, selectedIds: [], editingGroupId: null }),
-  setArrowRouting: (arrowRouting) =>
-    set((state) => {
-      const ids = new Set(state.selectedIds);
-      const byId = new Map(state.elements.map((el) => [el.id, el]));
-      let changed = false;
-      const elements = state.elements.map((el) => {
-        if (el.type !== "arrow" || !ids.has(el.id) || el.routing === arrowRouting) return el;
-        changed = true;
-        return setArrowRouting(el, arrowRouting, byId);
+    setSelection: (selectedIds) => set({ selectedIds }),
+    setEditingGroup: (editingGroupId) => set({ editingGroupId }),
+    setTableCell: (tableCell) => set({ tableCell }),
+    setTableTextScope: (tableTextScope) => set({ tableTextScope }),
+    exitEditingGroup: () => {
+      const { elements, editingGroupId } = get();
+      if (editingGroupId === null) return false;
+      set({
+        editingGroupId: getParentGroupId(elements, editingGroupId),
+        selectedIds: getGroupMembers(elements, editingGroupId).map((el) => el.id),
       });
-      if (!changed) return { arrowRouting };
-      return { arrowRouting, elements, past: pushPast(state.past, state.elements), future: [] };
-    }),
-  setArrowhead: (end, arrowhead) =>
-    set((state) => {
-      const key = end === "start" ? "startArrowhead" : "endArrowhead";
-      const arrowheads = { ...state.arrowheads, [end]: arrowhead };
-      const ids = new Set(state.selectedIds);
-      let changed = false;
-      const elements = state.elements.map((el) => {
-        if (el.type !== "arrow" || !ids.has(el.id) || el[key] === arrowhead) return el;
-        changed = true;
-        return { ...el, [key]: arrowhead };
-      });
-      if (!changed) return { arrowheads };
-      return { arrowheads, elements, past: pushPast(state.past, state.elements), future: [] };
-    }),
-  stepTextSize: (direction) =>
-    set((state) => {
-      const currentTextStyle = {
-        ...state.currentTextStyle,
-        fontSize: stepFontSize(state.currentTextStyle.fontSize, direction),
-      };
-      const ids = new Set(state.selectedIds);
-      let changed = false;
-      const elements = state.elements.map((el) => {
-        const textStyle = ids.has(el.id) ? getTextStyle(el) : null;
-        if (!textStyle) return el;
-        const styled = applyTextStyle(el, { fontSize: stepFontSize(textStyle.fontSize, direction) });
-        if (styled !== el) changed = true;
-        return styled;
-      });
-      if (!changed) return { currentTextStyle };
-      return { currentTextStyle, elements, past: pushPast(state.past, state.elements), future: [] };
-    }),
-  setTextStyle: (patch, options) =>
-    set((state) => {
-      const target = hasCellTextPatch(patch) ? getCellTextTarget(state) : null;
-      if (target) {
-        const updated = setCellsTextStyle(target.table, target.range, patch);
-        if (updated === target.table) return {};
-        const elements = state.elements.map((el) => (el.id === updated.id ? updated : el));
-        if (options?.record === false) return { elements };
+      return true;
+    },
+    groupSelection: () =>
+      set((state) => {
+        const elements = groupElements(state.elements, state.selectedIds, state.editingGroupId);
+        if (!elements) return {};
         return { elements, past: pushPast(state.past, state.elements), future: [] };
-      }
-      const currentTextStyle = { ...state.currentTextStyle, ...patch };
-      const ids = new Set(state.selectedIds);
-      let changed = false;
-      const elements = state.elements.map((el) => {
-        if (!ids.has(el.id)) return el;
-        const styled = applyTextStyle(el, patch);
-        if (styled !== el) changed = true;
-        return styled;
-      });
-      if (!changed) return { currentTextStyle };
-      if (options?.record === false) return { currentTextStyle, elements };
-      return { currentTextStyle, elements, past: pushPast(state.past, state.elements), future: [] };
-    }),
-  setStyle: (patch, options) =>
-    set((state) => {
-      const currentStyle = { ...state.currentStyle, ...patch };
-      const ids = new Set(state.selectedIds);
-      const changedIds: string[] = [];
-      const styled = state.elements.map((el) => {
-        if (!ids.has(el.id)) return el;
-        const next = applyStyle(el, patch);
-        if (next !== el) changedIds.push(el.id);
-        return next;
-      });
-      if (changedIds.length === 0) return { currentStyle };
-      const elements = patch.corners === undefined ? styled : updateBoundArrows(styled, changedIds, state.elements);
-      if (options?.record === false) return { currentStyle, elements };
-      return { currentStyle, elements, past: pushPast(state.past, state.elements), future: [] };
-    }),
-  swapArrowheads: () =>
-    set((state) => {
-      const arrowheads = { start: state.arrowheads.end, end: state.arrowheads.start };
-      const ids = new Set(state.selectedIds);
-      let changed = false;
-      const elements = state.elements.map((el) => {
-        if (el.type !== "arrow" || !ids.has(el.id) || el.startArrowhead === el.endArrowhead) return el;
-        changed = true;
-        return { ...el, startArrowhead: el.endArrowhead, endArrowhead: el.startArrowhead };
-      });
-      if (!changed) return { arrowheads };
-      return { arrowheads, elements, past: pushPast(state.past, state.elements), future: [] };
-    }),
-  toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
-  setGridStyle: (gridStyle) => set({ gridStyle, showGrid: true }),
-  cycleGridStyle: () =>
-    set((state) => {
-      const index = GRID_STYLES.indexOf(state.gridStyle);
-      return { gridStyle: GRID_STYLES[(index + 1) % GRID_STYLES.length], showGrid: true };
-    }),
-  setLibraryOpen: (libraryOpen) => set({ libraryOpen }),
-  setThemeMode: (themeMode) => set({ themeMode }),
-  toggleLibraryGroup: (groupId) =>
-    set((state) => ({
-      collapsedLibraryGroups: state.collapsedLibraryGroups.includes(groupId)
-        ? state.collapsedLibraryGroups.filter((id) => id !== groupId)
-        : [...state.collapsedLibraryGroups, groupId],
-    })),
-  setViewportSize: (viewportSize) => set({ viewportSize }),
-  setHelpOpen: (helpOpen) => set({ helpOpen }),
-  setExportOpen: (exportOpen) => set({ exportOpen }),
-  showNotice: (message, tone = "info") => set({ notice: { id: ++noticeCount, message, tone } }),
-  dismissNotice: (id) => set((state) => (state.notice?.id === id ? { notice: null } : {})),
-  panBy: (dx, dy) => set((state) => ({ viewport: panBy(state.viewport, dx, dy) })),
-  zoomAt: (screenPoint, factor) =>
-    set((state) => ({ viewport: zoomAt(state.viewport, screenPoint, factor) })),
-  stepZoom: (direction) =>
-    set((state) => ({
-      viewport: zoomTo(state.viewport, screenCenter(), nextZoomStep(state.viewport.zoom, direction)),
-    })),
-  resetZoom: () => set((state) => ({ viewport: zoomTo(state.viewport, screenCenter(), 1) })),
-}));
-
-let saveFailed = false;
-
-function persistBoard(id: string, content: BoardContent) {
-  const ok = saveStoredBoard(id, content);
-  if (!ok && !saveFailed) {
-    useBoardStore
-      .getState()
-      .showNotice("Não foi possível salvar: o armazenamento do navegador está cheio.", "error");
-  }
-  saveFailed = !ok;
+      }),
+    ungroupSelection: () =>
+      set((state) => {
+        const elements = ungroupElements(state.elements, state.selectedIds, state.editingGroupId);
+        if (!elements) return {};
+        return { elements, past: pushPast(state.past, state.elements), future: [] };
+      }),
+    reorderSelection: (direction) =>
+      set((state) => {
+        const elements = reorderElements(state.elements, state.selectedIds, state.editingGroupId, direction);
+        if (!elements) return {};
+        return { elements, past: pushPast(state.past, state.elements), future: [] };
+      }),
+    changePoolLanes: (change) =>
+      set((state) => {
+        const apply = change === "add" ? addPoolLane : removePoolLane;
+        const result = apply(state.elements, state.selectedIds);
+        if (!result) return {};
+        return {
+          elements: updateBoundArrows(result.elements, result.changedIds, state.elements),
+          selectedIds: result.selectedIds,
+          past: pushPast(state.past, state.elements),
+          future: [],
+        };
+      }),
+    setTool: (tool) =>
+      set(tool === "selection" ? { tool } : { tool, selectedIds: [], editingGroupId: null }),
+    setArrowRouting: (arrowRouting) =>
+      set((state) => {
+        const ids = new Set(state.selectedIds);
+        const byId = new Map(state.elements.map((el) => [el.id, el]));
+        let changed = false;
+        const elements = state.elements.map((el) => {
+          if (el.type !== "arrow" || !ids.has(el.id) || el.routing === arrowRouting) return el;
+          changed = true;
+          return setArrowRouting(el, arrowRouting, byId);
+        });
+        if (!changed) return { arrowRouting };
+        return { arrowRouting, elements, past: pushPast(state.past, state.elements), future: [] };
+      }),
+    setArrowhead: (end, arrowhead) =>
+      set((state) => {
+        const key = end === "start" ? "startArrowhead" : "endArrowhead";
+        const arrowheads = { ...state.arrowheads, [end]: arrowhead };
+        const ids = new Set(state.selectedIds);
+        let changed = false;
+        const elements = state.elements.map((el) => {
+          if (el.type !== "arrow" || !ids.has(el.id) || el[key] === arrowhead) return el;
+          changed = true;
+          return { ...el, [key]: arrowhead };
+        });
+        if (!changed) return { arrowheads };
+        return { arrowheads, elements, past: pushPast(state.past, state.elements), future: [] };
+      }),
+    stepTextSize: (direction) =>
+      set((state) => {
+        const currentTextStyle = {
+          ...state.currentTextStyle,
+          fontSize: stepFontSize(state.currentTextStyle.fontSize, direction),
+        };
+        const ids = new Set(state.selectedIds);
+        let changed = false;
+        const elements = state.elements.map((el) => {
+          const textStyle = ids.has(el.id) ? getTextStyle(el) : null;
+          if (!textStyle) return el;
+          const styled = applyTextStyle(el, { fontSize: stepFontSize(textStyle.fontSize, direction) });
+          if (styled !== el) changed = true;
+          return styled;
+        });
+        if (!changed) return { currentTextStyle };
+        return { currentTextStyle, elements, past: pushPast(state.past, state.elements), future: [] };
+      }),
+    setTextStyle: (patch, options) =>
+      set((state) => {
+        const target = hasCellTextPatch(patch) ? getCellTextTarget(state) : null;
+        if (target) {
+          const updated = setCellsTextStyle(target.table, target.range, patch);
+          if (updated === target.table) return {};
+          const elements = state.elements.map((el) => (el.id === updated.id ? updated : el));
+          if (options?.record === false) return { elements };
+          return { elements, past: pushPast(state.past, state.elements), future: [] };
+        }
+        const currentTextStyle = { ...state.currentTextStyle, ...patch };
+        const ids = new Set(state.selectedIds);
+        let changed = false;
+        const elements = state.elements.map((el) => {
+          if (!ids.has(el.id)) return el;
+          const styled = applyTextStyle(el, patch);
+          if (styled !== el) changed = true;
+          return styled;
+        });
+        if (!changed) return { currentTextStyle };
+        if (options?.record === false) return { currentTextStyle, elements };
+        return { currentTextStyle, elements, past: pushPast(state.past, state.elements), future: [] };
+      }),
+    setStyle: (patch, options) =>
+      set((state) => {
+        const currentStyle = { ...state.currentStyle, ...patch };
+        const ids = new Set(state.selectedIds);
+        const changedIds: string[] = [];
+        const styled = state.elements.map((el) => {
+          if (!ids.has(el.id)) return el;
+          const next = applyStyle(el, patch);
+          if (next !== el) changedIds.push(el.id);
+          return next;
+        });
+        if (changedIds.length === 0) return { currentStyle };
+        const elements = patch.corners === undefined ? styled : updateBoundArrows(styled, changedIds, state.elements);
+        if (options?.record === false) return { currentStyle, elements };
+        return { currentStyle, elements, past: pushPast(state.past, state.elements), future: [] };
+      }),
+    swapArrowheads: () =>
+      set((state) => {
+        const arrowheads = { start: state.arrowheads.end, end: state.arrowheads.start };
+        const ids = new Set(state.selectedIds);
+        let changed = false;
+        const elements = state.elements.map((el) => {
+          if (el.type !== "arrow" || !ids.has(el.id) || el.startArrowhead === el.endArrowhead) return el;
+          changed = true;
+          return { ...el, startArrowhead: el.endArrowhead, endArrowhead: el.startArrowhead };
+        });
+        if (!changed) return { arrowheads };
+        return { arrowheads, elements, past: pushPast(state.past, state.elements), future: [] };
+      }),
+    toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
+    setGridStyle: (gridStyle) => set({ gridStyle, showGrid: true }),
+    cycleGridStyle: () =>
+      set((state) => {
+        const index = GRID_STYLES.indexOf(state.gridStyle);
+        return { gridStyle: GRID_STYLES[(index + 1) % GRID_STYLES.length], showGrid: true };
+      }),
+    setLibraryOpen: (libraryOpen) => set({ libraryOpen }),
+    setThemeMode: (themeMode) => set({ themeMode }),
+    toggleLibraryGroup: (groupId) =>
+      set((state) => ({
+        collapsedLibraryGroups: state.collapsedLibraryGroups.includes(groupId)
+          ? state.collapsedLibraryGroups.filter((id) => id !== groupId)
+          : [...state.collapsedLibraryGroups, groupId],
+      })),
+    setViewportSize: (viewportSize) => set({ viewportSize }),
+    setHelpOpen: (helpOpen) => set({ helpOpen }),
+    setExportOpen: (exportOpen) => set({ exportOpen }),
+    showNotice: (message, tone = "info") => set({ notice: { id: ++noticeCount, message, tone } }),
+    dismissNotice: (id) => set((state) => (state.notice?.id === id ? { notice: null } : {})),
+    panBy: (dx, dy) => set((state) => ({ viewport: panBy(state.viewport, dx, dy) })),
+    zoomAt: (screenPoint, factor) =>
+      set((state) => ({ viewport: zoomAt(state.viewport, screenPoint, factor) })),
+    stepZoom: (direction) =>
+      set((state) => ({
+        viewport: zoomTo(state.viewport, screenCenter(state), nextZoomStep(state.viewport.zoom, direction)),
+      })),
+    resetZoom: () => set((state) => ({ viewport: zoomTo(state.viewport, screenCenter(state), 1) })),
+  }));
 }
 
-const scheduleSave = debounce(persistBoard, SAVE_DELAY);
-
-export function flushBoardSave() {
-  scheduleSave.flush();
-}
-
-const unsubscribe = useBoardStore.subscribe((state, prev) => {
-  if (
-    state.showGrid !== prev.showGrid ||
-    state.gridStyle !== prev.gridStyle ||
-    state.libraryOpen !== prev.libraryOpen ||
-    state.themeMode !== prev.themeMode ||
-    state.collapsedLibraryGroups !== prev.collapsedLibraryGroups
-  ) {
-    savePreferences({
-      showGrid: state.showGrid,
-      gridStyle: state.gridStyle,
-      libraryOpen: state.libraryOpen,
-      themeMode: state.themeMode,
-      collapsedLibraryGroups: state.collapsedLibraryGroups,
-    });
-  }
-  if (state.boardId === null || state.boardId !== prev.boardId) return;
-  const changed =
-    state.name !== prev.name || state.elements !== prev.elements || state.viewport !== prev.viewport;
-  if (!changed) return;
-  const { boardId, name, elements, viewport } = state;
-  scheduleSave(boardId, { name, elements, viewport });
-});
-
-const flushSave = () => scheduleSave.flush();
-window.addEventListener("pagehide", flushSave);
-
-import.meta.hot?.dispose(() => {
-  scheduleSave.flush();
-  unsubscribe();
-  window.removeEventListener("pagehide", flushSave);
-});

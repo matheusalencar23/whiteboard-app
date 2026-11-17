@@ -1,7 +1,7 @@
 import { LuBetweenHorizontalEnd, LuTableRowsSplit } from "react-icons/lu";
 import styles from "./StyleBar.module.scss";
 import { removePoolLane } from "../../../lib/elements/pool";
-import { useBoardStore } from "../../../store/boardStore";
+import { useBoardStore } from "../../../store/boardStoreContext";
 import { IconButton } from "../../../ui/IconButton/IconButton";
 import { PanelSection } from "../../../ui/Panel/Panel";
 import { selectPoolLane } from "./selectors";

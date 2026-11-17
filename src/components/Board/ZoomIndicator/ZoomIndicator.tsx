@@ -3,7 +3,7 @@ import { LuMinus, LuPlus } from "react-icons/lu";
 import styles from "./ZoomIndicator.module.scss";
 import { IconButton } from "../../../ui/IconButton/IconButton";
 import { Tooltip } from "../../../ui/Tooltip/Tooltip";
-import { useBoardStore } from "../../../store/boardStore";
+import { useBoardStore } from "../../../store/boardStoreContext";
 import { MAX_ZOOM, MIN_ZOOM } from "../../../lib/viewport";
 import { SHORTCUTS, formatShortcut } from "../shortcuts";
 

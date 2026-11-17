@@ -3,7 +3,8 @@ import type { Point } from "../../../lib/types";
 import type { BoardElement } from "../../../lib/elements/types";
 import { cloneElementsAt } from "../../../lib/elements/clone";
 import { parseClipboard, serializeClipboard } from "../../../lib/persistence";
-import { useBoardStore } from "../../../store/boardStore";
+import type { BoardStore } from "../../../store/boardStore";
+import { useBoardStoreApi } from "../../../store/boardStoreContext";
 import { isTypingTarget } from "../useShortcuts";
 
 interface ClipboardOptions {
@@ -21,14 +22,14 @@ function isMiddleClickPaste(): boolean {
   return middleButtonDown || performance.now() - middleButtonReleasedAt < MIDDLE_PASTE_WINDOW;
 }
 
-function isBlocked(e: ClipboardEvent): boolean {
-  const { helpOpen, exportOpen } = useBoardStore.getState();
+function isBlocked(boardStore: BoardStore, e: ClipboardEvent): boolean {
+  const { helpOpen, exportOpen } = boardStore.getState();
   return isTypingTarget(e.target) || helpOpen || exportOpen;
 }
 
-function copySelection(e: ClipboardEvent): string[] | null {
-  if (isBlocked(e) || !e.clipboardData) return null;
-  const { elements, selectedIds } = useBoardStore.getState();
+function copySelection(boardStore: BoardStore, e: ClipboardEvent): string[] | null {
+  if (isBlocked(boardStore, e) || !e.clipboardData) return null;
+  const { elements, selectedIds } = boardStore.getState();
   const ids = new Set(selectedIds);
   const selected = elements.filter((el) => ids.has(el.id));
   if (selected.length === 0) return null;
@@ -38,6 +39,7 @@ function copySelection(e: ClipboardEvent): string[] | null {
 }
 
 export function useClipboard(options: ClipboardOptions) {
+  const boardStore = useBoardStoreApi();
   const optionsRef = useRef(options);
 
   useEffect(() => {
@@ -46,12 +48,12 @@ export function useClipboard(options: ClipboardOptions) {
 
   useEffect(() => {
     function handleCopy(e: ClipboardEvent) {
-      copySelection(e);
+      copySelection(boardStore, e);
     }
 
     function handleCut(e: ClipboardEvent) {
-      const copied = copySelection(e);
-      if (copied) useBoardStore.getState().deleteElements(copied);
+      const copied = copySelection(boardStore, e);
+      if (copied) boardStore.getState().deleteElements(copied);
     }
 
     function handlePointerDown(e: PointerEvent) {
@@ -65,7 +67,7 @@ export function useClipboard(options: ClipboardOptions) {
     }
 
     function handlePaste(e: ClipboardEvent) {
-      if (isBlocked(e)) return;
+      if (isBlocked(boardStore, e)) return;
       if (isMiddleClickPaste()) {
         e.preventDefault();
         return;
@@ -77,7 +79,7 @@ export function useClipboard(options: ClipboardOptions) {
       const position = getPastePosition();
       const elements = parseClipboard(text);
       const inserted = elements ? cloneElementsAt(elements, position) : [createPastedText(text, position)];
-      useBoardStore.getState().insertElements(inserted);
+      boardStore.getState().insertElements(inserted);
     }
 
     document.addEventListener("copy", handleCopy);
@@ -92,5 +94,5 @@ export function useClipboard(options: ClipboardOptions) {
       document.removeEventListener("cut", handleCut);
       document.removeEventListener("paste", handlePaste);
     };
-  }, []);
+  }, [boardStore]);
 }

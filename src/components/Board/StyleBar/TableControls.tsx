@@ -36,7 +36,8 @@ import {
   type CellPosition,
 } from "../../../lib/elements/shapes/table";
 import { remapTableRowBindings } from "../../../lib/elements/bindings";
-import { useBoardStore } from "../../../store/boardStore";
+import type { BoardStore } from "../../../store/boardStore";
+import { useBoardStore, useBoardStoreApi } from "../../../store/boardStoreContext";
 import { IconButton } from "../../../ui/IconButton/IconButton";
 import { PanelSection } from "../../../ui/Panel/Panel";
 import { AUTO_COLOR, ColorField, type Swatch } from "./ColorField";
@@ -50,29 +51,30 @@ const CELL_SWATCHES: Swatch[] = [{ color: AUTO_COLOR, label: "Sem cor própria" 
 
 type TableUpdate = (table: TableElement) => TableElement;
 
-function findTable(id: string): TableElement | null {
-  const element = useBoardStore.getState().elements.find((el) => el.id === id);
+function findTable(boardStore: BoardStore, id: string): TableElement | null {
+  const element = boardStore.getState().elements.find((el) => el.id === id);
   return element?.type === "table" ? element : null;
 }
 
 function useTablePreview(id: string) {
+  const boardStore = useBoardStoreApi();
   const beforeRef = useRef<BoardElement[] | null>(null);
 
   const preview = useCallback(
     (update: TableUpdate) => {
-      const table = findTable(id);
+      const table = findTable(boardStore, id);
       if (!table) return;
-      beforeRef.current ??= useBoardStore.getState().elements;
-      useBoardStore.getState().updateElements([update(table)]);
+      beforeRef.current ??= boardStore.getState().elements;
+      boardStore.getState().updateElements([update(table)]);
     },
-    [id],
+    [boardStore, id],
   );
 
   const commit = useCallback(() => {
     const before = beforeRef.current;
     beforeRef.current = null;
-    if (before) useBoardStore.getState().commitHistory(before);
-  }, []);
+    if (before) boardStore.getState().commitHistory(before);
+  }, [boardStore]);
 
   useEffect(() => commit, [commit]);
 
@@ -86,6 +88,7 @@ export function TableControls() {
 }
 
 function TableControlsContent({ table }: { table: TableElement }) {
+  const boardStore = useBoardStoreApi();
   const tableCell = useBoardStore((s) => s.tableCell);
   const { preview, commit } = useTablePreview(table.id);
   const { preview: previewStyle, commit: commitStyle } = useStylePreview();
@@ -98,8 +101,8 @@ function TableControlsContent({ table }: { table: TableElement }) {
   const cellFill = onTitle ? undefined : table.cells[cell.row][cell.column].fill;
 
   function apply(update: TableUpdate, nextCell: CellPosition = cell, mapRow?: (row: number) => number | undefined) {
-    const store = useBoardStore.getState();
-    const current = findTable(table.id);
+    const store = boardStore.getState();
+    const current = findTable(boardStore, table.id);
     if (!current) return;
     const updated = update(current);
     if (updated !== current) {

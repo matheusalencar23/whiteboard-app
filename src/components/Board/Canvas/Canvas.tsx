@@ -112,7 +112,8 @@ import { toDegrees, type Measurement } from "../../../lib/render/measurement";
 import { GRID_SIZE } from "../../../lib/render/grid";
 import { screenToWorld, worldToScreen } from "../../../lib/viewport";
 import { lineHeight } from "../../../lib/text";
-import { useBoardStore } from "../../../store/boardStore";
+import type { BoardStore } from "../../../store/boardStore";
+import { useBoardStore, useBoardStoreApi } from "../../../store/boardStoreContext";
 import { TextEditor, type TextEditorLayout } from "../TextEditor/TextEditor";
 import { useTheme } from "../../useColorScheme";
 import { adaptColor } from "../../../lib/colors";
@@ -219,14 +220,14 @@ function getScreenPoint(e: { nativeEvent: MouseEvent }): Point {
   return { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY };
 }
 
-function getSelectedElements(): BoardElement[] {
-  const { elements, selectedIds } = useBoardStore.getState();
+function getSelectedElements(boardStore: BoardStore): BoardElement[] {
+  const { elements, selectedIds } = boardStore.getState();
   const ids = new Set(selectedIds);
   return elements.filter((el) => ids.has(el.id));
 }
 
-function findBindingAt(world: Point) {
-  const { elements, viewport } = useBoardStore.getState();
+function findBindingAt(boardStore: BoardStore, world: Point) {
+  const { elements, viewport } = boardStore.getState();
   const { zoom } = viewport;
   return findBinding(
     elements,
@@ -255,13 +256,13 @@ function toLocal(element: BoardElement, world: Point): Point {
   return rotatePoint(world, getCenter(element), -element.rotation);
 }
 
-function getSingleTable(): TableElement | null {
-  const [element, ...rest] = getSelectedElements();
+function getSingleTable(boardStore: BoardStore): TableElement | null {
+  const [element, ...rest] = getSelectedElements(boardStore);
   return element?.type === "table" && rest.length === 0 ? element : null;
 }
 
-function getColumnBorderHit(world: Point, zoom: number): { table: TableElement; column: number } | null {
-  const table = getSingleTable();
+function getColumnBorderHit(boardStore: BoardStore, world: Point, zoom: number): { table: TableElement; column: number } | null {
+  const table = getSingleTable(boardStore);
   if (!table) return null;
   const column = getColumnBorderAt(table, toLocal(table, world), COLUMN_BORDER_TOLERANCE / zoom);
   return column === null ? null : { table, column };
@@ -296,8 +297,8 @@ function editorKey(editing: Editing): string {
   return editing.element.id;
 }
 
-function activeCellOf(table: TableElement): CellPosition {
-  const { tableCell } = useBoardStore.getState();
+function activeCellOf(boardStore: BoardStore, table: TableElement): CellPosition {
+  const { tableCell } = boardStore.getState();
   if (tableCell?.elementId !== table.id) return { row: 0, column: 0 };
   return clampCell(table, tableCell);
 }
@@ -309,51 +310,51 @@ function editorInitialText(editing: Editing): string {
   return editing.element.label?.text ?? "";
 }
 
-function withCurrentStyle<T extends BoardElement>(element: T): T {
-  return { ...element, style: { ...useBoardStore.getState().currentStyle } };
+function withCurrentStyle<T extends BoardElement>(boardStore: BoardStore, element: T): T {
+  return { ...element, style: { ...boardStore.getState().currentStyle } };
 }
 
-function createStyledText(position: Point, text = ""): TextElement {
-  const { currentStyle, currentTextStyle } = useBoardStore.getState();
+function createStyledText(boardStore: BoardStore, position: Point, text = ""): TextElement {
+  const { currentStyle, currentTextStyle } = boardStore.getState();
   const textStyle = { ...currentTextStyle, color: currentTextStyle.color ?? currentStyle.strokeColor };
-  return withCurrentStyle(createText(position, textStyle, text));
+  return withCurrentStyle(boardStore, createText(position, textStyle, text));
 }
 
-function createPastedText(raw: string, center: Point): BoardElement {
+function createPastedText(boardStore: BoardStore, raw: string, center: Point): BoardElement {
   const rows = parseTableText(raw);
   if (rows) {
-    const { currentTextStyle } = useBoardStore.getState();
-    const table = withCurrentStyle(createTableFromRows(rows, center, { ...currentTextStyle, verticalAlign: "middle" }));
+    const { currentTextStyle } = boardStore.getState();
+    const table = withCurrentStyle(boardStore, createTableFromRows(rows, center, { ...currentTextStyle, verticalAlign: "middle" }));
     return { ...table, style: { ...table.style, fillStyle: "solid" } };
   }
   const text = raw.replace(/\r\n?/g, "\n").replace(/\s+$/, "");
-  const element = createStyledText(center, text);
+  const element = createStyledText(boardStore, center, text);
   return { ...element, x: center.x - element.width / 2, y: center.y - element.height / 2 };
 }
 
-function labelTextStyle(element: LabeledElement): TextStyle {
+function labelTextStyle(boardStore: BoardStore, element: LabeledElement): TextStyle {
   return (
     element.label?.textStyle ?? {
-      ...useBoardStore.getState().currentTextStyle,
+      ...boardStore.getState().currentTextStyle,
       align: "center",
       verticalAlign: "middle",
     }
   );
 }
 
-function editorTextStyle(editing: Editing): TextStyle {
+function editorTextStyle(boardStore: BoardStore, editing: Editing): TextStyle {
   if (editing.kind === "text") return editing.element.textStyle;
   if (editing.kind === "section") return getSectionTextStyle(editing.element, editing.index);
   if (editing.kind === "cell") return getCellTextStyle(editing.element, editing.cell.row, editing.cell.column);
-  return getLabelTextStyle(editing.element, labelTextStyle(editing.element));
+  return getLabelTextStyle(editing.element, labelTextStyle(boardStore, editing.element));
 }
 
-function currentEditingGroup(element: BoardElement): string | null {
-  const store = useBoardStore.getState();
+function currentEditingGroup(boardStore: BoardStore, element: BoardElement): string | null {
+  const store = boardStore.getState();
   if (store.editingGroupId !== null && !isInGroup(element, store.editingGroupId)) {
     store.setEditingGroup(null);
   }
-  return useBoardStore.getState().editingGroupId;
+  return boardStore.getState().editingGroupId;
 }
 
 function hasSize(element: BoardElement): boolean {
@@ -362,6 +363,7 @@ function hasSize(element: BoardElement): boolean {
 }
 
 export function Canvas() {
+  const boardStore = useBoardStoreApi();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const roughRef = useRef<RoughCanvas | null>(null);
   const interactionRef = useRef<Interaction | null>(null);
@@ -414,12 +416,12 @@ export function Canvas() {
     const observer = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect;
       setSize({ width, height });
-      useBoardStore.getState().setViewportSize({ width, height });
+      boardStore.getState().setViewportSize({ width, height });
     });
     observer.observe(canvas);
 
     return () => observer.disconnect();
-  }, []);
+  }, [boardStore]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -427,7 +429,7 @@ export function Canvas() {
 
     function handleWheel(e: WheelEvent) {
       e.preventDefault();
-      const { panBy, zoomAt } = useBoardStore.getState();
+      const { panBy, zoomAt } = boardStore.getState();
       const scale = e.deltaMode === 1 ? 16 : 1;
       const dx = e.deltaX * scale;
       const dy = e.deltaY * scale;
@@ -444,7 +446,7 @@ export function Canvas() {
 
     canvas.addEventListener("wheel", handleWheel, { passive: false });
     return () => canvas.removeEventListener("wheel", handleWheel);
-  }, []);
+  }, [boardStore]);
 
   useEffect(() => {
     function reapplyShift(e: KeyboardEvent) {
@@ -480,9 +482,9 @@ export function Canvas() {
   useClipboard({
     getPastePosition: () => {
       const screen = hoverPointRef.current ?? { x: size.width / 2, y: size.height / 2 };
-      return screenToWorld(screen, useBoardStore.getState().viewport);
+      return screenToWorld(screen, boardStore.getState().viewport);
     },
-    createPastedText,
+    createPastedText: (raw, center) => createPastedText(boardStore, raw, center),
   });
 
   const scene = useMemo(() => {
@@ -490,7 +492,7 @@ export function Canvas() {
     if (editing?.kind === "text") {
       visible = elements.filter((el) => el.id !== editing.element.id);
     } else if (editing?.kind === "label") {
-      const textStyle = labelTextStyle(editing.element);
+      const textStyle = labelTextStyle(boardStore, editing.element);
       visible = elements.map((el) =>
         el.id === editing.element.id && isLabeledElement(el)
           ? { ...el, label: { text: editingText, textStyle } }
@@ -501,7 +503,7 @@ export function Canvas() {
       visible = elements.map((el) => (el.id === live.id ? live : el));
     }
     return draft ? [...visible, draft] : visible;
-  }, [elements, draft, editing, editingText]);
+  }, [boardStore, elements, draft, editing, editingText]);
 
   const selected = useMemo(() => {
     const ids = new Set(selectedIds);
@@ -592,24 +594,24 @@ export function Canvas() {
   ]);
 
   function startEditingText(element: TextElement, isNew: boolean) {
-    useBoardStore.getState().setSelection([]);
+    boardStore.getState().setSelection([]);
     setEditing({ kind: "text", element, isNew });
   }
 
   function startEditingLabel(element: LabeledElement) {
-    useBoardStore.getState().setSelection([]);
+    boardStore.getState().setSelection([]);
     setEditingText(element.label?.text ?? "");
     setEditing({ kind: "label", element });
   }
 
   function startEditingSection(element: CompartmentsElement, index: number) {
-    useBoardStore.getState().setSelection([]);
+    boardStore.getState().setSelection([]);
     setEditingText(element.sections[index].text);
     setEditing({ kind: "section", element, index });
   }
 
   function startEditingCell(element: TableElement, cell: CellPosition) {
-    const store = useBoardStore.getState();
+    const store = boardStore.getState();
     store.setSelection([]);
     store.setTableCell({ elementId: element.id, ...cell });
     setEditingText(getCellText(element, cell));
@@ -627,7 +629,7 @@ export function Canvas() {
   }
 
   function commitCellText(id: string, cell: CellPosition, text: string, extend: boolean): TableElement | null {
-    const store = useBoardStore.getState();
+    const store = boardStore.getState();
     const table = store.elements.find((el) => el.id === id);
     if (table?.type !== "table" || sameCell(clampCell(table, cell), cell) === false) return null;
     let updated = setCellText(table, cell, text);
@@ -637,7 +639,7 @@ export function Canvas() {
   }
 
   function finishEditingCell(id: string, cell: CellPosition, text: string) {
-    const store = useBoardStore.getState();
+    const store = boardStore.getState();
     if (commitCellText(id, cell, text, false)) store.setSelection([id]);
     store.setTool("selection");
   }
@@ -660,7 +662,7 @@ export function Canvas() {
   }
 
   function finishEditingSection(id: string, index: number, text: string) {
-    const store = useBoardStore.getState();
+    const store = boardStore.getState();
     const shape = store.elements.find((el) => el.id === id);
     if (shape?.type === "compartments" && index < shape.sections.length) {
       const updated = setSectionText(shape, index, text);
@@ -671,14 +673,14 @@ export function Canvas() {
   }
 
   function finishEditingLabel(id: string, text: string) {
-    const store = useBoardStore.getState();
+    const store = boardStore.getState();
     const shape = store.elements.find((el) => el.id === id);
     if (shape && isLabeledElement(shape)) {
       const isEmpty = text.trim() === "";
       if (isEmpty && shape.label) {
         store.replaceElement({ ...shape, label: undefined });
       } else if (!isEmpty && text !== shape.label?.text) {
-        store.replaceElement({ ...shape, label: { text, textStyle: labelTextStyle(shape) } });
+        store.replaceElement({ ...shape, label: { text, textStyle: labelTextStyle(boardStore, shape) } });
       }
       store.setSelection([id]);
     }
@@ -686,7 +688,7 @@ export function Canvas() {
   }
 
   function finishEditingText(current: Extract<Editing, { kind: "text" }>, text: string) {
-    const store = useBoardStore.getState();
+    const store = boardStore.getState();
     const isEmpty = text.trim() === "";
     const updated = setText(current.element, text);
 
@@ -702,10 +704,10 @@ export function Canvas() {
   }
 
   function startSelectionInteraction(world: Point, shiftKey: boolean) {
-    const store = useBoardStore.getState();
+    const store = boardStore.getState();
     const { zoom } = store.viewport;
     const tolerance = HIT_TOLERANCE / zoom;
-    const selectedNow = getSelectedElements();
+    const selectedNow = getSelectedElements(boardStore);
     const frame = getSelectionFrame(selectedNow);
     const singleArrow = getSingleArrow(selectedNow);
 
@@ -779,7 +781,7 @@ export function Canvas() {
       return;
     }
 
-    const border = !shiftKey && getColumnBorderHit(world, zoom);
+    const border = !shiftKey && getColumnBorderHit(boardStore, world, zoom);
     if (border) {
       interactionRef.current = {
         kind: "resizingColumn",
@@ -794,14 +796,14 @@ export function Canvas() {
     if (hit?.type === "table") {
       const cell = getCellAt(hit, toLocal(hit, world));
       const cursor = store.tableCell;
-      if (shiftKey && getSingleTable()?.id === hit.id && cursor?.elementId === hit.id) {
+      if (shiftKey && getSingleTable(boardStore)?.id === hit.id && cursor?.elementId === hit.id) {
         store.setTableCell({ elementId: hit.id, row: cursor.row, column: cursor.column, extent: cell });
         return;
       }
       store.setTableCell({ elementId: hit.id, ...cell });
     }
     if (hit) {
-      const unit = getSelectionUnit(store.elements, hit, currentEditingGroup(hit));
+      const unit = getSelectionUnit(store.elements, hit, currentEditingGroup(boardStore, hit));
       const isSelected = store.selectedIds.includes(hit.id);
       if (shiftKey) {
         if (isSelected) {
@@ -816,7 +818,7 @@ export function Canvas() {
       interactionRef.current = {
         kind: "moving",
         start: world,
-        originals: getSelectedElements(),
+        originals: getSelectedElements(boardStore),
         before: store.elements,
       };
       return;
@@ -846,7 +848,7 @@ export function Canvas() {
       return;
     }
 
-    const store = useBoardStore.getState();
+    const store = boardStore.getState();
     const screen = getScreenPoint(e);
     const wantsPan =
       e.button === 1 || (e.button === 0 && (store.tool === "hand" || spacePressedRef.current));
@@ -857,7 +859,7 @@ export function Canvas() {
     const world = screenToWorld(screen, store.viewport);
 
     if (!wantsPan && store.tool === "text") {
-      startEditingText(createStyledText(world), true);
+      startEditingText(createStyledText(boardStore, world), true);
       return;
     }
 
@@ -871,25 +873,25 @@ export function Canvas() {
       startSelectionInteraction(world, e.shiftKey);
     } else if (store.tool === "freedraw") {
       interactionRef.current = { kind: "freedrawing", points: [world] };
-      setDraft(withCurrentStyle(createFreedraw([world])));
+      setDraft(withCurrentStyle(boardStore, createFreedraw([world])));
     } else if (store.tool === "arrow") {
-      const startBinding = findBindingAt(world);
+      const startBinding = findBindingAt(boardStore, world);
       interactionRef.current = { kind: "creating", start: world, startBinding };
       setDraft({
-        ...withCurrentStyle(createArrow(world, world, store.arrowRouting, store.arrowheads)),
+        ...withCurrentStyle(boardStore, createArrow(world, world, store.arrowRouting, store.arrowheads)),
         startBinding,
       });
       setBindingHint(startBinding);
     } else if (BOX_TOOLS.includes(store.tool)) {
       interactionRef.current = { kind: "creating", start: world, startBinding: null };
-      setDraft(withCurrentStyle(createBoxElement(store.tool as BoxElementType, world, world)));
+      setDraft(withCurrentStyle(boardStore, createBoxElement(store.tool as BoxElementType, world, world)));
     }
   }
 
   function updateHoverCursor(world: Point) {
-    const store = useBoardStore.getState();
+    const store = boardStore.getState();
     const { zoom } = store.viewport;
-    const selectedNow = getSelectedElements();
+    const selectedNow = getSelectedElements(boardStore);
     const frame = getSelectionFrame(selectedNow);
     const singleArrow = getSingleArrow(selectedNow);
 
@@ -905,14 +907,14 @@ export function Canvas() {
     const handle = boxFrame && getHandleAt(world, boxFrame, zoom);
     if (boxFrame && handle) return setHoverCursor(getHandleCursor(handle, boxFrame.rotation));
 
-    if (getColumnBorderHit(world, zoom)) return setHoverCursor("col-resize");
+    if (getColumnBorderHit(boardStore, world, zoom)) return setHoverCursor("col-resize");
     const overSelection = frame && frameContains(frame, world, zoom);
     const overElement = getElementAtPoint(store.elements, world, HIT_TOLERANCE / zoom);
     setHoverCursor(overSelection || overElement ? "move" : "default");
   }
 
   function handlePointerMove(e: React.PointerEvent) {
-    const store = useBoardStore.getState();
+    const store = boardStore.getState();
     const screen = getScreenPoint(e);
     hoverPointRef.current = screen;
     const world = screenToWorld(screen, store.viewport);
@@ -920,7 +922,7 @@ export function Canvas() {
 
     if (!interaction) {
       if (store.tool === "selection" && !editing) updateHoverCursor(world);
-      if (store.tool === "arrow") setBindingHint(findBindingAt(world));
+      if (store.tool === "arrow") setBindingHint(findBindingAt(boardStore, world));
       return;
     }
 
@@ -935,7 +937,7 @@ export function Canvas() {
   }
 
   function updateInteraction(world: Point, shiftKey: boolean) {
-    const store = useBoardStore.getState();
+    const store = boardStore.getState();
     const interaction = interactionRef.current;
     if (!interaction) return;
 
@@ -949,7 +951,7 @@ export function Canvas() {
           break;
         }
         const target = shiftKey ? snapToAngle(interaction.start, world) : world;
-        const binding = findBindingAt(target);
+        const binding = findBindingAt(boardStore, target);
         const base = setBinding(
           setArrowPoints(current, [interaction.start, target]),
           "start",
@@ -986,7 +988,7 @@ export function Canvas() {
         const index = end === "start" ? 0 : points.length - 1;
         const neighbor = points[end === "start" ? 1 : index - 1];
         const target = shiftKey && original.routing !== "elbow" ? snapToAngle(neighbor, world) : world;
-        const binding = findBindingAt(target);
+        const binding = findBindingAt(boardStore, target);
         points[index] = target;
         const byId = new Map(store.elements.map((el) => [el.id, el]));
         const arrow = bindArrowEnd(setArrowPoints(original, points), end, binding);
@@ -1063,13 +1065,13 @@ export function Canvas() {
   }
 
   function editSelection(): boolean {
-    const store = useBoardStore.getState();
+    const store = boardStore.getState();
     if (store.tool !== "selection" || editing || interactionRef.current) return false;
-    const [element, ...rest] = getSelectedElements();
+    const [element, ...rest] = getSelectedElements(boardStore);
     if (!element || rest.length > 0) return false;
     if (element.type === "text") startEditingText(element, false);
     else if (element.type === "compartments") startEditingSection(element, 0);
-    else if (element.type === "table") startEditingCell(element, activeCellOf(element));
+    else if (element.type === "table") startEditingCell(element, activeCellOf(boardStore, element));
     else if (isLabeledElement(element)) startEditingLabel(element);
     else return false;
     return true;
@@ -1095,7 +1097,7 @@ export function Canvas() {
   function handlePointerUp() {
     const interaction = interactionRef.current;
     const draftElement = draftRef.current;
-    const store = useBoardStore.getState();
+    const store = boardStore.getState();
     endInteraction();
     if (!interaction) return;
 
@@ -1131,7 +1133,7 @@ export function Canvas() {
       interaction?.kind === "resizing" ||
       interaction?.kind === "rotating"
     ) {
-      useBoardStore.getState().updateElements(interaction.originals);
+      boardStore.getState().updateElements(interaction.originals);
     } else if (
       interaction?.kind === "draggingEndpoint" ||
       interaction?.kind === "draggingPoint" ||
@@ -1139,14 +1141,14 @@ export function Canvas() {
       interaction?.kind === "draggingLabel" ||
       interaction?.kind === "resizingColumn"
     ) {
-      useBoardStore.getState().updateElements([interaction.original]);
+      boardStore.getState().updateElements([interaction.original]);
     }
     endInteraction();
   }
 
   function handleArrowHandleDoubleClick(world: Point): boolean {
-    const store = useBoardStore.getState();
-    const arrow = getSingleArrow(getSelectedElements());
+    const store = boardStore.getState();
+    const arrow = getSingleArrow(getSelectedElements(boardStore));
     const handle = arrow && getArrowHandleAt(arrow, world, store.viewport.zoom);
     if (!arrow || !handle) return false;
 
@@ -1162,7 +1164,7 @@ export function Canvas() {
   }
 
   function handleDoubleClick(e: React.MouseEvent) {
-    const store = useBoardStore.getState();
+    const store = boardStore.getState();
     if (store.tool !== "selection" || editing) return;
 
     const world = screenToWorld(getScreenPoint(e), store.viewport);
@@ -1171,7 +1173,7 @@ export function Canvas() {
     const hit = getElementAtPoint(store.elements, world, tolerance);
     const shape = hit ? hit : getLabelTargetAt(store.elements, world, 0);
 
-    const groupId = shape && getSelectableGroupId(shape, currentEditingGroup(shape));
+    const groupId = shape && getSelectableGroupId(shape, currentEditingGroup(boardStore, shape));
     if (shape && groupId) {
       store.setEditingGroup(groupId);
       store.setSelection(getSelectionUnit(store.elements, shape, groupId));
@@ -1187,7 +1189,7 @@ export function Canvas() {
     } else if (shape && isLabeledElement(shape)) {
       startEditingLabel(shape);
     } else if (!hit) {
-      const text = createStyledText(world);
+      const text = createStyledText(boardStore, world);
       startEditingText({ ...text, y: world.y - lineHeight(text.textStyle) / 2 }, true);
     }
   }
@@ -1203,7 +1205,7 @@ export function Canvas() {
     if (!item) return;
     e.preventDefault();
     if (editing) (document.activeElement as HTMLElement | null)?.blur();
-    insertLibraryItem(item, getScreenPoint(e));
+    insertLibraryItem(boardStore, item, getScreenPoint(e));
   }
 
   let styleBarPlacement: StyleBarPlacement = { kind: "top" };
@@ -1249,8 +1251,8 @@ export function Canvas() {
         <TextEditor
           key={editorKey(editing)}
           initialText={editorInitialText(editing)}
-          textStyle={editorTextStyle(editing)}
-          color={adaptColor(resolveTextColor(editorTextStyle(editing), editing.element), theme.scheme)}
+          textStyle={editorTextStyle(boardStore, editing)}
+          color={adaptColor(resolveTextColor(editorTextStyle(boardStore, editing), editing.element), theme.scheme)}
           layout={editorLayout(editing, editingText)}
           viewport={viewport}
           onChange={setEditingText}

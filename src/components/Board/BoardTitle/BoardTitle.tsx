@@ -1,4 +1,4 @@
-import { useBoardStore } from "../../../store/boardStore";
+import { useBoardStore } from "../../../store/boardStoreContext";
 import { MAX_BOARD_NAME_LENGTH } from "../../../lib/persistence";
 import { InlineEdit } from "../../../ui/InlineEdit/InlineEdit";
 import styles from "./BoardTitle.module.scss";

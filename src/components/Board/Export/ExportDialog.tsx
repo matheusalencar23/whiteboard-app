@@ -3,7 +3,7 @@ import { LuCopy, LuDownload } from "react-icons/lu";
 import styles from "./Export.module.scss";
 import { Modal } from "../../../ui/Modal/Modal";
 import { Button } from "../../../ui/Button/Button";
-import { useBoardStore } from "../../../store/boardStore";
+import { useBoardStore } from "../../../store/boardStoreContext";
 import { getExportBounds, getPngSize, renderToCanvas, type ExportOptions } from "../../../lib/export/exportScene";
 import { canCopyImage, copyPng, downloadPng, downloadSvg } from "./exportActions";
 

@@ -4,7 +4,7 @@ import { LuMonitor, LuMoon, LuSun } from "react-icons/lu";
 import styles from "./ThemeMenu.module.scss";
 import { IconButton } from "../../../ui/IconButton/IconButton";
 import { Menu, type MenuEntry } from "../../../ui/Menu/Menu";
-import { useBoardStore } from "../../../store/boardStore";
+import { useBoardStore } from "../../../store/boardStoreContext";
 import type { ThemeMode } from "../../../lib/theme";
 import { useColorScheme } from "../../useColorScheme";
 import { SHORTCUTS, formatShortcut } from "../shortcuts";

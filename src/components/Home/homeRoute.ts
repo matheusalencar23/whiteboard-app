@@ -1,4 +1,4 @@
-import { flushBoardSave } from "../../store/boardStore";
+import { flushBoardSave } from "../../store/appBoardStore";
 import { listBoards, loadStoredBoard, type BoardContent, type BoardSummary } from "../../lib/persistence";
 
 export interface BoardEntry {

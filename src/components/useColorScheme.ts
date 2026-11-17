@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
-import { useBoardStore } from "../store/boardStore";
+import type { BoardStore } from "../store/boardStore";
+import { useBoardStore } from "../store/boardStoreContext";
 import { getTheme, type ColorScheme, type Theme, type ThemeMode } from "../lib/theme";
 
 const DARK_QUERY = "(prefers-color-scheme: dark)";
@@ -32,7 +33,7 @@ export function useTheme(): Theme {
   return getTheme(useColorScheme());
 }
 
-export function toggleColorScheme() {
-  const { themeMode, setThemeMode } = useBoardStore.getState();
+export function toggleColorScheme(boardStore: BoardStore) {
+  const { themeMode, setThemeMode } = boardStore.getState();
   setThemeMode(resolveColorScheme(themeMode) === "dark" ? "light" : "dark");
 }

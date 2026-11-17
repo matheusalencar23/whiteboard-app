@@ -2,13 +2,15 @@ import { useState } from "react";
 import { LuChevronRight, LuSearch, LuX } from "react-icons/lu";
 import { LIBRARY_GROUPS, LIBRARY_ITEMS, matchesLibraryItem, type LibraryItem } from "../../../lib/elements/library";
 import { IconButton } from "../../../ui/IconButton/IconButton";
-import { useBoardStore } from "../../../store/boardStore";
+import { useBoardStore, useBoardStoreApi } from "../../../store/boardStoreContext";
 import { LibraryPreview } from "./LibraryPreview";
 import { useFontsVersion } from "../../useFontsVersion";
 import { LIBRARY_DRAG_TYPE, insertLibraryItem } from "./libraryActions";
 import styles from "./LibraryPanel.module.scss";
 
 function LibraryTile({ item, fontsVersion }: { item: LibraryItem; fontsVersion: number }) {
+  const boardStore = useBoardStoreApi();
+
   function handleDragStart(e: React.DragEvent<HTMLButtonElement>) {
     e.dataTransfer.setData(LIBRARY_DRAG_TYPE, item.id);
     e.dataTransfer.effectAllowed = "copy";
@@ -21,7 +23,7 @@ function LibraryTile({ item, fontsVersion }: { item: LibraryItem; fontsVersion: 
         className={styles.tile}
         draggable
         onDragStart={handleDragStart}
-        onClick={() => insertLibraryItem(item)}
+        onClick={() => insertLibraryItem(boardStore, item)}
       >
         <LibraryPreview item={item} fontsVersion={fontsVersion} />
         <span className={styles.tileName}>{item.name}</span>

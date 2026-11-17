@@ -15,7 +15,8 @@ import { LibraryPanel } from "./Library/LibraryPanel";
 import { importBoard } from "./boardFileActions";
 import { isBoardFileCandidate } from "../../lib/boardFile";
 import { IconButton } from "../../ui/IconButton/IconButton";
-import { flushBoardSave, useBoardStore } from "../../store/boardStore";
+import { flushBoardSave } from "../../store/appBoardStore";
+import { useBoardStore, useBoardStoreApi } from "../../store/boardStoreContext";
 import styles from "./Board.module.scss";
 
 function hasFiles(e: React.DragEvent) {
@@ -25,6 +26,7 @@ function hasFiles(e: React.DragEvent) {
 export function Board() {
   useShortcuts();
   const navigate = useNavigate();
+  const boardStore = useBoardStoreApi();
   const name = useBoardStore((s) => s.name);
   const exportOpen = useBoardStore((s) => s.exportOpen);
   const setExportOpen = useBoardStore((s) => s.setExportOpen);
@@ -55,7 +57,7 @@ export function Board() {
     e.preventDefault();
     setDropping(false);
     const file = Array.from(e.dataTransfer.files).find(isBoardFileCandidate) ?? e.dataTransfer.files[0];
-    if (file) void importBoard(file);
+    if (file) void importBoard(boardStore, file);
   }
 
   return (

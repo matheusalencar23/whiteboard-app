@@ -2,7 +2,7 @@ import { LuCircleHelp } from "react-icons/lu";
 import styles from "./Help.module.scss";
 import { HelpDialog } from "./HelpDialog";
 import { IconButton } from "../../../ui/IconButton/IconButton";
-import { useBoardStore } from "../../../store/boardStore";
+import { useBoardStore } from "../../../store/boardStoreContext";
 import { SHORTCUTS, formatShortcut } from "../shortcuts";
 
 export function HelpButton() {

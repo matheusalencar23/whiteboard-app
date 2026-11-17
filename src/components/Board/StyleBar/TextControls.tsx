@@ -17,7 +17,7 @@ import {
 } from "../../../lib/elements/types";
 import { FONT_SIZE_PRESETS, FONT_STACKS } from "../../../lib/text";
 import { lightTheme } from "../../../lib/theme";
-import { useBoardStore } from "../../../store/boardStore";
+import { useBoardStore } from "../../../store/boardStoreContext";
 import { IconButton } from "../../../ui/IconButton/IconButton";
 import { PanelSection } from "../../../ui/Panel/Panel";
 import { AUTO_COLOR, ColorField, type Swatch } from "./ColorField";

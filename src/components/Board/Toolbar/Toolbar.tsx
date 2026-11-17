@@ -4,7 +4,7 @@ import styles from "./Toolbar.module.scss";
 import { TOOLS } from "./tools";
 import { Divider } from "../../../ui/Divider/Divider";
 import { IconButton } from "../../../ui/IconButton/IconButton";
-import { useBoardStore } from "../../../store/boardStore";
+import { useBoardStore, useBoardStoreApi } from "../../../store/boardStoreContext";
 import type { GridStyle } from "../../../lib/render/grid";
 import { SHORTCUTS, formatShortcut } from "../shortcuts";
 import { canGroup, canUngroup } from "../../../lib/elements/groups";
@@ -19,6 +19,7 @@ function shortcutLabel(keys: string[]) {
 }
 
 export function Toolbar() {
+  const boardStore = useBoardStoreApi();
   const tool = useBoardStore((s) => s.tool);
   const setTool = useBoardStore((s) => s.setTool);
   const canUndo = useBoardStore((s) => s.past.length > 0);
@@ -70,7 +71,7 @@ export function Toolbar() {
         label="Apagar seleção"
         shortcut={formatShortcut(SHORTCUTS.delete.keys)}
         disabled={!hasSelection}
-        onClick={() => deleteElements(useBoardStore.getState().selectedIds)}
+        onClick={() => deleteElements(boardStore.getState().selectedIds)}
       />
       <IconButton
         icon={LuGroup}

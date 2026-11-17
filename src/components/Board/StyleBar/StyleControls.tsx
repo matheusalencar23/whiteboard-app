@@ -10,7 +10,7 @@ import {
   type FillStyle,
   type StrokeStyle,
 } from "../../../lib/elements/types";
-import { useBoardStore } from "../../../store/boardStore";
+import { useBoardStore } from "../../../store/boardStoreContext";
 import { IconButton } from "../../../ui/IconButton/IconButton";
 import { PanelSection } from "../../../ui/Panel/Panel";
 import { ArrowheadPicker } from "./ArrowheadPicker";

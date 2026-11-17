@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { LuDownload, LuFolderOpen, LuImageDown, LuMenu, LuPencil } from "react-icons/lu";
 import { IconButton } from "../../../ui/IconButton/IconButton";
 import { Menu, type MenuEntry } from "../../../ui/Menu/Menu";
-import { useBoardStore } from "../../../store/boardStore";
+import { useBoardStoreApi } from "../../../store/boardStoreContext";
 import { SHORTCUTS, formatShortcut } from "../shortcuts";
 import { exportBoard, importBoard } from "../boardFileActions";
 
@@ -13,6 +13,7 @@ interface BoardMenuProps {
 }
 
 export function BoardMenu({ onRename }: BoardMenuProps) {
+  const boardStore = useBoardStoreApi();
   const anchorRef = useRef<HTMLDivElement>(null);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const close = useCallback(() => setAnchor(null), []);
@@ -23,21 +24,21 @@ export function BoardMenu({ onRename }: BoardMenuProps) {
       label: SHORTCUTS.openFile.label,
       icon: LuFolderOpen,
       shortcut: formatShortcut(SHORTCUTS.openFile.keys),
-      onSelect: () => void importBoard(),
+      onSelect: () => void importBoard(boardStore),
     },
     {
       id: "save",
       label: SHORTCUTS.saveFile.label,
       icon: LuDownload,
       shortcut: formatShortcut(SHORTCUTS.saveFile.keys),
-      onSelect: exportBoard,
+      onSelect: () => exportBoard(boardStore),
     },
     {
       id: "export",
       label: SHORTCUTS.exportImage.label,
       icon: LuImageDown,
       shortcut: formatShortcut(SHORTCUTS.exportImage.keys),
-      onSelect: () => useBoardStore.getState().setExportOpen(true),
+      onSelect: () => boardStore.getState().setExportOpen(true),
     },
     "separator",
     { id: "rename", label: "Renomear", icon: LuPencil, onSelect: onRename },

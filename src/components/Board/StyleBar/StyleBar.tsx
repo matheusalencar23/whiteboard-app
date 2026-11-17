@@ -4,7 +4,7 @@ import { LuEllipsis, LuLayers, LuRows3, LuTable, LuType } from "react-icons/lu";
 import styles from "./StyleBar.module.scss";
 import { TRANSPARENT } from "../../../lib/elements/types";
 import type { Bounds } from "../../../lib/geometry/bounds";
-import { useBoardStore } from "../../../store/boardStore";
+import { useBoardStore } from "../../../store/boardStoreContext";
 import { adaptColor } from "../../../lib/colors";
 import { useColorScheme } from "../../useColorScheme";
 import { IconButton } from "../../../ui/IconButton/IconButton";

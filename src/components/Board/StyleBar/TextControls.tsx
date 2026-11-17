@@ -1,5 +1,7 @@
 import { useState } from "react";
 import {
+  LuGrid2X2,
+  LuSquareDashedMousePointer,
   LuAlignVerticalJustifyCenter,
   LuAlignVerticalJustifyEnd,
   LuAlignVerticalJustifyStart,
@@ -19,7 +21,8 @@ import { useBoardStore } from "../../../store/boardStore";
 import { IconButton } from "../../../ui/IconButton/IconButton";
 import { PanelSection } from "../../../ui/Panel/Panel";
 import { AUTO_COLOR, ColorField, type Swatch } from "./ColorField";
-import { selectTextScope, styleSelectors, textSelectors } from "./selectors";
+import { selectSingleTable, selectTextScope, styleSelectors, textSelectors } from "./selectors";
+import { getCellTextTarget, type TableTextScope } from "../../../store/boardStore";
 import { OpacityField, OptionGroup, type Option } from "./StyleControls";
 import { useStylePreview } from "./useStylePreview";
 import { ALIGN_OPTIONS } from "./alignOptions";
@@ -60,6 +63,11 @@ const SIZE_OPTIONS: Option<number>[] = FONT_SIZE_PRESETS.map((size, i) => ({
   label: `${SIZE_LABELS[i]} (${size})`,
   icon: () => <span className={styles.sizeLabel}>{SIZE_NAMES[i]}</span>,
 }));
+
+const TABLE_SCOPE_OPTIONS: Option<TableTextScope>[] = [
+  { value: "table", label: "Tabela inteira", icon: LuGrid2X2 },
+  { value: "cells", label: "Células selecionadas (clique ou Shift+clique)", icon: LuSquareDashedMousePointer },
+];
 
 const VERTICAL_ALIGN_OPTIONS: Option<VerticalAlign>[] = [
   { value: "top", label: "Topo", icon: LuAlignVerticalJustifyStart },
@@ -120,6 +128,11 @@ export function TextControls() {
   const setTextStyle = useBoardStore((s) => s.setTextStyle);
   const { preview, previewText, commit } = useStylePreview();
 
+  const hasTable = useBoardStore((s) => selectSingleTable(s) !== null);
+  const tableTextScope = useBoardStore((s) => s.tableTextScope);
+  const setTableTextScope = useBoardStore((s) => s.setTableTextScope);
+  const onCells = useBoardStore((s) => getCellTextTarget(s) !== null);
+
   const hasFree = scope.includes("free");
   const hasBox = scope.includes("box");
   const colorValue = color === null ? AUTO_COLOR : color;
@@ -127,23 +140,32 @@ export function TextControls() {
 
   return (
     <>
-      <PanelSection title="Fonte">
-        <OptionGroup
-          options={FONT_OPTIONS}
-          value={fontFamily}
-          onChange={(value) => setTextStyle({ fontFamily: value })}
-        />
-      </PanelSection>
-      <PanelSection title="Tamanho">
-        <div className={styles.textRow}>
-          <OptionGroup
-            options={SIZE_OPTIONS}
-            value={fontSize}
-            onChange={(value) => setTextStyle({ fontSize: value })}
-          />
-          <FontSizeInput value={fontSize} onPreview={(size) => previewText({ fontSize: size })} onCommit={commit} />
-        </div>
-      </PanelSection>
+      {hasTable && (
+        <PanelSection title="Aplicar em">
+          <OptionGroup options={TABLE_SCOPE_OPTIONS} value={tableTextScope} onChange={setTableTextScope} />
+        </PanelSection>
+      )}
+      {!onCells && (
+        <>
+          <PanelSection title="Fonte">
+            <OptionGroup
+              options={FONT_OPTIONS}
+              value={fontFamily}
+              onChange={(value) => setTextStyle({ fontFamily: value })}
+            />
+          </PanelSection>
+          <PanelSection title="Tamanho">
+            <div className={styles.textRow}>
+              <OptionGroup
+                options={SIZE_OPTIONS}
+                value={fontSize}
+                onChange={(value) => setTextStyle({ fontSize: value })}
+              />
+              <FontSizeInput value={fontSize} onPreview={(size) => previewText({ fontSize: size })} onCommit={commit} />
+            </div>
+          </PanelSection>
+        </>
+      )}
       <PanelSection title="Estilo">
         <div className={styles.options}>
           <IconButton

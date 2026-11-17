@@ -158,9 +158,16 @@ export interface CompartmentsElement extends BaseElement {
   textStyle: TextStyle;
 }
 
+export const CELL_TEXT_KEYS = ["bold", "italic", "underline", "color", "align", "verticalAlign"] as const;
+
+export type CellTextKey = (typeof CELL_TEXT_KEYS)[number];
+
+export type CellTextStyle = Partial<Pick<TextStyle, CellTextKey>>;
+
 export interface TableCell {
   text: string;
   fill?: string;
+  textStyle?: CellTextStyle;
   rowSpan?: number;
   colSpan?: number;
 }

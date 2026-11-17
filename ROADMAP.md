@@ -6,12 +6,11 @@ Os itens concluídos saem deste arquivo: o que o app já faz está no [README.md
 
 ## Ordem sugerida
 
-1. [Tabelas](#tabelas): estilo de texto por célula.
-2. [Tema escuro](#tema-escuro).
-3. Biblioteca de formas: [contêineres só de desenho](#contêineres).
-4. Depois: [contêineres com conteúdo vinculado](#contêineres) e [BPMN](#bpmn).
-5. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
-6. Depois: [publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm).
+1. [Tema escuro](#tema-escuro).
+2. Biblioteca de formas: [contêineres só de desenho](#contêineres).
+3. Depois: [contêineres com conteúdo vinculado](#contêineres) e [BPMN](#bpmn).
+4. A decidir: [IndexedDB](#trocar-o-localstorage-pelo-indexeddb) e [sincronizar abas](#sincronizar-duas-abas-abertas-no-mesmo-board).
+5. Depois: [publicar o board como biblioteca npm](#publicar-o-board-como-biblioteca-npm).
 
 ## Decisões tomadas
 
@@ -48,12 +47,6 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
 - Acrescentar e remover seções dos `compartments` pela interface. Hoje o número de seções vem do item da biblioteca: duas na entidade e na interface, três na classe.
 - Ligar a linha de vida do participante ao retângulo. Hoje os dois só estão agrupados, porque a folga das pontas ligadas (`BINDING_GAP`) deixaria a linha descolada da caixa; redimensionar o retângulo dentro do grupo não leva a linha junto.
 - Lembrar quais grupos do painel estão recolhidos, quando o catálogo crescer.
-
-### Tabelas
-
-A tabela (`table`), com título opcional, cabeçalho, cores, alinhamento por coluna, células mescladas e setas ligadas a cada linha, já existe, e a entidade ER é uma tabela (veja o [CLAUDE.md](CLAUDE.md)). Falta:
-
-- [ ] **Estilo de texto por célula:** negrito, itálico, sublinhado, cor e alinhamento próprios numa célula, sobrepondo o `textStyle` da tabela (um `textStyle` parcial e opcional na célula, mesclado no `getCellTextStyle`). Com a célula selecionada, o grupo "Texto" age só sobre ela; com a tabela inteira, sobre a tabela e limpando as sobreposições daquela propriedade, como já acontece com o alinhamento das colunas. Médio.
 
 ## Visual
 

@@ -325,6 +325,20 @@ function isValidElement(value: unknown): value is BoardElement {
   }
 }
 
+function isValidCellTextStyle(value: unknown): boolean {
+  if (value === undefined) return true;
+  if (!isObject(value)) return false;
+  const optionalBoolean = (key: string) => value[key] === undefined || typeof value[key] === "boolean";
+  return (
+    optionalBoolean("bold") &&
+    optionalBoolean("italic") &&
+    optionalBoolean("underline") &&
+    (value.color === undefined || value.color === null || typeof value.color === "string") &&
+    (value.align === undefined || isOneOf(TEXT_ALIGNS, value.align)) &&
+    (value.verticalAlign === undefined || isOneOf(VERTICAL_ALIGNS, value.verticalAlign))
+  );
+}
+
 function isSpan(value: unknown): boolean {
   return value === undefined || (Number.isInteger(value) && (value as number) >= 1);
 }
@@ -367,6 +381,7 @@ function isValidTable(value: Record<string, unknown>): boolean {
             isObject(cell) &&
             typeof cell.text === "string" &&
             (cell.fill === undefined || typeof cell.fill === "string") &&
+            isValidCellTextStyle(cell.textStyle) &&
             isSpan(cell.rowSpan) &&
             isSpan(cell.colSpan),
         ),

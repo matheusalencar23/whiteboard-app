@@ -4,7 +4,7 @@ import { rotatePoint } from "../../geometry/distance";
 import { drawTextLines, layoutText, lineHeight, measureText } from "../../text";
 import { theme } from "../../theme";
 import { baseFields, drawFill, scaleToBorder, strokeOptions, type ShapeUtil } from "../shapeUtil";
-import type { TableCell, TableElement, TextAlign, TextStyle } from "../types";
+import { CELL_TEXT_KEYS, type CellTextStyle, type TableCell, type TableElement, type TextAlign, type TextStyle } from "../types";
 import { resolveTextColor } from "./text";
 
 const PADDING_X = 10;
@@ -111,12 +111,83 @@ function getTitleTextStyle(el: TableElement): TextStyle {
   return { ...el.textStyle, bold: true, align: "center" };
 }
 
-export function getCellTextStyle(el: TableElement, row: number, column: number): TextStyle {
-  if (row === TITLE_ROW) return getTitleTextStyle(el);
+function getBaseCellTextStyle(el: TableElement, row: number, column: number): TextStyle {
   const align = getColumnAlign(el, column);
   const bold = isHeaderCell(el, row) || el.textStyle.bold;
   if (align === el.textStyle.align && bold === el.textStyle.bold) return el.textStyle;
   return { ...el.textStyle, align, bold };
+}
+
+export function getCellTextStyle(el: TableElement, row: number, column: number): TextStyle {
+  if (row === TITLE_ROW) return getTitleTextStyle(el);
+  const origin = resolveCell(el, { row, column });
+  const base = getBaseCellTextStyle(el, origin.row, origin.column);
+  const own = el.cells[origin.row][origin.column].textStyle;
+  return own ? { ...base, ...own } : base;
+}
+
+function pickCellText(patch: Partial<TextStyle>): CellTextStyle {
+  const picked: Record<string, unknown> = {};
+  for (const key of CELL_TEXT_KEYS) if (key in patch) picked[key] = patch[key];
+  return picked as CellTextStyle;
+}
+
+function withCellTextStyle(cell: TableCell, textStyle: CellTextStyle): TableCell {
+  const next = { ...cell };
+  delete next.textStyle;
+  return Object.keys(textStyle).length > 0 ? { ...next, textStyle } : next;
+}
+
+export function hasCellTextPatch(patch: Partial<TextStyle>): boolean {
+  return Object.keys(pickCellText(patch)).length > 0;
+}
+
+const DEFAULT_FALSY: Partial<Record<keyof TextStyle, unknown>> = { underline: false };
+
+export function setCellsTextStyle(el: TableElement, range: CellRange, patch: Partial<TextStyle>): TableElement {
+  const picked = pickCellText(patch);
+  if (Object.keys(picked).length === 0) return el;
+  const coverage = getCoverage(el);
+  let changed = false;
+  const cells = el.cells.map((row, r) =>
+    row.map((cell, c) => {
+      if (r < range.top || r > range.bottom || c < range.left || c > range.right || !isOrigin(coverage, r, c)) return cell;
+      const base = getBaseCellTextStyle(el, r, c);
+      const merged: Record<string, unknown> = { ...cell.textStyle, ...picked };
+      for (const key of CELL_TEXT_KEYS) {
+        if (key in merged && (merged[key] ?? DEFAULT_FALSY[key]) === (base[key] ?? DEFAULT_FALSY[key])) delete merged[key];
+      }
+      const next = withCellTextStyle(cell, merged as CellTextStyle);
+      if (JSON.stringify(next.textStyle ?? {}) !== JSON.stringify(cell.textStyle ?? {})) changed = true;
+      return next;
+    }),
+  );
+  return changed ? fitTable({ ...el, cells }) : el;
+}
+
+export function clearCellTextStyles(el: TableElement, patch: Partial<TextStyle>): TableElement {
+  const keys = Object.keys(pickCellText(patch)) as (keyof CellTextStyle)[];
+  if (keys.length === 0 || !el.cells.some((row) => row.some((cell) => cell.textStyle))) return el;
+  const cells = el.cells.map((row) =>
+    row.map((cell) => {
+      if (!cell.textStyle || !keys.some((key) => key in cell.textStyle!)) return cell;
+      const textStyle = { ...cell.textStyle };
+      for (const key of keys) delete textStyle[key];
+      return withCellTextStyle(cell, textStyle);
+    }),
+  );
+  return { ...el, cells };
+}
+
+export function getCellTarget(
+  el: TableElement,
+  cursor: CellPosition,
+  extent?: CellPosition,
+): { cell: CellPosition; range: CellRange } | null {
+  const cell = clampCell(el, cursor);
+  const end = extent ? clampCell(el, extent) : cell;
+  if (isTitleCell(cell) || isTitleCell(end)) return null;
+  return { cell, range: getMergeRange(el, cell, end) };
 }
 
 export function getCellFill(el: TableElement, { row, column }: CellPosition): string {
@@ -581,10 +652,10 @@ export function drawTableText(el: TableElement, ctx: CanvasRenderingContext2D, h
   const heights = getRowHeights(el);
   const tops = offsets(heights, getDataTop(el));
   const lefts = getColumnLefts(el);
-  const color = resolveTextColor(el.textStyle, el);
   const title = { row: TITLE_ROW, column: 0 };
   if (el.title && !sameCell(hidden, title)) {
-    drawCellText(ctx, el.title, getTitleTextStyle(el), color, getCellRect(el, title));
+    const style = getTitleTextStyle(el);
+    drawCellText(ctx, el.title, style, resolveTextColor(style, el), getCellRect(el, title));
   }
   const coverage = getCoverage(el);
   el.cells.forEach((row, r) => {
@@ -596,7 +667,8 @@ export function drawTableText(el: TableElement, ctx: CanvasRenderingContext2D, h
         width: spanWidth(el, c, getColSpan(cell)),
         height: sum(heights.slice(r, r + getRowSpan(cell))),
       };
-      drawCellText(ctx, cell.text, getCellTextStyle(el, r, c), color, rect);
+      const style = getCellTextStyle(el, r, c);
+      drawCellText(ctx, cell.text, style, resolveTextColor(style, el), rect);
     });
   });
 }

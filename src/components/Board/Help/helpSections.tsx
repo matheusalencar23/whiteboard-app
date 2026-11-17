@@ -94,7 +94,8 @@ export const HELP_SECTIONS: HelpSection[] = [
           de uma planilha cria uma tabela. Com a tabela selecionada, <Keys combos={[["Shift", "clique"]]} /> marca um intervalo de
           células. O grupo "Tabela" da barra de estilo mescla e separa células, insere e apaga linhas e colunas, liga
           o título acima das colunas e muda o alinhamento da coluna e as cores do cabeçalho, do corpo e da célula
-          selecionada; arrastar a borda entre duas colunas muda a largura. As setas ligam nos lados de cada linha.
+          selecionada; arrastar a borda entre duas colunas muda a largura. No grupo "Texto", "Aplicar em" escolhe entre
+          a tabela inteira e as células selecionadas. As setas ligam nos lados de cada linha.
         </li>
         <li>
           O grupo "Texto" da barra de estilo muda a fonte (manuscrita, sem serifa ou monoespaçada), o tamanho, o

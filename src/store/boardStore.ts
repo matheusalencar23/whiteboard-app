@@ -14,7 +14,7 @@ import {
 } from "../lib/elements/types";
 import { releaseBindings, setArrowRouting, updateBoundArrows, type ArrowEnd } from "../lib/elements/bindings";
 import { translateElement } from "../lib/elements/registry";
-import type { CellPosition } from "../lib/elements/shapes/table";
+import { getCellTarget, hasCellTextPatch, setCellsTextStyle, type CellPosition } from "../lib/elements/shapes/table";
 import {
   getGroupMembers,
   getParentGroupId,
@@ -60,6 +60,17 @@ export interface TableCursor extends CellPosition {
   extent?: CellPosition;
 }
 
+export type TableTextScope = "table" | "cells";
+
+export function getCellTextTarget(state: Pick<BoardState, "elements" | "selectedIds" | "tableCell" | "tableTextScope">) {
+  const { tableCell } = state;
+  if (state.tableTextScope !== "cells" || state.selectedIds.length !== 1 || !tableCell) return null;
+  const table = state.elements.find((el) => el.id === state.selectedIds[0]);
+  if (table?.type !== "table" || tableCell.elementId !== table.id) return null;
+  const target = getCellTarget(table, tableCell, tableCell.extent);
+  return target && { table, ...target };
+}
+
 export interface BoardState {
   boardId: string | null;
   name: string;
@@ -67,6 +78,7 @@ export interface BoardState {
   selectedIds: string[];
   editingGroupId: string | null;
   tableCell: TableCursor | null;
+  tableTextScope: TableTextScope;
   tool: Tool;
   viewport: Viewport;
   viewportSize: { width: number; height: number };
@@ -101,6 +113,7 @@ export interface BoardState {
   setSelection: (ids: string[]) => void;
   setEditingGroup: (groupId: string | null) => void;
   setTableCell: (cursor: TableCursor | null) => void;
+  setTableTextScope: (scope: TableTextScope) => void;
   exitEditingGroup: () => boolean;
   groupSelection: () => void;
   ungroupSelection: () => void;
@@ -153,6 +166,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
   selectedIds: [],
   editingGroupId: null,
   tableCell: null,
+  tableTextScope: "table",
   tool: "selection",
   viewport: INITIAL_VIEWPORT,
   viewportSize: { width: 0, height: 0 },
@@ -311,6 +325,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
   setSelection: (selectedIds) => set({ selectedIds }),
   setEditingGroup: (editingGroupId) => set({ editingGroupId }),
   setTableCell: (tableCell) => set({ tableCell }),
+  setTableTextScope: (tableTextScope) => set({ tableTextScope }),
   exitEditingGroup: () => {
     const { elements, editingGroupId } = useBoardStore.getState();
     if (editingGroupId === null) return false;
@@ -381,6 +396,14 @@ export const useBoardStore = create<BoardState>()((set) => ({
     }),
   setTextStyle: (patch, options) =>
     set((state) => {
+      const target = hasCellTextPatch(patch) ? getCellTextTarget(state) : null;
+      if (target) {
+        const updated = setCellsTextStyle(target.table, target.range, patch);
+        if (updated === target.table) return {};
+        const elements = state.elements.map((el) => (el.id === updated.id ? updated : el));
+        if (options?.record === false) return { elements };
+        return { elements, past: pushPast(state.past, state.elements), future: [] };
+      }
       const currentTextStyle = { ...state.currentTextStyle, ...patch };
       const ids = new Set(state.selectedIds);
       let changed = false;

@@ -10,7 +10,8 @@ import {
 } from "../../../lib/elements/types";
 import { getTextStyle } from "../../../lib/elements/textStyle";
 import { supportsStyle, type StyleProperty } from "../../../lib/elements/style";
-import type { BoardState } from "../../../store/boardStore";
+import { getCellTextTarget, type BoardState } from "../../../store/boardStore";
+import { getCellTextStyle } from "../../../lib/elements/shapes/table";
 
 const DRAWING_TOOLS: readonly string[] = [
   "rectangle",
@@ -110,6 +111,11 @@ export function selectTextScope(state: BoardState): string {
 
 function selectTextField<K extends keyof TextStyle>(key: K, accepts: (el: BoardElement) => boolean = () => true) {
   return (state: BoardState): TextStyle[K] | "mixed" => {
+    const target = getCellTextTarget(state);
+    if (target) {
+      const style = getCellTextStyle(target.table, target.cell.row, target.cell.column);
+      return (style[key] ?? DEFAULT_TEXT_STYLE[key]) as TextStyle[K];
+    }
     const ids = new Set(state.selectedIds);
     let found = false;
     let value: TextStyle[K] | undefined;

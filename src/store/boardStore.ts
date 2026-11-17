@@ -72,7 +72,6 @@ export function getCellTextTarget(state: Pick<BoardState, "elements" | "selected
 }
 
 export interface BoardState {
-  boardId: string | null;
   name: string;
   elements: BoardElement[];
   selectedIds: string[];
@@ -102,7 +101,7 @@ export interface BoardState {
   translateElements: (ids: string[], dx: number, dy: number, options?: { record?: boolean }) => void;
   replaceElement: (element: BoardElement) => void;
   deleteElements: (ids: string[]) => void;
-  loadBoard: (id: string, board: BoardContent) => void;
+  loadBoard: (board: BoardContent) => void;
   openBoard: (board: BoardContent) => void;
   setBoardName: (name: string) => void;
 
@@ -167,7 +166,6 @@ export interface BoardStoreInit {
 export function createBoardStore({ preferences = DEFAULT_PREFERENCES }: BoardStoreInit = {}): BoardStore {
   let noticeCount = 0;
   return createStore<BoardState>()((set, get) => ({
-    boardId: null,
     name: DEFAULT_BOARD_NAME,
     elements: [],
     selectedIds: [],
@@ -258,9 +256,8 @@ export function createBoardStore({ preferences = DEFAULT_PREFERENCES }: BoardSto
         };
       }),
 
-    loadBoard: (id, board) =>
+    loadBoard: (board) =>
       set({
-        boardId: id,
         name: board.name,
         elements: board.elements,
         viewport: board.viewport,

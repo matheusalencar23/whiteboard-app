@@ -1,4 +1,4 @@
-import { flushBoardSave } from "../../store/appBoardStore";
+import { closeStoredBoard } from "../../store/appBoardStore";
 import { listBoards, loadStoredBoard, type BoardContent, type BoardSummary } from "../../lib/persistence";
 
 export interface BoardEntry {
@@ -7,6 +7,6 @@ export interface BoardEntry {
 }
 
 export function homeLoader(): BoardEntry[] {
-  flushBoardSave();
+  closeStoredBoard();
   return listBoards().map((summary) => ({ summary, content: loadStoredBoard(summary.id) }));
 }

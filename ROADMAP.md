@@ -64,7 +64,7 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
 
 - [ ] **O quê:** separar o board (canvas, toolbar, barra de estilo, menu, exportação) num pacote npm que outros projetos React instalam e usam como um componente, por exemplo `<Whiteboard initialData={...} onChange={...} />`. O app atual (lista de boards e rotas) passa a ser um usuário desse pacote.
 - **Problemas de hoje:**
-  - **Persistência e rotas:** o `Board` usa `useNavigate` (botão "Todos os boards"), chama o `flushBoardSave` do app ao desmontar e muda o `document.title`, e a store ainda guarda o `boardId`, que é conceito do app. O salvamento, as preferências e o `pagehide` já estão no `appBoardStore.ts`, fora da store. Pela [decisão](#decisões-tomadas), o pacote não persiste nada: o board recebe os dados e avisa das mudanças (`initialData`, `onChange` com os elementos, o viewport e o nome), e quem usa decide onde salvar. As preferências (grade, tema, painel da biblioteca e grupos recolhidos) entram por props com valor inicial e saem por `onPreferencesChange`. O botão de voltar e o título da página viram props ou callbacks opcionais. O `persistence.ts`, a inscrição de salvamento da store e o `homeRoute`/`boardRoute` ficam no app.
+  - **Persistência e rotas:** o `Board` usa `useNavigate` (botão "Todos os boards") e muda o `document.title`. O salvamento, as preferências, o `pagehide` e o id do board aberto já estão no `appBoardStore.ts`, fora da store. Pela [decisão](#decisões-tomadas), o pacote não persiste nada: o board recebe os dados e avisa das mudanças (`initialData`, `onChange` com os elementos, o viewport e o nome), e quem usa decide onde salvar. As preferências (grade, tema, painel da biblioteca e grupos recolhidos) entram por props com valor inicial e saem por `onPreferencesChange`. O botão de voltar e o título da página viram props ou callbacks opcionais. O `persistence.ts`, a inscrição de salvamento da store e o `homeRoute`/`boardRoute` ficam no app.
   - **Teclado:** `useShortcuts` e o `Canvas` ouvem o `keydown` do `window`, então capturariam teclas da página inteira. No pacote, ouvir só quando o foco estiver dentro do board (listener no contêiner com `tabIndex`) ou com uma prop para ligar os atalhos globais.
   - **Tamanho:** o `.board` usa `100vw`/`100vh`. Passar a ocupar o contêiner pai (`width/height: 100%`), com o canvas medindo o próprio elemento (`ResizeObserver`).
   - **Tema e estilos:** o `applyTheme` grava as variáveis no `document.documentElement`. Gravar no elemento raiz do board, aceitar um tema por prop (o `renderScene` e o `renderElement` já recebem o tema e o esquema de cores) e prefixar as variáveis (`--wb-*`) para não colidir com as do projeto hospedeiro. Os SCSS modules viram um CSS gerado no build, importado pelo usuário (`import "pacote/style.css"`).
@@ -125,12 +125,11 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
   - **Depois da primeira versão:** acessibilidade do canvas (anunciar seleção e criação por `aria-live`) e o app publicado no GitHub Pages como demonstração.
 - **Por quê:** permite usar o quadro branco dentro de outros projetos (documentação, ferramentas internas, apps com diagramas) sem copiar o código, mantendo uma base só.
 - **Ordem:** depende pouco dos outros itens, mas fica mais barato se as decisões acima forem seguidas desde já. O tema ativo hoje sai da store (`themeMode`) e é aplicado no `document.documentElement` pelo `App`; no pacote, passa a ser por instância. Sequência sugerida:
-  1. Tirar o `boardId` da store e o `flushBoardSave` do `Board` (o app guarda qual board está aberto e grava ao sair).
-  2. Componente `<Whiteboard initialData onChange onPreferencesChange>`, com `lastChange` e `version`.
-  3. Ref com `updateScene`, contador de interações, fila e `sanitizeTransient`. O app passa a usar só a API pública.
-  4. Índice fracionário na ordem dos elementos.
-  5. Demais separações (teclado com a área de transferência e os efeitos ao importar, tamanho, tema, fontes, portais e `config` com o modo somente leitura).
-  6. Dicionário de textos, troca do `react-color` e carregamento sob demanda.
-  7. Versão no formato salvo, migrações e os testes delas.
-  8. Checagens de pacote na CI, Changesets, README com três exemplos (só leitura, salvar numa API, trocar a cena por fora) e publicação da `0.1.0`.
-  9. Depois: histórico por alterações e a sincronização de abas (nível 2).
+  1. Componente `<Whiteboard initialData onChange onPreferencesChange>`, com `lastChange` e `version`.
+  2. Ref com `updateScene`, contador de interações, fila e `sanitizeTransient`. O app passa a usar só a API pública.
+  3. Índice fracionário na ordem dos elementos.
+  4. Demais separações (teclado com a área de transferência e os efeitos ao importar, tamanho, tema, fontes, portais e `config` com o modo somente leitura).
+  5. Dicionário de textos, troca do `react-color` e carregamento sob demanda.
+  6. Versão no formato salvo, migrações e os testes delas.
+  7. Checagens de pacote na CI, Changesets, README com três exemplos (só leitura, salvar numa API, trocar a cena por fora) e publicação da `0.1.0`.
+  8. Depois: histórico por alterações e a sincronização de abas (nível 2).

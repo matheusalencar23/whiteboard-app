@@ -12,6 +12,7 @@ const SAVE_DELAY = 300;
 
 export const appBoardStore = createBoardStore({ preferences: loadPreferences() });
 
+let openBoardId: string | null = null;
 let saveFailed = false;
 
 function persistBoard(id: string, content: BoardContent) {
@@ -26,15 +27,21 @@ function persistBoard(id: string, content: BoardContent) {
 
 const scheduleSave = debounce(persistBoard, SAVE_DELAY);
 
-export function flushBoardSave() {
+function flushBoardSave() {
   scheduleSave.flush();
 }
 
-export function openStoredBoard(id: string): boolean {
+export function closeStoredBoard() {
   flushBoardSave();
+  openBoardId = null;
+}
+
+export function openStoredBoard(id: string): boolean {
+  closeStoredBoard();
   const board = loadStoredBoard(id);
   if (!board) return false;
-  appBoardStore.getState().loadBoard(id, board);
+  appBoardStore.getState().loadBoard(board);
+  openBoardId = id;
   return true;
 }
 
@@ -54,12 +61,12 @@ const unsubscribe = appBoardStore.subscribe((state, prev) => {
       collapsedLibraryGroups: state.collapsedLibraryGroups,
     });
   }
-  if (state.boardId === null || state.boardId !== prev.boardId) return;
+  if (openBoardId === null) return;
   const changed =
     state.name !== prev.name || state.elements !== prev.elements || state.viewport !== prev.viewport;
   if (!changed) return;
-  const { boardId, name, elements, viewport } = state;
-  scheduleSave(boardId, { name, elements, viewport });
+  const { name, elements, viewport } = state;
+  scheduleSave(openBoardId, { name, elements, viewport });
 });
 
 window.addEventListener("pagehide", flushBoardSave);

@@ -15,7 +15,6 @@ import { LibraryPanel } from "./Library/LibraryPanel";
 import { importBoard } from "./boardFileActions";
 import { isBoardFileCandidate } from "../../lib/boardFile";
 import { IconButton } from "../../ui/IconButton/IconButton";
-import { flushBoardSave } from "../../store/appBoardStore";
 import { useBoardStore, useBoardStoreApi } from "../../store/boardStoreContext";
 import styles from "./Board.module.scss";
 
@@ -33,8 +32,6 @@ export function Board() {
   const libraryOpen = useBoardStore((s) => s.libraryOpen);
   const [dropping, setDropping] = useState(false);
   const [renaming, setRenaming] = useState(false);
-
-  useEffect(() => flushBoardSave, []);
 
   useEffect(() => {
     document.title = `${name} · Whiteboard`;

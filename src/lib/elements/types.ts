@@ -38,6 +38,7 @@ interface BaseElement {
   style: ElementStyle;
   seed: number;
   version?: number;
+  index?: string;
   groupIds?: string[];
 }
 

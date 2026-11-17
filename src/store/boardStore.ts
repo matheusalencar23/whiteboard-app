@@ -35,6 +35,7 @@ import { GRID_STYLES, type GridStyle } from "../lib/render/grid";
 import type { ThemeMode } from "../lib/theme";
 import { reorderElements, type OrderDirection } from "../lib/elements/order";
 import { addPoolLane, removePoolLane } from "../lib/elements/pool";
+import { syncIndices } from "../lib/elements/fractionalIndex";
 import { INITIAL_VIEWPORT, nextZoomStep, panBy, zoomAt, zoomTo, type Viewport } from "../lib/viewport";
 
 export type Tool =
@@ -245,7 +246,9 @@ export function createBoardStore({ scene = {}, preferences: given = {} }: BoardS
       const patch = typeof update === "function" ? update(state) : update;
       const next: BoardPatch = { ...patch };
       const elementsChanged = patch.elements !== undefined && patch.elements !== state.elements;
-      if (patch.elements && elementsChanged) next.elements = bumpVersions(state.elements, patch.elements, pendingIds);
+      if (patch.elements && elementsChanged) {
+        next.elements = bumpVersions(state.elements, syncIndices(patch.elements), pendingIds);
+      }
       if ((patch.past !== undefined && patch.past !== state.past) || (reason && elementsChanged)) {
         next.lastChange = nextChange(state, reason ?? "commit", [...pendingIds]);
         pendingIds = new Set();
@@ -278,7 +281,7 @@ export function createBoardStore({ scene = {}, preferences: given = {} }: BoardS
 
     return {
       name: scene.name ?? DEFAULT_BOARD_NAME,
-      elements: scene.elements ?? [],
+      elements: syncIndices(scene.elements ?? []),
       selectedIds: [],
       editingGroupId: null,
       tableCell: null,

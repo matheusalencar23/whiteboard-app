@@ -4,6 +4,7 @@ import {
   LuBetweenHorizontalStart,
   LuBetweenVerticalEnd,
   LuBetweenVerticalStart,
+  LuHeading,
   LuPanelTop,
   LuTableColumnsSplit,
   LuTableRowsSplit,
@@ -16,7 +17,11 @@ import {
   deleteRow,
   insertColumn,
   insertRow,
+  TITLE_PLACEHOLDER,
   getColumnAlign,
+  hasTitle,
+  isTitleCell,
+  setTitle,
   setCellFill,
   setColumnAlign,
   setHeaderFill,
@@ -80,7 +85,8 @@ function TableControlsContent({ table }: { table: TableElement }) {
   const setStyle = useBoardStore((s) => s.setStyle);
 
   const cell = tableCell?.elementId === table.id ? clampCell(table, tableCell) : { row: 0, column: 0 };
-  const cellFill = table.cells[cell.row][cell.column].fill;
+  const onTitle = isTitleCell(cell);
+  const cellFill = onTitle ? undefined : table.cells[cell.row][cell.column].fill;
 
   function apply(update: TableUpdate, nextCell: CellPosition = cell, mapRow?: (row: number) => number | undefined) {
     const store = useBoardStore.getState();
@@ -110,6 +116,7 @@ function TableControlsContent({ table }: { table: TableElement }) {
             label="Inserir linha acima"
             size="sm"
             tooltipSide="bottom"
+            disabled={onTitle}
             onClick={() => apply((t) => insertRow(t, cell.row), cell, shiftFrom(cell.row))}
           />
           <IconButton
@@ -126,7 +133,7 @@ function TableControlsContent({ table }: { table: TableElement }) {
             label="Apagar linha"
             size="sm"
             tooltipSide="bottom"
-            disabled={table.cells.length <= 1}
+            disabled={onTitle || table.cells.length <= 1}
             onClick={() => apply((t) => deleteRow(t, cell.row), cell, removeRow(cell.row))}
           />
         </div>
@@ -138,6 +145,7 @@ function TableControlsContent({ table }: { table: TableElement }) {
             label="Inserir coluna à esquerda"
             size="sm"
             tooltipSide="bottom"
+            disabled={onTitle}
             onClick={() => apply((t) => insertColumn(t, cell.column))}
           />
           <IconButton
@@ -145,6 +153,7 @@ function TableControlsContent({ table }: { table: TableElement }) {
             label="Inserir coluna à direita"
             size="sm"
             tooltipSide="bottom"
+            disabled={onTitle}
             onClick={() => apply((t) => insertColumn(t, cell.column + 1), { ...cell, column: cell.column + 1 })}
           />
           <IconButton
@@ -152,18 +161,31 @@ function TableControlsContent({ table }: { table: TableElement }) {
             label="Apagar coluna"
             size="sm"
             tooltipSide="bottom"
-            disabled={table.columns.length <= 1}
+            disabled={onTitle || table.columns.length <= 1}
             onClick={() => apply((t) => deleteColumn(t, cell.column))}
           />
         </div>
-        <OptionGroup
-          options={ALIGN_OPTIONS}
-          value={getColumnAlign(table, cell.column)}
-          onChange={(align) => apply((t) => setColumnAlign(t, cell.column, align))}
-        />
+        {!onTitle && (
+          <OptionGroup
+            options={ALIGN_OPTIONS}
+            value={getColumnAlign(table, cell.column)}
+            onChange={(align) => apply((t) => setColumnAlign(t, cell.column, align))}
+          />
+        )}
       </PanelSection>
       <PanelSection title="Cabeçalho">
         <div className={styles.options}>
+          <IconButton
+            icon={LuHeading}
+            label="Título acima das colunas"
+            size="sm"
+            tooltipSide="bottom"
+            active={hasTitle(table)}
+            onClick={() => {
+              const next = hasTitle(table) ? { row: 0, column: 0 } : cell;
+              apply((t) => setTitle(t, hasTitle(t) ? undefined : TITLE_PLACEHOLDER), next);
+            }}
+          />
           <IconButton
             icon={LuPanelTop}
             label="Primeira linha como cabeçalho"
@@ -173,7 +195,7 @@ function TableControlsContent({ table }: { table: TableElement }) {
             onClick={() => apply((t) => setHeaderRow(t, !t.headerRow))}
           />
         </div>
-        {table.headerRow && (
+        {(table.headerRow || hasTitle(table)) && (
           <ColorField
             title="Cor do cabeçalho"
             value={table.headerFill}
@@ -194,16 +216,18 @@ function TableControlsContent({ table }: { table: TableElement }) {
           onPreviewEnd={commitStyle}
         />
       </PanelSection>
-      <PanelSection title="Célula selecionada">
-        <ColorField
-          title="Cor da célula"
-          value={cellFill ?? AUTO_COLOR}
-          swatches={CELL_SWATCHES}
-          onChange={(color) => apply((t) => setCellFill(t, cell, toCellFill(color)))}
-          onPreview={(color) => preview((t) => setCellFill(t, cell, toCellFill(color)))}
-          onPreviewEnd={commit}
-        />
-      </PanelSection>
+      {!onTitle && (
+        <PanelSection title="Célula selecionada">
+          <ColorField
+            title="Cor da célula"
+            value={cellFill ?? AUTO_COLOR}
+            swatches={CELL_SWATCHES}
+            onChange={(color) => apply((t) => setCellFill(t, cell, toCellFill(color)))}
+            onPreview={(color) => preview((t) => setCellFill(t, cell, toCellFill(color)))}
+            onPreviewEnd={commit}
+          />
+        </PanelSection>
+      )}
     </>
   );
 }

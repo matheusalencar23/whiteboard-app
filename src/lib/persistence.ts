@@ -257,7 +257,7 @@ function isValidBinding(value: unknown): boolean {
   if (value === null) return true;
   if (!isObject(value) || typeof value.elementId !== "string") return false;
   if (typeof value.fixed !== "boolean") return false;
-  if (value.row !== undefined && !(Number.isInteger(value.row) && (value.row as number) >= 0)) return false;
+  if (value.row !== undefined && !(Number.isInteger(value.row) && (value.row as number) >= -1)) return false;
   const { anchor } = value;
   return isObject(anchor) && isNumber(anchor.x) && isNumber(anchor.y);
 }
@@ -346,6 +346,7 @@ function isValidTable(value: Record<string, unknown>): boolean {
       (Array.isArray(value.columnAligns) &&
         value.columnAligns.length === columns.length &&
         value.columnAligns.every((align) => align === null || isOneOf(TEXT_ALIGNS, align)))) &&
+    (value.title === undefined || typeof value.title === "string") &&
     typeof value.headerRow === "boolean" &&
     typeof value.headerFill === "string" &&
     isValidTextStyle(value.textStyle)

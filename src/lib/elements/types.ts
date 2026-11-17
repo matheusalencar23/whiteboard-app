@@ -170,6 +170,7 @@ export interface TableElement extends BaseElement {
   textStyle: TextStyle;
   headerRow: boolean;
   headerFill: string;
+  title?: string;
   columnAligns?: (TextAlign | null)[];
 }
 

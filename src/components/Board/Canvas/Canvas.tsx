@@ -62,8 +62,13 @@ import {
   setSectionText,
 } from "../../../lib/elements/shapes/compartments";
 import {
+  TITLE_ROW,
   clampCell,
   createTableFromRows,
+  getCellText,
+  hasTitle,
+  isTitleCell,
+  sameCell,
   getCellAt,
   getCellTextArea,
   getCellTextStyle,
@@ -260,9 +265,10 @@ function getColumnBorderHit(world: Point, zoom: number): { table: TableElement; 
 }
 
 function nextCell(table: TableElement, cell: CellPosition, backwards: boolean): CellPosition | null {
+  if (isTitleCell(cell)) return backwards ? null : { row: 0, column: 0 };
   const columns = table.columns.length;
   const index = cell.row * columns + cell.column + (backwards ? -1 : 1);
-  if (index < 0) return null;
+  if (index < 0) return hasTitle(table) ? { row: TITLE_ROW, column: 0 } : null;
   return { row: Math.floor(index / columns), column: index % columns };
 }
 
@@ -300,7 +306,7 @@ function activeCellOf(table: TableElement): CellPosition {
 function editorInitialText(editing: Editing): string {
   if (editing.kind === "text") return editing.element.text;
   if (editing.kind === "section") return editing.element.sections[editing.index].text;
-  if (editing.kind === "cell") return editing.element.cells[editing.cell.row][editing.cell.column].text;
+  if (editing.kind === "cell") return getCellText(editing.element, editing.cell);
   return editing.element.label?.text ?? "";
 }
 
@@ -602,7 +608,7 @@ export function Canvas() {
     const store = useBoardStore.getState();
     store.setSelection([]);
     store.setTableCell({ elementId: element.id, ...cell });
-    setEditingText(element.cells[cell.row][cell.column].text);
+    setEditingText(getCellText(element, cell));
     setEditing({ kind: "cell", element, cell });
   }
 
@@ -619,7 +625,7 @@ export function Canvas() {
   function commitCellText(id: string, cell: CellPosition, text: string, extend: boolean): TableElement | null {
     const store = useBoardStore.getState();
     const table = store.elements.find((el) => el.id === id);
-    if (table?.type !== "table" || cell.row >= table.cells.length || cell.column >= table.columns.length) return null;
+    if (table?.type !== "table" || sameCell(clampCell(table, cell), cell) === false) return null;
     let updated = setCellText(table, cell, text);
     if (extend) updated = insertRow(updated, updated.cells.length);
     if (updated !== table) store.replaceElement(updated);

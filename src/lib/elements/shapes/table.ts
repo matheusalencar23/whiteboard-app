@@ -26,11 +26,26 @@ export function sameCell(a: CellPosition | null, b: CellPosition | null): boolea
   return a !== null && b !== null && a.row === b.row && a.column === b.column;
 }
 
+export const TITLE_ROW = -1;
+
+export const TITLE_PLACEHOLDER = "Título";
+
+export function hasTitle(el: TableElement): boolean {
+  return el.title !== undefined;
+}
+
+export function isTitleCell(cell: CellPosition): boolean {
+  return cell.row === TITLE_ROW;
+}
+
 export function clampCell(el: TableElement, cell: CellPosition): CellPosition {
-  return {
-    row: Math.min(Math.max(cell.row, 0), el.cells.length - 1),
-    column: Math.min(Math.max(cell.column, 0), el.columns.length - 1),
-  };
+  const row = Math.min(Math.max(cell.row, hasTitle(el) ? TITLE_ROW : 0), el.cells.length - 1);
+  if (row === TITLE_ROW) return { row, column: 0 };
+  return { row, column: Math.min(Math.max(cell.column, 0), el.columns.length - 1) };
+}
+
+export function getCellText(el: TableElement, cell: CellPosition): string {
+  return isTitleCell(cell) ? (el.title ?? "") : el.cells[cell.row][cell.column].text;
 }
 
 export function isHeaderCell(el: TableElement, row: number): boolean {
@@ -41,7 +56,12 @@ export function getColumnAlign(el: TableElement, column: number): TextAlign {
   return el.columnAligns?.[column] ?? el.textStyle.align;
 }
 
+function getTitleTextStyle(el: TableElement): TextStyle {
+  return { ...el.textStyle, bold: true, align: "center" };
+}
+
 export function getCellTextStyle(el: TableElement, row: number, column: number): TextStyle {
+  if (row === TITLE_ROW) return getTitleTextStyle(el);
   const align = getColumnAlign(el, column);
   const bold = isHeaderCell(el, row) || el.textStyle.bold;
   if (align === el.textStyle.align && bold === el.textStyle.bold) return el.textStyle;
@@ -49,6 +69,7 @@ export function getCellTextStyle(el: TableElement, row: number, column: number):
 }
 
 export function getCellFill(el: TableElement, { row, column }: CellPosition): string {
+  if (row === TITLE_ROW) return el.headerFill;
   return el.cells[row][column].fill ?? (isHeaderCell(el, row) ? el.headerFill : el.style.fillColor);
 }
 
@@ -81,13 +102,21 @@ function minRowHeights(el: TableElement): number[] {
   );
 }
 
+function getTitleHeight(el: TableElement): number {
+  return el.title === undefined ? 0 : cellMinHeight({ text: el.title }, getTitleTextStyle(el), el.width);
+}
+
 function minTableHeight(el: TableElement): number {
-  return sum(minRowHeights(el));
+  return getTitleHeight(el) + sum(minRowHeights(el));
+}
+
+function getDataTop(el: TableElement): number {
+  return el.y + getTitleHeight(el);
 }
 
 export function getRowHeights(el: TableElement): number[] {
   const mins = minRowHeights(el);
-  const extra = Math.max(el.height - sum(mins), 0) / mins.length;
+  const extra = Math.max(el.height - getTitleHeight(el) - sum(mins), 0) / mins.length;
   return mins.map((height) => height + extra);
 }
 
@@ -96,8 +125,9 @@ export function getColumnLefts(el: TableElement): number[] {
 }
 
 export function getCellRect(el: TableElement, { row, column }: CellPosition): Bounds {
+  if (row === TITLE_ROW) return { x: el.x, y: el.y, width: el.width, height: getTitleHeight(el) };
   const heights = getRowHeights(el);
-  const tops = offsets(heights, el.y);
+  const tops = offsets(heights, getDataTop(el));
   return { x: getColumnLefts(el)[column], y: tops[row], width: el.columns[column], height: heights[row] };
 }
 
@@ -117,15 +147,17 @@ function indexAt(starts: number[], sizes: number[], value: number): number {
 }
 
 export function getCellAt(el: TableElement, localPoint: Point): CellPosition {
+  const top = getDataTop(el);
+  if (hasTitle(el) && localPoint.y < top) return { row: TITLE_ROW, column: 0 };
   const heights = getRowHeights(el);
   return {
-    row: indexAt(offsets(heights, el.y), heights, localPoint.y),
+    row: indexAt(offsets(heights, top), heights, localPoint.y),
     column: indexAt(getColumnLefts(el), el.columns, localPoint.x),
   };
 }
 
 export function getColumnBorderAt(el: TableElement, localPoint: Point, tolerance: number): number | null {
-  if (localPoint.y < el.y - tolerance || localPoint.y > el.y + el.height + tolerance) return null;
+  if (localPoint.y < getDataTop(el) - tolerance || localPoint.y > el.y + el.height + tolerance) return null;
   const lefts = getColumnLefts(el);
   for (let i = 1; i < lefts.length; i++) {
     if (Math.abs(localPoint.x - lefts[i]) <= tolerance) return i - 1;
@@ -150,19 +182,31 @@ function emptyRow(columnCount: number): TableCell[] {
   return Array.from({ length: columnCount }, () => ({ text: "" }));
 }
 
-export function createTable(bounds: Bounds, rows: string[][], textStyle: TextStyle, columns?: number[]): TableElement {
-  const columnCount = Math.max(1, ...rows.map((row) => row.length));
+export interface TableOptions {
+  columns?: number[];
+  title?: string;
+  headerRow?: boolean;
+}
+
+export function createTable(
+  bounds: Bounds,
+  rows: string[][],
+  textStyle: TextStyle,
+  { columns, title, headerRow = true }: TableOptions = {},
+): TableElement {
+  const columnCount = Math.max(1, columns?.length ?? 0, ...rows.map((row) => row.length));
   const cells = rows.map((row) => Array.from({ length: columnCount }, (_, c) => ({ text: row[c] ?? "" })));
   const widths = columns ?? Array.from({ length: columnCount }, () => bounds.width / columnCount);
-  return fitTable({
+  const table: TableElement = {
     ...baseFields(bounds),
     type: "table",
     columns: widths,
     cells: cells.length > 0 ? cells : [emptyRow(columnCount)],
     textStyle,
-    headerRow: true,
+    headerRow,
     headerFill: DEFAULT_HEADER_FILL,
-  });
+  };
+  return fitTable(title === undefined ? table : { ...table, title });
 }
 
 export function parseTableText(text: string): string[][] | null {
@@ -181,7 +225,7 @@ export function createTableFromRows(rows: string[][], center: Point, textStyle: 
     const width = widest + PADDING_X * 2 + PASTED_COLUMN_SLACK;
     return Math.min(Math.max(width, PASTED_COLUMN_MIN), PASTED_COLUMN_MAX);
   });
-  const table = createTable({ x: center.x, y: center.y, width: sum(columns), height: 0 }, rows, textStyle, columns);
+  const table = createTable({ x: center.x, y: center.y, width: sum(columns), height: 0 }, rows, textStyle, { columns });
   return { ...table, x: center.x - table.width / 2, y: center.y - table.height / 2 };
 }
 
@@ -192,11 +236,13 @@ function mapCell(el: TableElement, target: CellPosition, update: (cell: TableCel
 }
 
 export function setCellText(el: TableElement, cell: CellPosition, text: string): TableElement {
+  if (isTitleCell(cell)) return el.title === undefined || el.title === text ? el : fitTable({ ...el, title: text });
   if (el.cells[cell.row]?.[cell.column]?.text === text) return el;
   return fitTable({ ...el, cells: mapCell(el, cell, (current) => ({ ...current, text })) });
 }
 
 export function setCellFill(el: TableElement, cell: CellPosition, fill: string | undefined): TableElement {
+  if (isTitleCell(cell)) return el;
   if (el.cells[cell.row][cell.column].fill === fill) return el;
   const cells = mapCell(el, cell, ({ text }) => (fill === undefined ? { text } : { text, fill }));
   return { ...el, cells };
@@ -208,6 +254,14 @@ export function setHeaderFill(el: TableElement, headerFill: string): TableElemen
 
 export function setHeaderRow(el: TableElement, headerRow: boolean): TableElement {
   return el.headerRow === headerRow ? el : fitTable({ ...el, headerRow });
+}
+
+export function setTitle(el: TableElement, title: string | undefined): TableElement {
+  if (el.title === title) return el;
+  if (title !== undefined) return fitTable({ ...el, title });
+  const next = { ...el };
+  delete next.title;
+  return fitTable(withSize(next, el.width, el.height - getTitleHeight(el)));
 }
 
 export function insertRow(el: TableElement, index: number): TableElement {
@@ -260,30 +314,38 @@ export function clearColumnAligns(el: TableElement): TableElement {
 
 export type TableSide = "left" | "right";
 
-function rowCenters(el: TableElement): number[] {
+interface RowCenter {
+  row: number;
+  y: number;
+}
+
+function rowCenters(el: TableElement): RowCenter[] {
+  const fraction = (y: number) => (el.height > 0 ? y / el.height : 0.5);
+  const titleHeight = getTitleHeight(el);
   const heights = getRowHeights(el);
-  return offsets(heights, 0).map((top, r) => (el.height > 0 ? (top + heights[r] / 2) / el.height : 0.5));
+  const rows = offsets(heights, titleHeight).map((top, r) => ({ row: r, y: fraction(top + heights[r] / 2) }));
+  return hasTitle(el) ? [{ row: TITLE_ROW, y: fraction(titleHeight / 2) }, ...rows] : rows;
 }
 
 export function getRowAnchor(el: TableElement, row: number, side: TableSide): Point {
   const centers = rowCenters(el);
-  return { x: side === "left" ? 0 : 1, y: centers[Math.min(Math.max(row, 0), centers.length - 1)] };
+  const center = centers.find((entry) => entry.row === row) ?? centers[row < 0 ? 0 : centers.length - 1];
+  return { x: side === "left" ? 0 : 1, y: center.y };
 }
 
 export function getTableConnectionPoints(el: TableElement): Point[] {
   const centers = rowCenters(el);
   return [
     { x: 0.5, y: 0 },
-    ...centers.map((y) => ({ x: 1, y })),
+    ...centers.map(({ y }) => ({ x: 1, y })),
     { x: 0.5, y: 1 },
-    ...centers.map((y) => ({ x: 0, y })),
+    ...centers.map(({ y }) => ({ x: 0, y })),
   ];
 }
 
 export function getAnchorRow(el: TableElement, anchor: Point): number | undefined {
   if (anchor.x !== 0 && anchor.x !== 1) return undefined;
-  const row = rowCenters(el).findIndex((y) => y === anchor.y);
-  return row === -1 ? undefined : row;
+  return rowCenters(el).find(({ y }) => y === anchor.y)?.row;
 }
 
 export function setColumnWidth(el: TableElement, index: number, width: number): TableElement {
@@ -293,21 +355,35 @@ export function setColumnWidth(el: TableElement, index: number, width: number): 
   return fitTable({ ...el, columns });
 }
 
+function drawCellText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  style: TextStyle,
+  color: string,
+  rect: Bounds,
+) {
+  const area = { x: rect.x + PADDING_X, width: innerWidth(rect.width) };
+  const { lines, height } = layoutText(text, style, area.width);
+  const room = rect.height - PADDING_Y * 2;
+  const offset =
+    style.verticalAlign === "top" ? 0 : style.verticalAlign === "bottom" ? room - height : (room - height) / 2;
+  drawTextLines(ctx, lines, style, color, area, rect.y + PADDING_Y + offset);
+}
+
 export function drawTableText(el: TableElement, ctx: CanvasRenderingContext2D, hidden: CellPosition | null) {
   const heights = getRowHeights(el);
-  const tops = offsets(heights, el.y);
+  const tops = offsets(heights, getDataTop(el));
   const lefts = getColumnLefts(el);
   const color = resolveTextColor(el.textStyle, el);
+  const title = { row: TITLE_ROW, column: 0 };
+  if (el.title && !sameCell(hidden, title)) {
+    drawCellText(ctx, el.title, getTitleTextStyle(el), color, getCellRect(el, title));
+  }
   el.cells.forEach((row, r) => {
     row.forEach((cell, c) => {
       if (cell.text === "" || sameCell(hidden, { row: r, column: c })) return;
-      const style = getCellTextStyle(el, r, c);
-      const area = { x: lefts[c] + PADDING_X, width: innerWidth(el.columns[c]) };
-      const { lines, height } = layoutText(cell.text, style, area.width);
-      const room = heights[r] - PADDING_Y * 2;
-      const offset =
-        style.verticalAlign === "top" ? 0 : style.verticalAlign === "bottom" ? room - height : (room - height) / 2;
-      drawTextLines(ctx, lines, style, color, area, tops[r] + PADDING_Y + offset);
+      const rect = { x: lefts[c], y: tops[r], width: el.columns[c], height: heights[r] };
+      drawCellText(ctx, cell.text, getCellTextStyle(el, r, c), color, rect);
     });
   });
 }
@@ -315,9 +391,15 @@ export function drawTableText(el: TableElement, ctx: CanvasRenderingContext2D, h
 export const tableUtil: ShapeUtil<TableElement> = {
   draw(el, rc, ctx) {
     const heights = getRowHeights(el);
-    const tops = offsets(heights, el.y);
+    const dataTop = getDataTop(el);
+    const tops = offsets(heights, dataTop);
     const lefts = getColumnLefts(el);
     const columnCount = el.columns.length;
+    if (hasTitle(el)) {
+      drawFill(ctx, { ...el.style, fillColor: el.headerFill }, el.seed - 1, (options) =>
+        rc.rectangle(el.x, el.y, el.width, dataTop - el.y, options),
+      );
+    }
     el.cells.forEach((row, r) =>
       row.forEach((_, c) => {
         const style = { ...el.style, fillColor: getCellFill(el, { row: r, column: c }) };
@@ -328,8 +410,10 @@ export const tableUtil: ShapeUtil<TableElement> = {
     );
     rc.rectangle(el.x, el.y, el.width, el.height, strokeOptions(el.style, el.seed));
     let seed = el.seed + 1;
-    for (const y of tops.slice(1)) rc.line(el.x, y, el.x + el.width, y, strokeOptions(el.style, seed++));
-    for (const x of lefts.slice(1)) rc.line(x, el.y, x, el.y + el.height, strokeOptions(el.style, seed++));
+    for (const y of hasTitle(el) ? tops : tops.slice(1)) {
+      rc.line(el.x, y, el.x + el.width, y, strokeOptions(el.style, seed++));
+    }
+    for (const x of lefts.slice(1)) rc.line(x, dataTop, x, el.y + el.height, strokeOptions(el.style, seed++));
   },
 
   hitTest(el, p, tolerance) {

@@ -140,6 +140,19 @@ function card(bounds: Bounds, textStyle: TextStyle): LibraryPart[] {
 
 const TABLE_ROWS = [["Coluna 1", "Coluna 2", "Coluna 3"], ["", "", ""], ["", "", ""]];
 
+const ENTITY_COLUMNS = [50, 85, 105];
+const ENTITY_ROWS = [["PK", "id", "int"], ["", "nome", "varchar"]];
+
+function entity(bounds: Bounds, textStyle: TextStyle): LibraryPart[] {
+  const scale = bounds.width / ENTITY_COLUMNS.reduce((total, width) => total + width, 0);
+  const element = createTable(bounds, ENTITY_ROWS, { ...textStyle, verticalAlign: "middle" }, {
+    columns: ENTITY_COLUMNS.map((width) => width * scale),
+    title: "Entidade",
+    headerRow: false,
+  });
+  return [{ element, style: { fillStyle: "solid" } }];
+}
+
 function table(bounds: Bounds, textStyle: TextStyle): LibraryPart[] {
   const element = createTable(bounds, TABLE_ROWS, { ...textStyle, verticalAlign: "middle" });
   return [{ element, style: { fillStyle: "solid" } }];
@@ -429,10 +442,10 @@ export const LIBRARY_ITEMS: LibraryItem[] = [
     id: "er.entity",
     name: "Entidade",
     group: "er",
-    keywords: ["tabela", "atributos", "chave", "pk", "fk", "compartimentos"],
-    width: 200,
-    height: 120,
-    create: compartments(["Entidade", "PK  id\nnome"]),
+    keywords: ["tabela", "atributos", "chave", "pk", "fk", "colunas", "tipo"],
+    width: 240,
+    height: 110,
+    create: entity,
   },
   {
     id: "er.weakEntity",

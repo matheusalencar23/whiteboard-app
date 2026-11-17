@@ -78,4 +78,4 @@ Os detalhes da arquitetura e as convenções do código estão no [CLAUDE.md](CL
 
 ## Roadmap
 
-O que falta fazer e as decisões que orientam o projeto ficam no [ROADMAP.md](ROADMAP.md). A troca do `localStorage` pelo IndexedDB e a sincronização entre abas estão registradas para decidir depois.
+O que falta fazer e as decisões que orientam o projeto ficam no [ROADMAP.md](ROADMAP.md). A sincronização entre abas está registrada para decidir depois, e a publicação do board como biblioteca npm (sem persistência própria) fica para a etapa seguinte.

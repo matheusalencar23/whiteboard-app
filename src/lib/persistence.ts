@@ -38,6 +38,7 @@ export interface Preferences {
   gridStyle: GridStyle;
   libraryOpen: boolean;
   themeMode: ThemeMode;
+  collapsedLibraryGroups: string[];
 }
 
 const FILE_TYPE = "whiteboard";
@@ -56,6 +57,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   gridStyle: "dots",
   libraryOpen: false,
   themeMode: "system",
+  collapsedLibraryGroups: [],
 };
 
 const ELEMENT_TYPES: Record<ElementType, true> = {
@@ -178,6 +180,9 @@ export function loadPreferences(): Preferences {
     gridStyle: GRID_STYLES.find((style) => style === data.gridStyle) ?? DEFAULT_PREFERENCES.gridStyle,
     libraryOpen: typeof data.libraryOpen === "boolean" ? data.libraryOpen : DEFAULT_PREFERENCES.libraryOpen,
     themeMode: THEME_MODES.find((mode) => mode === data.themeMode) ?? DEFAULT_PREFERENCES.themeMode,
+    collapsedLibraryGroups: Array.isArray(data.collapsedLibraryGroups)
+      ? data.collapsedLibraryGroups.filter((id): id is string => typeof id === "string")
+      : DEFAULT_PREFERENCES.collapsedLibraryGroups,
   };
 }
 

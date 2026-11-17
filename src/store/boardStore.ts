@@ -93,6 +93,7 @@ export interface BoardState {
   gridStyle: GridStyle;
   libraryOpen: boolean;
   themeMode: ThemeMode;
+  collapsedLibraryGroups: string[];
   helpOpen: boolean;
   exportOpen: boolean;
   notice: Notice | null;
@@ -135,6 +136,7 @@ export interface BoardState {
   cycleGridStyle: () => void;
   setLibraryOpen: (open: boolean) => void;
   setThemeMode: (mode: ThemeMode) => void;
+  toggleLibraryGroup: (groupId: string) => void;
   setViewportSize: (size: { width: number; height: number }) => void;
   setHelpOpen: (open: boolean) => void;
   setExportOpen: (open: boolean) => void;
@@ -185,6 +187,7 @@ export const useBoardStore = create<BoardState>()((set) => ({
   gridStyle: preferences.gridStyle,
   libraryOpen: preferences.libraryOpen,
   themeMode: preferences.themeMode,
+  collapsedLibraryGroups: preferences.collapsedLibraryGroups,
   helpOpen: false,
   exportOpen: false,
   notice: null,
@@ -481,6 +484,12 @@ export const useBoardStore = create<BoardState>()((set) => ({
     }),
   setLibraryOpen: (libraryOpen) => set({ libraryOpen }),
   setThemeMode: (themeMode) => set({ themeMode }),
+  toggleLibraryGroup: (groupId) =>
+    set((state) => ({
+      collapsedLibraryGroups: state.collapsedLibraryGroups.includes(groupId)
+        ? state.collapsedLibraryGroups.filter((id) => id !== groupId)
+        : [...state.collapsedLibraryGroups, groupId],
+    })),
   setViewportSize: (viewportSize) => set({ viewportSize }),
   setHelpOpen: (helpOpen) => set({ helpOpen }),
   setExportOpen: (exportOpen) => set({ exportOpen }),
@@ -519,13 +528,15 @@ const unsubscribe = useBoardStore.subscribe((state, prev) => {
     state.showGrid !== prev.showGrid ||
     state.gridStyle !== prev.gridStyle ||
     state.libraryOpen !== prev.libraryOpen ||
-    state.themeMode !== prev.themeMode
+    state.themeMode !== prev.themeMode ||
+    state.collapsedLibraryGroups !== prev.collapsedLibraryGroups
   ) {
     savePreferences({
       showGrid: state.showGrid,
       gridStyle: state.gridStyle,
       libraryOpen: state.libraryOpen,
       themeMode: state.themeMode,
+      collapsedLibraryGroups: state.collapsedLibraryGroups,
     });
   }
   if (state.boardId === null || state.boardId !== prev.boardId) return;

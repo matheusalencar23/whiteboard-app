@@ -34,22 +34,14 @@ export function LibraryPanel() {
   const setLibraryOpen = useBoardStore((s) => s.setLibraryOpen);
   const [query, setQuery] = useState("");
   const fontsVersion = useFontsVersion();
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+  const collapsed = useBoardStore((s) => s.collapsedLibraryGroups);
+  const toggleGroup = useBoardStore((s) => s.toggleLibraryGroup);
 
   const searching = query.trim() !== "";
   const groups = LIBRARY_GROUPS.map((group) => ({
     ...group,
     items: LIBRARY_ITEMS.filter((item) => item.group === group.id && (!searching || matchesLibraryItem(item, query))),
   })).filter((group) => group.items.length > 0);
-
-  function toggleGroup(id: string) {
-    setCollapsed((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
 
   return (
     <aside className={styles.panel} aria-label="Biblioteca de formas">
@@ -77,7 +69,7 @@ export function LibraryPanel() {
 
       <div className={styles.groups}>
         {groups.map((group) => {
-          const expanded = searching || !collapsed.has(group.id);
+          const expanded = searching || !collapsed.includes(group.id);
           return (
             <section key={group.id} className={styles.group}>
               <button

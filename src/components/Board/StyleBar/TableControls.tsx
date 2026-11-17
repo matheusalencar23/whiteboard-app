@@ -64,7 +64,10 @@ function useTablePreview(id: string) {
     (update: TableUpdate) => {
       const table = findTable(boardStore, id);
       if (!table) return;
-      beforeRef.current ??= boardStore.getState().elements;
+      if (!beforeRef.current) {
+        beforeRef.current = boardStore.getState().elements;
+        boardStore.getState().beginInteraction();
+      }
       boardStore.getState().updateElements([update(table)]);
     },
     [boardStore, id],
@@ -73,7 +76,9 @@ function useTablePreview(id: string) {
   const commit = useCallback(() => {
     const before = beforeRef.current;
     beforeRef.current = null;
-    if (before) boardStore.getState().commitHistory(before);
+    if (!before) return;
+    boardStore.getState().commitHistory(before);
+    boardStore.getState().endInteraction();
   }, [boardStore]);
 
   useEffect(() => commit, [commit]);

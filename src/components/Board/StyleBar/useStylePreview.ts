@@ -7,7 +7,9 @@ export function useStylePreview() {
   const beforeRef = useRef<BoardElement[] | null>(null);
 
   const remember = useCallback(() => {
-    beforeRef.current ??= boardStore.getState().elements;
+    if (beforeRef.current) return;
+    beforeRef.current = boardStore.getState().elements;
+    boardStore.getState().beginInteraction();
   }, [boardStore]);
 
   const preview = useCallback(
@@ -29,7 +31,9 @@ export function useStylePreview() {
   const commit = useCallback(() => {
     const before = beforeRef.current;
     beforeRef.current = null;
-    if (before) boardStore.getState().commitHistory(before);
+    if (!before) return;
+    boardStore.getState().commitHistory(before);
+    boardStore.getState().endInteraction();
   }, [boardStore]);
 
   useEffect(() => commit, [commit]);

@@ -79,6 +79,12 @@ export interface LastChange extends ChangeInfo {
   seq: number;
 }
 
+export type SceneHistoryMode = "clear" | "record";
+
+export interface UpdateSceneOptions {
+  history?: SceneHistoryMode;
+}
+
 export function getCellTextTarget(state: Pick<BoardState, "elements" | "selectedIds" | "tableCell" | "tableTextScope">) {
   const { tableCell } = state;
   if (state.tableTextScope !== "cells" || state.selectedIds.length !== 1 || !tableCell) return null;
@@ -124,6 +130,10 @@ export interface BoardState {
 
   updateElements: (updated: BoardElement[]) => void;
   commitHistory: (before: BoardElement[]) => void;
+  updateScene: (patch: Partial<WhiteboardScene>, options?: UpdateSceneOptions) => void;
+  resetHistory: () => void;
+  beginInteraction: () => void;
+  endInteraction: () => void;
 
   undo: () => void;
   redo: () => void;
@@ -176,9 +186,14 @@ export function preferencesChanged(state: BoardState, prev: BoardState): boolean
   );
 }
 
-function keepExisting(selectedIds: string[], elements: BoardElement[]) {
-  const ids = new Set(elements.map((el) => el.id));
-  return selectedIds.filter((id) => ids.has(id));
+function sanitizeTransient(state: BoardState, elements: BoardElement[]) {
+  const byId = new Map(elements.map((el) => [el.id, el]));
+  const { tableCell } = state;
+  return {
+    selectedIds: state.selectedIds.filter((id) => byId.has(id)),
+    editingGroupId: keepEditingGroup(state.editingGroupId, elements),
+    tableCell: tableCell && byId.get(tableCell.elementId)?.type === "table" ? tableCell : null,
+  };
 }
 
 function pushPast(past: BoardElement[][], snapshot: BoardElement[]) {
@@ -217,6 +232,8 @@ export function createBoardStore({ scene = {}, preferences: given = {} }: BoardS
   const preferences = { ...DEFAULT_PREFERENCES, ...given };
   let noticeCount = 0;
   let pendingIds = new Set<string>();
+  let interactionDepth = 0;
+  let queuedScenes: { patch: Partial<WhiteboardScene>; history: SceneHistoryMode }[] = [];
 
   return createStore<BoardState>()((rawSet, get) => {
     function nextChange(state: BoardState, reason: ChangeReason, changedIds: readonly string[]): LastChange {
@@ -242,6 +259,21 @@ export function createBoardStore({ scene = {}, preferences: given = {} }: BoardS
 
     function set(update: BoardUpdate) {
       setWithReason(null, update);
+    }
+
+    function applyScene(patch: Partial<WhiteboardScene>, history: SceneHistoryMode) {
+      setWithReason("external", (state) => {
+        const elements = patch.elements ? updateBoundArrows(patch.elements, []) : state.elements;
+        const recorded = history === "record" && elements !== state.elements;
+        return {
+          ...(patch.name !== undefined && { name: normalizeBoardName(patch.name) ?? DEFAULT_BOARD_NAME }),
+          ...(patch.viewport && { viewport: patch.viewport }),
+          elements,
+          ...sanitizeTransient(state, elements),
+          ...(history === "clear" && { past: [], future: [] }),
+          ...(recorded && { past: pushPast(state.past, state.elements), future: [] }),
+        };
+      });
     }
 
     return {
@@ -329,8 +361,7 @@ export function createBoardStore({ scene = {}, preferences: given = {} }: BoardS
           const elements = updateBoundArrows(remaining, []);
           return {
             elements,
-            selectedIds: keepExisting(state.selectedIds, elements),
-            editingGroupId: keepEditingGroup(state.editingGroupId, elements),
+            ...sanitizeTransient(state, elements),
             past: pushPast(state.past, state.elements),
             future: [],
           };
@@ -362,14 +393,34 @@ export function createBoardStore({ scene = {}, preferences: given = {} }: BoardS
           before === state.elements ? {} : { past: pushPast(state.past, before), future: [] },
         ),
 
+      updateScene: (patch, options) => {
+        const history = options?.history ?? "clear";
+        if (interactionDepth > 0) queuedScenes.push({ patch, history });
+        else applyScene(patch, history);
+      },
+
+      resetHistory: () => rawSet({ past: [], future: [] }),
+
+      beginInteraction: () => {
+        interactionDepth += 1;
+      },
+
+      endInteraction: () => {
+        if (interactionDepth === 0) return;
+        interactionDepth -= 1;
+        if (interactionDepth > 0) return;
+        const queued = queuedScenes;
+        queuedScenes = [];
+        queued.forEach(({ patch, history }) => applyScene(patch, history));
+      },
+
       undo: () =>
         setWithReason("undo", (state) => {
           const previous = state.past.at(-1);
           if (!previous) return {};
           return {
             elements: previous,
-            selectedIds: keepExisting(state.selectedIds, previous),
-            editingGroupId: keepEditingGroup(state.editingGroupId, previous),
+            ...sanitizeTransient(state, previous),
             past: state.past.slice(0, -1),
             future: [...state.future, state.elements],
           };
@@ -381,8 +432,7 @@ export function createBoardStore({ scene = {}, preferences: given = {} }: BoardS
           if (!next) return {};
           return {
             elements: next,
-            selectedIds: keepExisting(state.selectedIds, next),
-            editingGroupId: keepEditingGroup(state.editingGroupId, next),
+            ...sanitizeTransient(state, next),
             past: pushPast(state.past, state.elements),
             future: state.future.slice(0, -1),
           };

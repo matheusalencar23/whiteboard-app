@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
 import { LuLayoutGrid } from "react-icons/lu";
 import { Canvas } from "./Canvas/Canvas";
 import { Toolbar } from "./Toolbar/Toolbar";
@@ -14,12 +14,15 @@ import { LibraryPanel } from "./Library/LibraryPanel";
 import { importBoard } from "./boardFileActions";
 import { isBoardFileCandidate } from "../../lib/boardFile";
 import type { Preferences } from "../../lib/persistence";
+import { canvasToBlob, renderToCanvas, type ExportOptions } from "../../lib/export/exportScene";
 import { IconButton } from "../../ui/IconButton/IconButton";
 import {
   createBoardStore,
   getPreferences,
   preferencesChanged,
+  type BoardStore,
   type ChangeInfo,
+  type UpdateSceneOptions,
   type WhiteboardScene,
 } from "../../store/boardStore";
 import { BoardStoreContext, useBoardStore, useBoardStoreApi } from "../../store/boardStoreContext";
@@ -30,7 +33,36 @@ export interface WhiteboardBackAction {
   onClick: () => void;
 }
 
+export interface WhiteboardApi {
+  getScene(): WhiteboardScene;
+  updateScene(patch: Partial<WhiteboardScene>, options?: UpdateSceneOptions): void;
+  undo(): void;
+  redo(): void;
+  resetHistory(): void;
+  exportPng(options?: Partial<ExportOptions>): Promise<Blob | null>;
+}
+
+const DEFAULT_PNG_OPTIONS: ExportOptions = { background: true, scheme: "light", scale: 1 };
+
+function createWhiteboardApi(store: BoardStore): WhiteboardApi {
+  return {
+    getScene() {
+      const { name, elements, viewport } = store.getState();
+      return { name, elements, viewport };
+    },
+    updateScene: (patch, options) => store.getState().updateScene(patch, options),
+    undo: () => store.getState().undo(),
+    redo: () => store.getState().redo(),
+    resetHistory: () => store.getState().resetHistory(),
+    async exportPng(options) {
+      const canvas = renderToCanvas(store.getState().elements, { ...DEFAULT_PNG_OPTIONS, ...options });
+      return canvas ? canvasToBlob(canvas) : null;
+    },
+  };
+}
+
 export interface WhiteboardProps {
+  ref?: Ref<WhiteboardApi>;
   initialData?: Partial<WhiteboardScene>;
   initialPreferences?: Partial<Preferences>;
   onChange?: (scene: WhiteboardScene, info: ChangeInfo) => void;
@@ -38,8 +70,9 @@ export interface WhiteboardProps {
   back?: WhiteboardBackAction;
 }
 
-export function Whiteboard({ initialData, initialPreferences, onChange, onPreferencesChange, back }: WhiteboardProps) {
+export function Whiteboard({ ref, initialData, initialPreferences, onChange, onPreferencesChange, back }: WhiteboardProps) {
   const [store] = useState(() => createBoardStore({ scene: initialData, preferences: initialPreferences }));
+  useImperativeHandle(ref, () => createWhiteboardApi(store), [store]);
   const onChangeRef = useRef(onChange);
   const onPreferencesChangeRef = useRef(onPreferencesChange);
 

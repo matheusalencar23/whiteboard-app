@@ -77,7 +77,7 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
 - **Como:**
   - **Estrutura:** monorepo com workspaces do npm: `packages/whiteboard` (o pacote) e `apps/web` (o app atual). Ou uma pasta `src/whiteboard/` com um build de biblioteca à parte, se o monorepo parecer exagero. O `src/lib/` já é TypeScript puro e quase não muda.
   - **Build:** modo biblioteca do Vite (`build.lib`) gerando ESM, com `react`, `react-dom` e `react/jsx-runtime` como `peerDependencies` e externos. Os tipos saem com `vite-plugin-dts` ou com `tsc --emitDeclarationOnly`. `roughjs`, `zustand`, `nanoid` e `react-icons` ficam como dependências comuns.
-  - **Modelo de dados (decidido):** não controlado com ref imperativo, como o Excalidraw (veja as [decisões](#decisões-tomadas)). Assinaturas da 0.1 (o componente, `initialData`, `initialPreferences`, `onChange`, `onPreferencesChange`, `back`, o `version` e o `lastChange` já existem; faltam o ref, o `onChangeLive` e o `config`):
+  - **Modelo de dados (decidido):** não controlado com ref imperativo, como o Excalidraw (veja as [decisões](#decisões-tomadas)). Assinaturas da 0.1 (o componente, `initialData`, `initialPreferences`, `onChange`, `onPreferencesChange`, `back`, o `version` e o `lastChange` já existem, assim como o ref; faltam o `onChangeLive` e o `config`):
     ```ts
     interface WhiteboardScene { elements: readonly BoardElement[]; name: string; viewport: Viewport }
     type ChangeReason = "commit" | "undo" | "redo" | "name" | "viewport" | "external";
@@ -99,7 +99,7 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
       undo(): void;
       redo(): void;
       resetHistory(): void;
-      exportPng(options?: ExportOptions): Promise<Blob>;
+      exportPng(options?: Partial<ExportOptions>): Promise<Blob | null>;
     }
     ```
     - **`onChange`:** dois objetos, o que se grava (`scene`) e o porquê (`info`), para o `reason` e o `changedIds` não irem parar no que é salvo. Dispara uma vez por passo do histórico e nas trocas de nome e viewport, nunca a cada `pointermove`. O `onChangeLive` (opcional, um por quadro com `requestAnimationFrame`) é para pré-visualização ao vivo.
@@ -108,8 +108,6 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
     - **Prop `elements` reservada:** o modo controlado e a opção `history: "preserve"` (aplicar de fora mantendo o histórico local) entram numa versão menor depois do histórico por alterações, sem quebrar a API.
   - **Por dentro da store, para a 0.1:**
     - **Ordem por índice fracionário:** cada elemento guarda a própria posição na ordem de desenho (uma chave que ordena como texto, como o `index` do Excalidraw), e o array continua ordenado por ela. O `reorderElements` só dá índice novo aos elementos movidos, e reordenar vira uma alteração comum de elemento. Entra na 0.1 porque o formato ganha versão nela, e porque a mesclagem entre abas precisa da ordem como propriedade do elemento para as duas convergirem.
-    - **Contador de interações:** `beginInteraction()`/`endInteraction()` na store, chamados pelos arrastes do Canvas, pela prévia de estilo (`useStylePreview`), pela da tabela (`TableControls`) e pela edição de texto. Um `updateScene` com o contador acima de zero espera numa fila e é aplicado quando ele volta a zero, depois do `commitHistory` da interação. Isso evita três problemas: o arraste gravar por cima da mudança de fora (calcula a partir do `original`), o desfazer revertê-la (o `before` é anterior) e o cancelamento do ponteiro restaurar os `originals` por cima dela.
-    - **`sanitizeTransient`:** depois de um `updateScene` (e de qualquer remoção), tirar da seleção, do `editingGroupId` e do `tableCell` os ids que sumiram, e passar pelo `updateBoundArrows` para soltar as setas presas a formas apagadas. Hoje o `deleteElements` já esquece de limpar o `tableCell`.
   - **Depois da 0.1, antes da sincronização de abas:** trocar o histórico de fotos por alterações (`{ id, before?, after? }` por passo), como refatoração interna do `boardStore.ts`: os `pushPast` passam a guardar a diferença entre o antes e o depois (por referência, barato), e os chamadores de `commitHistory` não mudam. O desfazer aplica o inverso só onde o elemento ainda tem a `version` do `after`. Testes com Vitest para `diffElements`, `applyDiff` e `invert`, mais um roteiro manual de desfazer e refazer de cada ação. Com isso entram o `"preserve"` e, se houver demanda, a prop `elements`.
   - **API pública:** o componente `Whiteboard` e o `WhiteboardApi` acima, os tipos do modelo (`BoardElement`, `BoardFile`, `WhiteboardScene`), as funções de arquivo (`serializeBoardFile`/`parseBoardFile`) e as de exportar imagem (`renderToCanvas`, `renderToSvg`). O resto fica interno, para poder mudar sem quebrar quem usa.
   - **Configuração:** quem usa escolhe o que aparece e o que funciona, com uma prop de configuração (por exemplo, `config`) em que tudo é opcional e o padrão é o app completo de hoje.
@@ -125,10 +123,9 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
   - **Depois da primeira versão:** acessibilidade do canvas (anunciar seleção e criação por `aria-live`) e o app publicado no GitHub Pages como demonstração.
 - **Por quê:** permite usar o quadro branco dentro de outros projetos (documentação, ferramentas internas, apps com diagramas) sem copiar o código, mantendo uma base só.
 - **Ordem:** depende pouco dos outros itens, mas fica mais barato se as decisões acima forem seguidas desde já. O tema ativo hoje sai da store (`themeMode`) e é aplicado no `document.documentElement` pelo `App`; no pacote, passa a ser por instância. Sequência sugerida:
-  1. Ref com `updateScene`, contador de interações, fila e `sanitizeTransient`. O app passa a usar só a API pública.
-  2. Índice fracionário na ordem dos elementos.
-  3. Demais separações (teclado com a área de transferência e os efeitos ao importar, tamanho, tema, fontes, portais e `config` com o modo somente leitura).
-  4. Dicionário de textos, troca do `react-color` e carregamento sob demanda.
-  5. Versão no formato salvo, migrações e os testes delas.
-  6. Checagens de pacote na CI, Changesets, README com três exemplos (só leitura, salvar numa API, trocar a cena por fora) e publicação da `0.1.0`.
-  7. Depois: histórico por alterações e a sincronização de abas (nível 2).
+  1. Índice fracionário na ordem dos elementos.
+  2. Demais separações (teclado com a área de transferência e os efeitos ao importar, tamanho, tema, fontes, portais e `config` com o modo somente leitura).
+  3. Dicionário de textos, troca do `react-color` e carregamento sob demanda.
+  4. Versão no formato salvo, migrações e os testes delas.
+  5. Checagens de pacote na CI, Changesets, README com três exemplos (só leitura, salvar numa API, trocar a cena por fora) e publicação da `0.1.0`.
+  6. Depois: histórico por alterações e a sincronização de abas (nível 2).

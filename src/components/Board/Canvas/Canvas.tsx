@@ -367,6 +367,7 @@ export function Canvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const roughRef = useRef<RoughCanvas | null>(null);
   const interactionRef = useRef<Interaction | null>(null);
+  const holdingInteractionRef = useRef(false);
   const spacePressedRef = useRef(false);
   const draftRef = useRef<BoardElement | null>(null);
 
@@ -592,6 +593,14 @@ export function Canvas() {
     fontsLoaded,
     theme,
   ]);
+
+  const isEditing = editing !== null;
+
+  useEffect(() => {
+    if (!isEditing) return;
+    boardStore.getState().beginInteraction();
+    return () => boardStore.getState().endInteraction();
+  }, [boardStore, isEditing]);
 
   function startEditingText(element: TextElement, isNew: boolean) {
     boardStore.getState().setSelection([]);
@@ -865,6 +874,7 @@ export function Canvas() {
 
     e.currentTarget.setPointerCapture(e.pointerId);
     setIsInteracting(true);
+    holdInteraction();
 
     if (wantsPan) {
       interactionRef.current = { kind: "panning", last: screen };
@@ -1082,6 +1092,18 @@ export function Canvas() {
     editSelectionRef.current = editSelection;
   });
 
+  function holdInteraction() {
+    if (holdingInteractionRef.current) return;
+    holdingInteractionRef.current = true;
+    boardStore.getState().beginInteraction();
+  }
+
+  function releaseInteraction() {
+    if (!holdingInteractionRef.current) return;
+    holdingInteractionRef.current = false;
+    boardStore.getState().endInteraction();
+  }
+
   function endInteraction() {
     interactionRef.current = null;
     lastPointerRef.current = null;
@@ -1099,7 +1121,10 @@ export function Canvas() {
     const draftElement = draftRef.current;
     const store = boardStore.getState();
     endInteraction();
-    if (!interaction) return;
+    if (!interaction) {
+      releaseInteraction();
+      return;
+    }
 
     switch (interaction.kind) {
       case "creating":
@@ -1124,6 +1149,7 @@ export function Canvas() {
         store.commitHistory(interaction.before);
         break;
     }
+    releaseInteraction();
   }
 
   function handlePointerCancel() {
@@ -1144,6 +1170,7 @@ export function Canvas() {
       boardStore.getState().updateElements([interaction.original]);
     }
     endInteraction();
+    releaseInteraction();
   }
 
   function handleArrowHandleDoubleClick(world: Point): boolean {

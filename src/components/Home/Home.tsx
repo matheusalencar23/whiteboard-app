@@ -12,7 +12,7 @@ import {
   type BoardSummary,
 } from "../../lib/persistence";
 import { pickBoardFile, readBoardFile } from "../../lib/boardFile";
-import { useFontsVersion } from "../useFontsVersion";
+import { useFontsVersion } from "../fonts";
 import { BoardCard } from "./BoardCard";
 import type { homeLoader } from "./homeRoute";
 import styles from "./Home.module.scss";

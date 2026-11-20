@@ -65,15 +65,15 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
 - [ ] **O quê:** separar o board (canvas, toolbar, barra de estilo, menu, exportação) num pacote npm que outros projetos React instalam e usam como um componente, por exemplo `<Whiteboard initialData={...} onChange={...} />`. O app atual (lista de boards e rotas) passa a ser um usuário desse pacote.
 - **Problemas de hoje:**
   - **Tema e estilos:** as variáveis (`--wb-*`) já ficam na raiz do board, e o board ocupa o contêiner pai. Falta aceitar um tema próprio por prop (cores, raios, sombras; o `renderScene` e o `renderElement` já recebem o tema e o esquema de cores), provavelmente junto com o `config`, e os SCSS modules virarem um CSS gerado no build, importado pelo usuário (`import "pacote/style.css"`). Avaliar também se o fundo escurecido do `Modal` deve cobrir só o board quando ele não ocupa a tela toda (hoje cobre a janela).
-  - **Fontes:** hoje vêm do `<link>` do `index.html`. O pacote pode documentar o `<link>` necessário, trazer as fontes no CSS (`@font-face` com os arquivos no pacote) ou aceitar as famílias por prop. Decidir na hora.
   - **SSR:** nenhum módulo do board toca no `window` ou no `document` fora de efeitos e handlers (só o `appBoardSaving.ts`, que é do app), e isso precisa continuar assim. Falta o README documentar o uso com `"use client"` ou importação dinâmica.
+  - **Fontes:** o board já acrescenta a folha do Google Fonts sozinho, e `loadFonts={false}` desliga. Falta o README do pacote dizer as famílias ("Caveat", "IBM Plex Sans" e "IBM Plex Mono") para quem hospeda por conta própria, e que a exportação SVG ainda busca os subconjuntos no Google Fonts mesmo com `loadFonts={false}`. Trazer os arquivos das fontes no pacote fica para quando alguém pedir.
   - **Idioma da interface:** há perto de 300 textos fixos em português (rótulos, tooltips, menus, ajuda, avisos). Juntar todos num dicionário (`messages`), com o pt-BR como padrão e uma prop `locale`/`messages` para trocar, e trazer pelo menos o inglês. Os nomes de `tools.ts`, `shortcuts.ts` e do catálogo da biblioteca (inclusive as palavras de busca) passam a ser chaves do dicionário.
   - **`react-color`:** está sem manutenção há anos e não declara suporte ao React 19, o que gera aviso de peer dependency em quem instala. É usado só no `ColorPicker`: trocar por um seletor próprio (saturação e matiz) ou pelo `react-colorful`.
   - **Tamanho:** o build de hoje tem uns 736 KB de JS num arquivo só. No pacote, carregar sob demanda o que é ocasional (diálogo de exportação com as fontes do SVG, painel da biblioteca, ajuda) e medir o tamanho na CI (`size-limit`).
 - **Como:**
   - **Estrutura:** monorepo com workspaces do npm: `packages/whiteboard` (o pacote) e `apps/web` (o app atual). Ou uma pasta `src/whiteboard/` com um build de biblioteca à parte, se o monorepo parecer exagero. O `src/lib/` já é TypeScript puro e quase não muda.
   - **Build:** modo biblioteca do Vite (`build.lib`) gerando ESM, com `react`, `react-dom` e `react/jsx-runtime` como `peerDependencies` e externos. Os tipos saem com `vite-plugin-dts` ou com `tsc --emitDeclarationOnly`. `roughjs`, `zustand`, `nanoid` e `react-icons` ficam como dependências comuns.
-  - **Modelo de dados (decidido):** não controlado com ref imperativo, como o Excalidraw (veja as [decisões](#decisões-tomadas)). Assinaturas da 0.1 (o componente, `initialData`, `initialPreferences`, `onChange`, `onPreferencesChange`, `back`, o `autoFocus`, o `version` e o `lastChange` já existem, assim como o ref; faltam o `onChangeLive` e o `config`):
+  - **Modelo de dados (decidido):** não controlado com ref imperativo, como o Excalidraw (veja as [decisões](#decisões-tomadas)). Assinaturas da 0.1 (o componente, `initialData`, `initialPreferences`, `onChange`, `onPreferencesChange`, `back`, o `autoFocus`, o `loadFonts`, o `version` e o `lastChange` já existem, assim como o ref; faltam o `onChangeLive` e o `config`):
     ```ts
     interface WhiteboardScene { elements: readonly BoardElement[]; name: string; viewport: Viewport }
     type ChangeReason = "commit" | "undo" | "redo" | "name" | "viewport" | "external";
@@ -87,6 +87,7 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
       onChangeLive?: (elements: readonly BoardElement[]) => void;
       back?: { label: string; onClick: () => void };
       autoFocus?: boolean;
+      loadFonts?: boolean;
       config?: WhiteboardConfig;
     }
 
@@ -118,7 +119,7 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
   - **Depois da primeira versão:** acessibilidade do canvas (anunciar seleção e criação por `aria-live`) e o app publicado no GitHub Pages como demonstração.
 - **Por quê:** permite usar o quadro branco dentro de outros projetos (documentação, ferramentas internas, apps com diagramas) sem copiar o código, mantendo uma base só.
 - **Ordem:** depende pouco dos outros itens, mas fica mais barato se as decisões acima forem seguidas desde já. O tema ativo hoje sai da store (`themeMode`) e é aplicado no `document.documentElement` pelo `App`; no pacote, passa a ser por instância. Sequência sugerida:
-  1. Demais separações (fontes e `config` com o modo somente leitura e o tema por prop).
+  1. Demais separações (`config` com o modo somente leitura e o tema por prop).
   2. Dicionário de textos, troca do `react-color` e carregamento sob demanda.
   3. Versão no formato salvo, migrações e os testes delas.
   4. Checagens de pacote na CI, Changesets, README com três exemplos (só leitura, salvar numa API, trocar a cena por fora) e publicação da `0.1.0`.

@@ -4,7 +4,7 @@ import { LIBRARY_GROUPS, LIBRARY_ITEMS, matchesLibraryItem, type LibraryItem } f
 import { IconButton } from "../../../ui/IconButton/IconButton";
 import { useBoardStore, useBoardStoreApi } from "../../../store/boardStoreContext";
 import { LibraryPreview } from "./LibraryPreview";
-import { useFontsVersion } from "../../useFontsVersion";
+import { useFontsVersion } from "../../fonts";
 import { LIBRARY_DRAG_TYPE, insertLibraryItem } from "./libraryActions";
 import styles from "./LibraryPanel.module.scss";
 

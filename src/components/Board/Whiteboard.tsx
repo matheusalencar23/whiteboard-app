@@ -30,6 +30,7 @@ import { BoardRootContext, focusBoard } from "./boardRoot";
 import { themeVariables } from "../../lib/theme";
 import { PortalContainerContext } from "../../ui/portal";
 import { useTheme } from "../useColorScheme";
+import { useFontStylesheet } from "../fonts";
 import styles from "./Whiteboard.module.scss";
 
 export interface WhiteboardBackAction {
@@ -73,6 +74,7 @@ export interface WhiteboardProps {
   onPreferencesChange?: (preferences: Preferences) => void;
   back?: WhiteboardBackAction;
   autoFocus?: boolean;
+  loadFonts?: boolean;
 }
 
 export function Whiteboard({
@@ -83,9 +85,11 @@ export function Whiteboard({
   onPreferencesChange,
   back,
   autoFocus = false,
+  loadFonts = true,
 }: WhiteboardProps) {
   const [store] = useState(() => createBoardStore({ scene: initialData, preferences: initialPreferences }));
   useImperativeHandle(ref, () => createWhiteboardApi(store), [store]);
+  useFontStylesheet(loadFonts);
   const onChangeRef = useRef(onChange);
   const onPreferencesChangeRef = useRef(onPreferencesChange);
 

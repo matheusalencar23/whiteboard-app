@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import rough from "roughjs";
-import { useFontsVersion } from "../../useFontsVersion";
+import { useFontsVersion } from "../../fonts";
 import type { RoughCanvas } from "roughjs/bin/canvas";
 import styles from "./Canvas.module.scss";
 import type { Point } from "../../../lib/types";

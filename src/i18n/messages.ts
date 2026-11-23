@@ -14,6 +14,38 @@ import type { ShortcutId } from "../components/Board/shortcuts";
 
 export type PaletteColor = keyof Theme["palette"];
 
+export type HelpSectionId = "start" | "tools" | "diagrams" | "text" | "style" | "navigation" | "shortcuts";
+
+export type ShortcutGroupId = "tools" | "editing" | "file" | "text" | "view" | "mouse";
+
+export type MouseActionId =
+  | "keepRatio"
+  | "rotateSteps"
+  | "arrowAngles"
+  | "pan"
+  | "panHorizontal"
+  | "zoomAtCursor"
+  | "writeText"
+  | "insertShape"
+  | "enterGroup"
+  | "moveArrowLabel";
+
+export const KEY_NAMES = [
+  "Arrows",
+  "Space",
+  "drag",
+  "rotate",
+  "wheel",
+  "middleButton",
+  "pinch",
+  "click",
+  "doubleClick",
+  "dragToBoard",
+  "dragText",
+] as const;
+
+export type KeyName = (typeof KEY_NAMES)[number];
+
 export interface Messages {
   tools: Record<Tool, string>;
   shortcuts: Record<ShortcutId, string>;
@@ -50,6 +82,32 @@ export interface Messages {
   help: {
     button: string;
     title: string;
+    sectionsLabel: string;
+    or: string;
+    sections: Record<HelpSectionId, string>;
+    start: {
+      steps: readonly string[];
+      name: string;
+      rename: string;
+      menu: string;
+      save: string;
+      open: string;
+      image: string;
+    };
+    diagrams: readonly string[];
+    text: readonly string[];
+    style: readonly string[];
+    navigation: {
+      pan: string;
+      zoom: string;
+      zoomButtons: string;
+      grid: string;
+      theme: string;
+    };
+    tools: Record<Tool, string>;
+    groups: Record<ShortcutGroupId, string>;
+    mouse: Record<MouseActionId, string>;
+    keys: Record<KeyName, string>;
   };
   library: {
     panel: string;

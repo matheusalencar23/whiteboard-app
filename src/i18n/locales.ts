@@ -6,7 +6,7 @@ export const LOCALES = { "pt-BR": ptBR, en } as const;
 
 export type WhiteboardLocale = keyof typeof LOCALES;
 
-export const DEFAULT_LOCALE: WhiteboardLocale = "en";
+export const DEFAULT_LOCALE: WhiteboardLocale = "pt-BR";
 
 type MessageValue = string | readonly string[] | ((...args: never[]) => string);
 

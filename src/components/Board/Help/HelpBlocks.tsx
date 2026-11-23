@@ -1,23 +1,13 @@
 import styles from "./Help.module.scss";
 import { Keys } from "./Keys";
 import { SHORTCUTS, type ShortcutId } from "../shortcuts";
-import type { Messages } from "../../../i18n/messages";
+import type { Messages, ShortcutGroupId } from "../../../i18n/messages";
+import { RichText } from "./RichText";
 import { useMessages } from "../../../i18n/useMessages";
 import { TOOLS } from "../Toolbar/tools";
-import type { Tool } from "../../../store/boardStore";
 import { useBoardStore } from "../../../store/boardStoreContext";
-import { canEdit, isToolAllowed, type WhiteboardConfig } from "../../../store/whiteboardConfig";
+import { canEdit, hasBoardMenu, isToolAllowed, type WhiteboardConfig } from "../../../store/whiteboardConfig";
 
-const TOOL_DESCRIPTIONS: Record<Tool, string> = {
-  hand: "Arrasta a tela sem mexer nos elementos.",
-  selection: "Clique para selecionar, Shift + clique para somar à seleção ou arraste no vazio para selecionar por caixa. O clique num elemento agrupado seleciona o grupo inteiro, e o duplo clique entra nele.",
-  rectangle: "Arraste para desenhar. Com Shift, vira um quadrado.",
-  diamond: "Arraste para desenhar. Com Shift, fica com os lados iguais.",
-  ellipse: "Arraste para desenhar. Com Shift, vira um círculo.",
-  arrow: "Arraste de um ponto a outro. Começar ou terminar sobre uma forma liga a seta a ela. Com Shift, anda em ângulos de 45°, também ao arrastar as pontas e os pontos de uma seta pronta.",
-  freedraw: "Desenho à mão livre. Continua ativo depois de cada traço.",
-  text: "Clique no quadro para escrever um texto solto.",
-};
 
 type ConfigCheck = (config: WhiteboardConfig) => boolean;
 
@@ -37,9 +27,9 @@ function editingRows(ids: ShortcutId[]): ShortcutRow[] {
   return ids.map((id) => fromShortcut(id, whenEditable));
 }
 
-const SHORTCUT_GROUPS: { title: string; rows: ShortcutRow[] }[] = [
+const SHORTCUT_GROUPS: { title: ShortcutGroupId; rows: ShortcutRow[] }[] = [
   {
-    title: "Ferramentas",
+    title: "tools",
     rows: TOOLS.map(({ tool, keys }) => ({
       label: (messages) => messages.tools[tool],
       combos: keys.map((key) => [key.toUpperCase()]),
@@ -47,7 +37,7 @@ const SHORTCUT_GROUPS: { title: string; rows: ShortcutRow[] }[] = [
     })),
   },
   {
-    title: "Edição",
+    title: "editing",
     rows: editingRows([
       "undo",
       "redo",
@@ -68,7 +58,7 @@ const SHORTCUT_GROUPS: { title: string; rows: ShortcutRow[] }[] = [
     ]).concat(fromShortcut("selectAll", (config) => isToolAllowed(config, "selection"))),
   },
   {
-    title: "Arquivo",
+    title: "file",
     rows: [
       fromShortcut("saveFile", (config) => config.saveFile),
       fromShortcut("openFile", (config) => config.openFile),
@@ -76,7 +66,7 @@ const SHORTCUT_GROUPS: { title: string; rows: ShortcutRow[] }[] = [
     ],
   },
   {
-    title: "Texto",
+    title: "text",
     rows: editingRows([
       "editText",
       "bold",
@@ -87,7 +77,7 @@ const SHORTCUT_GROUPS: { title: string; rows: ShortcutRow[] }[] = [
     ]).concat({ label: (messages) => messages.shortcuts.confirmText, combos: [SHORTCUTS.confirmText.keys, ["Esc"]], when: whenEditable }),
   },
   {
-    title: "Visualização",
+    title: "view",
     rows: [
       fromShortcut("zoomIn", (config) => config.zoomControls),
       fromShortcut("zoomOut", (config) => config.zoomControls),
@@ -100,18 +90,18 @@ const SHORTCUT_GROUPS: { title: string; rows: ShortcutRow[] }[] = [
     ],
   },
   {
-    title: "Com o mouse",
+    title: "mouse",
     rows: [
-      { label: () => "Manter a proporção ao desenhar ou redimensionar", combos: [["Shift", "arrastar"]], when: whenEditable },
-      { label: () => "Girar em passos de 15°", combos: [["Shift", "girar"]], when: whenEditable },
-      { label: () => "Seta em ângulos de 45° ao desenhar ou arrastar as pontas e os pontos", combos: [["Shift", "arrastar"]], when: whenEditable },
-      { label: () => "Mover a tela", combos: [["Espaço", "arrastar"], ["botão do meio"], ["roda"]] },
-      { label: () => "Mover a tela na horizontal", combos: [["Shift", "roda"]] },
-      { label: () => "Zoom no cursor", combos: [["Ctrl", "roda"], ["pinça"]] },
-      { label: () => "Escrever um texto, um rótulo ou uma seção da entidade", combos: [["duplo clique"]], when: whenEditable },
-      { label: () => "Inserir uma forma da biblioteca", combos: [["clique"], ["arrastar para o quadro"]], when: (config) => config.library },
-      { label: () => "Entrar no grupo para mexer num elemento dele", combos: [["duplo clique"]], when: whenEditable },
-      { label: () => "Levar o texto da seta ao longo dela (com a seta selecionada)", combos: [["arrastar o texto"]], when: whenEditable },
+      { label: (messages) => messages.help.mouse.keepRatio, combos: [["Shift", "drag"]], when: whenEditable },
+      { label: (messages) => messages.help.mouse.rotateSteps, combos: [["Shift", "rotate"]], when: whenEditable },
+      { label: (messages) => messages.help.mouse.arrowAngles, combos: [["Shift", "drag"]], when: whenEditable },
+      { label: (messages) => messages.help.mouse.pan, combos: [["Space", "drag"], ["middleButton"], ["wheel"]] },
+      { label: (messages) => messages.help.mouse.panHorizontal, combos: [["Shift", "wheel"]] },
+      { label: (messages) => messages.help.mouse.zoomAtCursor, combos: [["Ctrl", "wheel"], ["pinch"]] },
+      { label: (messages) => messages.help.mouse.writeText, combos: [["doubleClick"]], when: whenEditable },
+      { label: (messages) => messages.help.mouse.insertShape, combos: [["click"], ["dragToBoard"]], when: (config) => config.library },
+      { label: (messages) => messages.help.mouse.enterGroup, combos: [["doubleClick"]], when: whenEditable },
+      { label: (messages) => messages.help.mouse.moveArrowLabel, combos: [["dragText"]], when: whenEditable },
     ],
   },
 ];
@@ -128,7 +118,7 @@ export function ShortcutTable() {
     <div className={styles.groups}>
       {groups.map((group) => (
         <section key={group.title} className={styles.group}>
-          <h3 className={styles.groupTitle}>{group.title}</h3>
+          <h3 className={styles.groupTitle}>{messages.help.groups[group.title]}</h3>
           <dl className={styles.table}>
             {group.rows.map((row) => (
               <div key={row.label(messages)} className={styles.row}>
@@ -159,7 +149,7 @@ export function ToolList() {
             <span className={styles.toolName}>
               {messages.tools[tool]} <Keys combos={keys.map((key) => [key.toUpperCase()])} />
             </span>
-            <span>{TOOL_DESCRIPTIONS[tool]}</span>
+            <span>{messages.help.tools[tool]}</span>
           </span>
         </li>
       ))}
@@ -169,31 +159,71 @@ export function ToolList() {
 
 export function NavigationHelp() {
   const config = useBoardStore((s) => s.config);
+  const { navigation } = useMessages().help;
+  const items = [
+    navigation.pan,
+    navigation.zoom,
+    config.zoomControls && navigation.zoomButtons,
+    config.grid && navigation.grid,
+    config.themeToggle && navigation.theme,
+  ].filter((item) => typeof item === "string");
+  return <RichList items={items} />;
+}
+
+function RichList({ items }: { items: readonly string[] }) {
   return (
     <ul className={styles.list}>
-      <li>
-        A roda do mouse move a tela, e com Shift move na horizontal. Também dá para arrastar com Espaço, com o botão do
-        meio ou com a ferramenta mão.
-      </li>
-      <li>
-        <Keys combos={[["Ctrl", "roda"]]} /> ou a pinça no trackpad dão zoom no ponto do cursor.
-      </li>
-      {config.zoomControls && (
-        <li>
-          O indicador no canto inferior direito mostra o zoom. Os botões <Keys combos={[["−"], ["+"]]} /> andam por
-          níveis fixos, e clicar na porcentagem volta a 100%.
+      {items.map((item) => (
+        <li key={item}>
+          <RichText text={item} />
         </li>
-      )}
-      {config.grid && (
-        <li>A grade de fundo pode ser de pontos ou de linhas, nos botões do fim da barra de ferramentas. Ela é só visual.</li>
-      )}
-      {config.themeToggle && (
-        <li>
-          O botão do sol (ou da lua), no canto inferior direito, escolhe o tema claro, o escuro ou o do sistema, e{" "}
-          <Keys combos={[["Alt", "Shift", "D"]]} /> alterna entre os dois. No tema escuro, as cores dos desenhos são
-          adaptadas para continuar legíveis, mas o board guarda as cores originais.
-        </li>
-      )}
+      ))}
     </ul>
   );
+}
+
+export function StartHelp() {
+  const messages = useMessages();
+  const config = useBoardStore((s) => s.config);
+  const { start } = messages.help;
+  const note = [
+    start.name,
+    config.rename && start.rename,
+    hasBoardMenu(config) && start.menu,
+    config.saveFile && start.save,
+    config.openFile && start.open,
+    config.exportImage && start.image,
+  ].filter((sentence) => typeof sentence === "string");
+
+  return (
+    <>
+      <ol className={styles.steps}>
+        {start.steps.map((step) => (
+          <li key={step}>
+            <RichText text={step} />
+          </li>
+        ))}
+      </ol>
+      <p className={styles.note}>
+        {note.map((sentence, i) => (
+          <span key={sentence}>
+            {i > 0 && " "}
+            <RichText text={sentence} />
+          </span>
+        ))}
+      </p>
+    </>
+  );
+}
+
+export function DiagramsHelp() {
+  return <RichList items={useMessages().help.diagrams} />;
+}
+
+export function TextHelp() {
+  return <RichList items={useMessages().help.text} />;
+}
+
+export function StyleHelp() {
+  return <RichList items={useMessages().help.style} />;
 }

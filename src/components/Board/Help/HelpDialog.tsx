@@ -20,8 +20,8 @@ export function HelpDialog({ onClose }: HelpDialogProps) {
 
   return (
     <Modal title={messages.help.title} closeLabel={messages.common.close} onClose={onClose} closeKeys={CLOSE_KEYS} className={styles.dialog}>
-      <nav className={styles.nav} role="tablist" aria-label="Seções da ajuda" aria-orientation="vertical">
-        {sections.map(({ id, title, icon: Icon }) => (
+      <nav className={styles.nav} role="tablist" aria-label={messages.help.sectionsLabel} aria-orientation="vertical">
+        {sections.map(({ id, icon: Icon }) => (
           <button
             key={id}
             type="button"
@@ -33,13 +33,13 @@ export function HelpDialog({ onClose }: HelpDialogProps) {
             onClick={() => setActiveId(id)}
           >
             <Icon />
-            {title}
+            {messages.help.sections[id]}
           </button>
         ))}
       </nav>
       <div id="help-panel" role="tabpanel" aria-labelledby={`help-tab-${active.id}`} className={styles.panel}>
-        <h3 className={styles.panelTitle}>{active.title}</h3>
-        {active.content}
+        <h3 className={styles.panelTitle}>{messages.help.sections[active.id]}</h3>
+        <active.Content />
       </div>
     </Modal>
   );

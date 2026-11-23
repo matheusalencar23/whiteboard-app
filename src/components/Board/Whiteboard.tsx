@@ -1,4 +1,4 @@
-import { useEffect, useImperativeHandle, useMemo, useRef, useState, type CSSProperties, type Ref } from "react";
+import { useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type Ref } from "react";
 import { LuLayoutGrid } from "react-icons/lu";
 import { Canvas } from "./Canvas/Canvas";
 import { Toolbar } from "./Toolbar/Toolbar";
@@ -31,6 +31,7 @@ import { themeVariables } from "../../lib/theme";
 import { PortalContainerContext } from "../../ui/portal";
 import { useTheme } from "../useColorScheme";
 import { useFontStylesheet } from "../fonts";
+import { canEdit, hasBoardMenu, resolveConfig, type WhiteboardConfig } from "../../store/whiteboardConfig";
 import styles from "./Whiteboard.module.scss";
 
 export interface WhiteboardBackAction {
@@ -75,6 +76,7 @@ export interface WhiteboardProps {
   back?: WhiteboardBackAction;
   autoFocus?: boolean;
   loadFonts?: boolean;
+  config?: Partial<WhiteboardConfig>;
 }
 
 export function Whiteboard({
@@ -86,8 +88,14 @@ export function Whiteboard({
   back,
   autoFocus = false,
   loadFonts = true,
+  config,
 }: WhiteboardProps) {
-  const [store] = useState(() => createBoardStore({ scene: initialData, preferences: initialPreferences }));
+  const [store] = useState(() =>
+    createBoardStore({ scene: initialData, preferences: initialPreferences, config: resolveConfig(config) }),
+  );
+  useLayoutEffect(() => {
+    store.getState().setConfig(resolveConfig(config));
+  });
   useImperativeHandle(ref, () => createWhiteboardApi(store), [store]);
   useFontStylesheet(loadFonts);
   const onChangeRef = useRef(onChange);
@@ -117,6 +125,10 @@ export function Whiteboard({
   );
 }
 
+function hasToolbar(config: WhiteboardConfig) {
+  return config.tools.length > 0 || config.library || canEdit(config) || config.grid;
+}
+
 function hasFiles(e: React.DragEvent) {
   return e.dataTransfer.types.includes("Files");
 }
@@ -131,6 +143,7 @@ function WhiteboardView({ back, autoFocus }: { back?: WhiteboardBackAction; auto
   const exportOpen = useBoardStore((s) => s.exportOpen);
   const setExportOpen = useBoardStore((s) => s.setExportOpen);
   const libraryOpen = useBoardStore((s) => s.libraryOpen);
+  const config = useBoardStore((s) => s.config);
   const [dropping, setDropping] = useState(false);
   const [renaming, setRenaming] = useState(false);
 
@@ -154,7 +167,7 @@ function WhiteboardView({ back, autoFocus }: { back?: WhiteboardBackAction; auto
   }, []);
 
   function handleDragOver(e: React.DragEvent) {
-    if (!hasFiles(e)) return;
+    if (!config.fileDrop || !hasFiles(e)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "copy";
     setDropping(true);
@@ -166,7 +179,7 @@ function WhiteboardView({ back, autoFocus }: { back?: WhiteboardBackAction; auto
   }
 
   function handleDrop(e: React.DragEvent) {
-    if (!hasFiles(e)) return;
+    if (!config.fileDrop || !hasFiles(e)) return;
     e.preventDefault();
     setDropping(false);
     const file = Array.from(e.dataTransfer.files).find(isBoardFileCandidate) ?? e.dataTransfer.files[0];
@@ -191,28 +204,30 @@ function WhiteboardView({ back, autoFocus }: { back?: WhiteboardBackAction; auto
               {back && (
                 <IconButton icon={LuLayoutGrid} label={back.label} size="sm" tooltipSide="bottom" onClick={back.onClick} />
               )}
-              <BoardMenu onRename={() => setRenaming(true)} />
+              {hasBoardMenu(config) && <BoardMenu onRename={() => setRenaming(true)} />}
             </div>
             <BoardTitle editing={renaming} onEditingChange={setRenaming} />
           </div>
-          <div className={styles.dock}>
-            <Toolbar />
-          </div>
+          {hasToolbar(config) && (
+            <div className={styles.dock}>
+              <Toolbar />
+            </div>
+          )}
           <Canvas />
-          {libraryOpen && (
+          {config.library && libraryOpen && (
             <div className={styles.sidebar}>
               <LibraryPanel />
             </div>
           )}
           <div className={styles.corner}>
-            <ZoomIndicator />
-            <ThemeMenu />
-            <HelpButton />
+            {config.zoomControls && <ZoomIndicator />}
+            {config.themeToggle && <ThemeMenu />}
+            {config.help && <HelpButton />}
           </div>
           <div className={styles.notice}>
             <BoardNotice />
           </div>
-          {exportOpen && <ExportDialog onClose={() => setExportOpen(false)} />}
+          {config.exportImage && exportOpen && <ExportDialog onClose={() => setExportOpen(false)} />}
           <div ref={setPortalContainer} data-portal-container="" />
         </div>
       </PortalContainerContext>

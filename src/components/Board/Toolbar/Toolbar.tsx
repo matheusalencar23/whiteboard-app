@@ -8,6 +8,7 @@ import { useBoardStore, useBoardStoreApi } from "../../../store/boardStoreContex
 import type { GridStyle } from "../../../lib/render/grid";
 import { SHORTCUTS, formatShortcut } from "../shortcuts";
 import { canGroup, canUngroup } from "../../../lib/elements/groups";
+import { canEdit } from "../../../store/whiteboardConfig";
 
 const GRID_OPTIONS: { style: GridStyle; label: string; icon: IconType }[] = [
   { style: "dots", label: "Grade em pontos", icon: LuGrip },
@@ -19,29 +20,22 @@ function shortcutLabel(keys: string[]) {
 }
 
 export function Toolbar() {
-  const boardStore = useBoardStoreApi();
   const tool = useBoardStore((s) => s.tool);
   const setTool = useBoardStore((s) => s.setTool);
-  const canUndo = useBoardStore((s) => s.past.length > 0);
-  const canRedo = useBoardStore((s) => s.future.length > 0);
-  const hasSelection = useBoardStore((s) => s.selectedIds.length > 0);
-  const undo = useBoardStore((s) => s.undo);
-  const redo = useBoardStore((s) => s.redo);
-  const deleteElements = useBoardStore((s) => s.deleteElements);
-  const groupAllowed = useBoardStore((s) => canGroup(s.elements, s.selectedIds, s.editingGroupId));
-  const ungroupAllowed = useBoardStore((s) => canUngroup(s.elements, s.selectedIds, s.editingGroupId));
-  const groupSelection = useBoardStore((s) => s.groupSelection);
-  const ungroupSelection = useBoardStore((s) => s.ungroupSelection);
   const showGrid = useBoardStore((s) => s.showGrid);
   const gridStyle = useBoardStore((s) => s.gridStyle);
   const toggleGrid = useBoardStore((s) => s.toggleGrid);
   const setGridStyle = useBoardStore((s) => s.setGridStyle);
   const libraryOpen = useBoardStore((s) => s.libraryOpen);
   const setLibraryOpen = useBoardStore((s) => s.setLibraryOpen);
+  const config = useBoardStore((s) => s.config);
+  const tools = TOOLS.filter((definition) => config.tools.includes(definition.tool));
+  const showTools = tools.length > 0 || config.library;
+  const editable = canEdit(config);
 
   return (
     <nav className={styles.toolbar} aria-label="Ferramentas">
-      {TOOLS.map(({ tool: t, label, icon, keys }) => (
+      {tools.map(({ tool: t, label, icon, keys }) => (
         <IconButton
           key={t}
           icon={icon}
@@ -53,17 +47,60 @@ export function Toolbar() {
           onClick={() => setTool(t)}
         />
       ))}
-      <IconButton
-        icon={LuShapes}
-        label="Biblioteca de formas"
-        shortcut={formatShortcut(SHORTCUTS.library.keys)}
-        active={libraryOpen}
-        activeMarker
-        onClick={() => setLibraryOpen(!libraryOpen)}
-      />
+      {config.library && (
+        <IconButton
+          icon={LuShapes}
+          label="Biblioteca de formas"
+          shortcut={formatShortcut(SHORTCUTS.library.keys)}
+          active={libraryOpen}
+          activeMarker
+          onClick={() => setLibraryOpen(!libraryOpen)}
+        />
+      )}
 
-      <Divider />
+      {editable && (
+        <>
+          {showTools && <Divider />}
+          <EditButtons />
+        </>
+      )}
 
+      {config.grid && (showTools || editable) && <Divider />}
+
+      {config.grid &&
+        GRID_OPTIONS.map(({ style, label, icon }) => {
+          const active = showGrid && gridStyle === style;
+          return (
+            <IconButton
+              key={style}
+              icon={icon}
+              label={label}
+              shortcut={formatShortcut((gridStyle === style ? SHORTCUTS.toggleGrid : SHORTCUTS.cycleGrid).keys)}
+              active={active}
+              activeMarker
+              onClick={() => (active ? toggleGrid() : setGridStyle(style))}
+            />
+          );
+        })}
+    </nav>
+  );
+}
+
+function EditButtons() {
+  const boardStore = useBoardStoreApi();
+  const canUndo = useBoardStore((s) => s.past.length > 0);
+  const canRedo = useBoardStore((s) => s.future.length > 0);
+  const hasSelection = useBoardStore((s) => s.selectedIds.length > 0);
+  const undo = useBoardStore((s) => s.undo);
+  const redo = useBoardStore((s) => s.redo);
+  const deleteElements = useBoardStore((s) => s.deleteElements);
+  const groupAllowed = useBoardStore((s) => canGroup(s.elements, s.selectedIds, s.editingGroupId));
+  const ungroupAllowed = useBoardStore((s) => canUngroup(s.elements, s.selectedIds, s.editingGroupId));
+  const groupSelection = useBoardStore((s) => s.groupSelection);
+  const ungroupSelection = useBoardStore((s) => s.ungroupSelection);
+
+  return (
+    <>
       <IconButton icon={LuUndo2} label="Desfazer" shortcut={formatShortcut(SHORTCUTS.undo.keys)} disabled={!canUndo} onClick={undo} />
       <IconButton icon={LuRedo2} label="Refazer" shortcut={formatShortcut(SHORTCUTS.redo.keys)} disabled={!canRedo} onClick={redo} />
       <IconButton
@@ -87,24 +124,6 @@ export function Toolbar() {
         disabled={!ungroupAllowed}
         onClick={ungroupSelection}
       />
-
-      <Divider />
-
-      {GRID_OPTIONS.map(({ style, label, icon }) => {
-        const active = showGrid && gridStyle === style;
-        return (
-          <IconButton
-            key={style}
-            icon={icon}
-            label={label}
-            shortcut={formatShortcut((gridStyle === style ? SHORTCUTS.toggleGrid : SHORTCUTS.cycleGrid).keys)}
-            active={active}
-            activeMarker
-            onClick={() => (active ? toggleGrid() : setGridStyle(style))}
-          />
-        );
-      })}
-
-    </nav>
+    </>
   );
 }

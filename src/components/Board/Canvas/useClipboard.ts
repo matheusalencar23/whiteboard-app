@@ -1,3 +1,4 @@
+import { canEdit } from "../../../store/whiteboardConfig";
 import { useEffect, useRef } from "react";
 import type { Point } from "../../../lib/types";
 import type { BoardElement } from "../../../lib/elements/types";
@@ -18,8 +19,8 @@ const MIDDLE_BUTTON = 1;
 const MIDDLE_PASTE_WINDOW = 500;
 
 function isBlocked(boardStore: BoardStore, e: ClipboardEvent): boolean {
-  const { helpOpen, exportOpen } = boardStore.getState();
-  return isTypingTarget(e.target) || isInPortal(e.target) || helpOpen || exportOpen;
+  const { helpOpen, exportOpen, config } = boardStore.getState();
+  return isTypingTarget(e.target) || isInPortal(e.target) || helpOpen || exportOpen || !canEdit(config);
 }
 
 function copySelection(boardStore: BoardStore, e: ClipboardEvent): string[] | null {

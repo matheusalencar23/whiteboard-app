@@ -13,6 +13,7 @@ interface BoardTitleProps {
 export function BoardTitle({ editing, onEditingChange }: BoardTitleProps) {
   const name = useBoardStore((s) => s.name);
   const setBoardName = useBoardStore((s) => s.setBoardName);
+  const renameAllowed = useBoardStore((s) => s.config.rename);
   const rootRef = useBoardRoot();
 
   function handleEditingChange(next: boolean) {
@@ -27,6 +28,7 @@ export function BoardTitle({ editing, onEditingChange }: BoardTitleProps) {
       value={name}
       label="Nome do board"
       editing={editing}
+      readOnly={!renameAllowed}
       onEditingChange={handleEditingChange}
       onCommit={setBoardName}
       maxLength={MAX_BOARD_NAME_LENGTH}

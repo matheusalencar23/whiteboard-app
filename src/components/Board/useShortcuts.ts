@@ -9,6 +9,7 @@ import { exportBoard, importBoard } from "./boardFileActions";
 import { toggleColorScheme } from "../useColorScheme";
 import { cloneElements } from "../../lib/elements/clone";
 import type { Point } from "../../lib/types";
+import { canEdit, isToolAllowed } from "../../store/whiteboardConfig";
 
 const DUPLICATE_OFFSET = 20;
 const NUDGE_STEP = 1;
@@ -55,11 +56,13 @@ export function useShortcuts(rootRef: BoardRootRef) {
       if (isTypingTarget(e.target) || isInPortal(e.target)) return;
 
       const store = boardStore.getState();
+      const { config } = store;
+      const editable = canEdit(config);
       const key = e.key.toLowerCase();
       const mod = e.ctrlKey || e.metaKey;
 
       if (mod) {
-        const hasText = selectTextScope(store) !== "";
+        const hasText = editable && selectTextScope(store) !== "";
         if (hasText && key === "b" && !e.shiftKey) {
           store.setTextStyle({ bold: textSelectors.bold(store) !== true });
         } else if (hasText && key === "i" && !e.shiftKey) {
@@ -68,39 +71,41 @@ export function useShortcuts(rootRef: BoardRootRef) {
           store.setTextStyle({ underline: textSelectors.underline(store) !== true });
         } else if (hasText && e.shiftKey && (e.code === "Period" || e.code === "Comma")) {
           store.stepTextSize(e.code === "Period" ? 1 : -1);
-        } else if (ORDER_KEYS.has(key)) {
+        } else if (editable && ORDER_KEYS.has(key)) {
           const up = ORDER_KEYS.get(key);
           store.reorderSelection(e.shiftKey ? (up ? "front" : "back") : up ? "forward" : "backward");
-        } else if (key === "=" || key === "+") store.stepZoom(1);
-        else if (key === "-" || key === "_") store.stepZoom(-1);
-        else if (key === "0") store.resetZoom();
-        else if (key === "s" && !e.shiftKey) exportBoard(boardStore);
-        else if (key === "e" && e.shiftKey) store.setExportOpen(true);
-        else if (key === "o" && !e.shiftKey) void importBoard(boardStore);
-        else if (key === "d" && !e.shiftKey) duplicateSelection(boardStore);
-        else if (key === "g") {
+        } else if (config.zoomControls && (key === "=" || key === "+")) store.stepZoom(1);
+        else if (config.zoomControls && (key === "-" || key === "_")) store.stepZoom(-1);
+        else if (config.zoomControls && key === "0") store.resetZoom();
+        else if (config.saveFile && key === "s" && !e.shiftKey) exportBoard(boardStore);
+        else if (config.exportImage && key === "e" && e.shiftKey) store.setExportOpen(true);
+        else if (config.openFile && key === "o" && !e.shiftKey) void importBoard(boardStore);
+        else if (editable && key === "d" && !e.shiftKey) duplicateSelection(boardStore);
+        else if (editable && key === "g") {
           if (e.shiftKey) store.ungroupSelection();
           else store.groupSelection();
         }
-        else if (key === "z" && !e.shiftKey) store.undo();
-        else if ((key === "z" && e.shiftKey) || key === "y") store.redo();
+        else if (editable && key === "z" && !e.shiftKey) store.undo();
+        else if (editable && ((key === "z" && e.shiftKey) || key === "y")) store.redo();
         else if (key === "a") {
-          store.setTool("selection");
-          store.setEditingGroup(null);
-          store.setSelection(store.elements.map((el) => el.id));
+          if (isToolAllowed(config, "selection")) {
+            store.setTool("selection");
+            store.setEditingGroup(null);
+            store.setSelection(store.elements.map((el) => el.id));
+          }
         } else return;
         e.preventDefault();
         return;
       }
 
       if (e.altKey) {
-        if (!e.shiftKey || e.code !== "KeyD") return;
+        if (!config.themeToggle || !e.shiftKey || e.code !== "KeyD") return;
         toggleColorScheme(boardStore);
         e.preventDefault();
         return;
       }
 
-      if (e.key === "?") {
+      if (config.help && e.key === "?") {
         store.setHelpOpen(!store.helpOpen);
         e.preventDefault();
         return;
@@ -108,20 +113,20 @@ export function useShortcuts(rootRef: BoardRootRef) {
 
       const direction = NUDGE_DIRECTIONS[key];
       if (direction) {
-        if (store.selectedIds.length === 0) return;
+        if (!editable || store.selectedIds.length === 0) return;
         const step = e.shiftKey ? NUDGE_STEP_FAR : NUDGE_STEP;
         store.translateElements(store.selectedIds, direction.x * step, direction.y * step, { record: !e.repeat });
-      } else if (key === "delete" || key === "backspace") {
+      } else if (editable && (key === "delete" || key === "backspace")) {
         store.deleteElements(store.selectedIds);
       } else if (key === "escape") {
         if (!store.exitEditingGroup()) store.setSelection([]);
-      } else if (key === "l" && e.shiftKey) {
+      } else if (config.library && key === "l" && e.shiftKey) {
         store.setLibraryOpen(!store.libraryOpen);
-      } else if (key === "g") {
+      } else if (config.grid && key === "g") {
         if (e.shiftKey) store.cycleGridStyle();
         else store.toggleGrid();
       } else {
-        const definition = TOOLS.find((t) => t.keys.includes(key));
+        const definition = TOOLS.find((t) => t.keys.includes(key) && isToolAllowed(config, t.tool));
         if (!definition) return;
         store.setTool(definition.tool);
       }

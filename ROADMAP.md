@@ -73,7 +73,7 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
 - **Como:**
   - **Estrutura:** monorepo com workspaces do npm: `packages/whiteboard` (o pacote) e `apps/web` (o app atual). Ou uma pasta `src/whiteboard/` com um build de biblioteca à parte, se o monorepo parecer exagero. O `src/lib/` já é TypeScript puro e quase não muda.
   - **Build:** modo biblioteca do Vite (`build.lib`) gerando ESM, com `react`, `react-dom` e `react/jsx-runtime` como `peerDependencies` e externos. Os tipos saem com `vite-plugin-dts` ou com `tsc --emitDeclarationOnly`. `roughjs`, `zustand`, `nanoid` e `react-icons` ficam como dependências comuns.
-  - **Modelo de dados (decidido):** não controlado com ref imperativo, como o Excalidraw (veja as [decisões](#decisões-tomadas)). Assinaturas da 0.1 (o componente, `initialData`, `initialPreferences`, `onChange`, `onPreferencesChange`, `back`, o `autoFocus`, o `loadFonts`, o `version` e o `lastChange` já existem, assim como o ref; faltam o `onChangeLive` e o `config`):
+  - **Modelo de dados (decidido):** não controlado com ref imperativo, como o Excalidraw (veja as [decisões](#decisões-tomadas)). Assinaturas da 0.1 (o componente, `initialData`, `initialPreferences`, `onChange`, `onPreferencesChange`, `back`, o `autoFocus`, o `loadFonts`, o `config`, o `version` e o `lastChange` já existem, assim como o ref; falta o `onChangeLive`):
     ```ts
     interface WhiteboardScene { elements: readonly BoardElement[]; name: string; viewport: Viewport }
     type ChangeReason = "commit" | "undo" | "redo" | "name" | "viewport" | "external";
@@ -88,7 +88,7 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
       back?: { label: string; onClick: () => void };
       autoFocus?: boolean;
       loadFonts?: boolean;
-      config?: WhiteboardConfig;
+      config?: Partial<WhiteboardConfig>;
     }
 
     interface WhiteboardApi {
@@ -106,11 +106,7 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
     - **Prop `elements` reservada:** o modo controlado e a opção `history: "preserve"` (aplicar de fora mantendo o histórico local) entram numa versão menor depois do histórico por alterações, sem quebrar a API.
   - **Depois da 0.1, antes da sincronização de abas:** trocar o histórico de fotos por alterações (`{ id, before?, after? }` por passo), como refatoração interna do `boardStore.ts`: os `pushPast` passam a guardar a diferença entre o antes e o depois (por referência, barato), e os chamadores de `commitHistory` não mudam. O desfazer aplica o inverso só onde o elemento ainda tem a `version` do `after`. Testes com Vitest para `diffElements`, `applyDiff` e `invert`, mais um roteiro manual de desfazer e refazer de cada ação. Com isso entram o `"preserve"` e, se houver demanda, a prop `elements`.
   - **API pública:** o componente `Whiteboard` e o `WhiteboardApi` acima, os tipos do modelo (`BoardElement`, `BoardFile`, `WhiteboardScene`), as funções de arquivo (`serializeBoardFile`/`parseBoardFile`) e as de exportar imagem (`renderToCanvas`, `renderToSvg`). O resto fica interno, para poder mudar sem quebrar quem usa.
-  - **Configuração:** quem usa escolhe o que aparece e o que funciona, com uma prop de configuração (por exemplo, `config`) em que tudo é opcional e o padrão é o app completo de hoje.
-    - **Funcionalidades:** ligar ou desligar cada parte, como ferramentas (lista das que aparecem, `tools: ["selection", "rectangle", "arrow"]`), barra de estilo, menu do board, abrir e salvar arquivo, exportar imagem, grade, zoom, ajuda e a importação por arrastar arquivo.
-    - **Modo somente leitura:** só pan, zoom e exportar, sem selecionar nem editar, para mostrar diagramas prontos.
-    - **Valores iniciais e limites:** estilo inicial das formas, paleta oferecida no seletor de cor, grade inicial, níveis de zoom.
-    - **Fonte única:** um tipo `WhiteboardConfig` com os padrões e uma função que mescla o que veio por prop (`resolveConfig`), guardado no contexto da instância. A toolbar filtra o `TOOLS`, o menu filtra as entradas (e some se ficar vazio), a ajuda mostra só o que está ligado, e o `useShortcuts` ignora os atalhos de funcionalidades desligadas. Desligar uma parte esconde o botão e também o atalho, para não sobrar caminho escondido.
+  - **Configuração:** a prop `config` já liga e desliga as partes da interface e tem o modo somente leitura (veja o CLAUDE.md). Faltam os valores iniciais e limites: estilo inicial das formas, paleta oferecida no seletor de cor, grade inicial e níveis de zoom, e o tema próprio (veja "Tema e estilos"). Os textos da ajuda ainda falam do app ("Tudo é salvo sozinho neste navegador", o botão de voltar para a lista); revisar junto com o dicionário de textos.
   - **Formato salvo:** quem usar o pacote guarda os dados, então a decisão de [não ter versão nem migrações](#decisões-tomadas) precisa ser revista antes da primeira versão publicada: o `.whiteboard.json` ganha um campo de versão e as migrações voltam. A primeira versão do formato já traz a `version` e o índice fracionário de cada elemento, para não precisar de uma migração logo em seguida.
   - **Testes mínimos:** o projeto não tem test runner. Antes da primeira versão, um `vitest` cobrindo o contrato com os dados de quem usa: `parseBoardFile`/`isValidElement` e as migrações, com um board de exemplo de cada versão do formato. Um erro ali perde boards de terceiros.
   - **Nome:** conferir se o nome está livre no npm, senão publicar com escopo (`@usuario/whiteboard`). O pacote herda a licença MIT do repositório (`license` no `package.json` e o `LICENSE` incluído no tarball).
@@ -119,7 +115,7 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
   - **Depois da primeira versão:** acessibilidade do canvas (anunciar seleção e criação por `aria-live`) e o app publicado no GitHub Pages como demonstração.
 - **Por quê:** permite usar o quadro branco dentro de outros projetos (documentação, ferramentas internas, apps com diagramas) sem copiar o código, mantendo uma base só.
 - **Ordem:** depende pouco dos outros itens, mas fica mais barato se as decisões acima forem seguidas desde já. O tema ativo hoje sai da store (`themeMode`) e é aplicado no `document.documentElement` pelo `App`; no pacote, passa a ser por instância. Sequência sugerida:
-  1. Demais separações (`config` com o modo somente leitura e o tema por prop).
+  1. Demais separações (valores iniciais no `config` e o tema por prop).
   2. Dicionário de textos, troca do `react-color` e carregamento sob demanda.
   3. Versão no formato salvo, migrações e os testes delas.
   4. Checagens de pacote na CI, Changesets, README com três exemplos (só leitura, salvar numa API, trocar a cena por fora) e publicação da `0.1.0`.

@@ -36,17 +36,10 @@ import type { ThemeMode } from "../lib/theme";
 import { reorderElements, type OrderDirection } from "../lib/elements/order";
 import { addPoolLane, removePoolLane } from "../lib/elements/pool";
 import { syncIndices } from "../lib/elements/fractionalIndex";
+import { fallbackTool, isToolAllowed, resolveConfig, sameConfig, type Tool, type WhiteboardConfig } from "./whiteboardConfig";
 import { INITIAL_VIEWPORT, nextZoomStep, panBy, zoomAt, zoomTo, type Viewport } from "../lib/viewport";
 
-export type Tool =
-  | "selection"
-  | "hand"
-  | "rectangle"
-  | "ellipse"
-  | "diamond"
-  | "arrow"
-  | "freedraw"
-  | "text";
+export type { Tool };
 
 const HISTORY_LIMIT = 100;
 
@@ -103,6 +96,7 @@ export interface BoardState {
   tableCell: TableCursor | null;
   tableTextScope: TableTextScope;
   tool: Tool;
+  config: WhiteboardConfig;
   viewport: Viewport;
   viewportSize: { width: number; height: number };
   arrowRouting: ArrowRouting;
@@ -149,6 +143,7 @@ export interface BoardState {
   reorderSelection: (direction: OrderDirection) => void;
   changePoolLanes: (change: "add" | "remove") => void;
   setTool: (tool: Tool) => void;
+  setConfig: (config: WhiteboardConfig) => void;
   setArrowRouting: (routing: ArrowRouting) => void;
   setArrowhead: (end: ArrowEnd, arrowhead: Arrowhead) => void;
   swapArrowheads: () => void;
@@ -221,15 +216,20 @@ function screenCenter({ viewportSize }: BoardState): Point {
 
 export type BoardStore = StoreApi<BoardState>;
 
+function toolAfterInsert(state: BoardState): Tool {
+  return isToolAllowed(state.config, "selection") ? "selection" : state.tool;
+}
+
 export interface BoardStoreInit {
   scene?: Partial<WhiteboardScene>;
   preferences?: Partial<Preferences>;
+  config?: WhiteboardConfig;
 }
 
 type BoardPatch = Partial<BoardState>;
 type BoardUpdate = BoardPatch | ((state: BoardState) => BoardPatch);
 
-export function createBoardStore({ scene = {}, preferences: given = {} }: BoardStoreInit = {}): BoardStore {
+export function createBoardStore({ scene = {}, preferences: given = {}, config = resolveConfig() }: BoardStoreInit = {}): BoardStore {
   const preferences = { ...DEFAULT_PREFERENCES, ...given };
   let noticeCount = 0;
   let pendingIds = new Set<string>();
@@ -286,7 +286,8 @@ export function createBoardStore({ scene = {}, preferences: given = {} }: BoardS
       editingGroupId: null,
       tableCell: null,
       tableTextScope: "table",
-      tool: "selection",
+      tool: fallbackTool(config),
+      config,
       viewport: scene.viewport ?? INITIAL_VIEWPORT,
       viewportSize: { width: 0, height: 0 },
       arrowRouting: "straight",
@@ -321,7 +322,7 @@ export function createBoardStore({ scene = {}, preferences: given = {} }: BoardS
             elements: updateBoundArrows([...state.elements, ...inserted], ids),
             selectedIds: ids,
             editingGroupId: inserted.every((el) => isInGroup(el, state.editingGroupId)) ? state.editingGroupId : null,
-            tool: "selection",
+            tool: toolAfterInsert(state),
             past: pushPast(state.past, state.elements),
             future: [],
           };
@@ -377,7 +378,7 @@ export function createBoardStore({ scene = {}, preferences: given = {} }: BoardS
           viewport: board.viewport,
           selectedIds: [],
           editingGroupId: null,
-          tool: "selection",
+          tool: toolAfterInsert(state),
           past: pushPast(state.past, state.elements),
           future: [],
         })),
@@ -484,8 +485,21 @@ export function createBoardStore({ scene = {}, preferences: given = {} }: BoardS
             future: [],
           };
         }),
-      setTool: (tool) =>
-        set(tool === "selection" ? { tool } : { tool, selectedIds: [], editingGroupId: null }),
+      setTool: (tool) => {
+        if (!isToolAllowed(get().config, tool)) return;
+        set(tool === "selection" ? { tool } : { tool, selectedIds: [], editingGroupId: null });
+      },
+      setConfig: (next) =>
+        set((state) => {
+          if (sameConfig(state.config, next)) return {};
+          const tool = isToolAllowed(next, state.tool) ? state.tool : fallbackTool(next);
+          const cleared = next.readOnly || tool !== state.tool;
+          return {
+            config: next,
+            tool,
+            ...(cleared && { selectedIds: [], editingGroupId: null, tableCell: null }),
+          };
+        }),
       setArrowRouting: (arrowRouting) =>
         set((state) => {
           const ids = new Set(state.selectedIds);

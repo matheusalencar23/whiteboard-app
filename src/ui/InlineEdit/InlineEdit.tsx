@@ -11,6 +11,7 @@ interface InlineEditProps {
   inputClassName?: string;
   title?: string;
   as?: "h1" | "h2" | "span";
+  readOnly?: boolean;
 }
 
 type EditorProps = Pick<InlineEditProps, "value" | "label" | "maxLength" | "onCommit"> & {
@@ -58,7 +59,10 @@ export function InlineEdit({
   inputClassName,
   title = "Duplo clique para renomear",
   as: Tag = "span",
+  readOnly = false,
 }: InlineEditProps) {
+  if (readOnly) return <Tag className={className}>{value}</Tag>;
+
   if (editing) {
     return (
       <Editor

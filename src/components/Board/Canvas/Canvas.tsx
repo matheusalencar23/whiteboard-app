@@ -538,6 +538,7 @@ export function Canvas() {
   }, [selected, tableCell]);
 
   const showBindingTarget = tool === "arrow" || isInteracting;
+  const styleBarEnabled = useBoardStore((s) => s.config.styleBar);
   const bindingTarget = useMemo(
     () =>
       (showBindingTarget && bindingHint && elements.find((el) => el.id === bindingHint.elementId)) ||
@@ -1234,14 +1235,14 @@ export function Canvas() {
   }
 
   function handleDragOver(e: React.DragEvent<HTMLCanvasElement>) {
-    if (!e.dataTransfer.types.includes(LIBRARY_DRAG_TYPE)) return;
+    if (!boardStore.getState().config.library || !e.dataTransfer.types.includes(LIBRARY_DRAG_TYPE)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "copy";
   }
 
   function handleDrop(e: React.DragEvent<HTMLCanvasElement>) {
     const item = findLibraryItem(e.dataTransfer.getData(LIBRARY_DRAG_TYPE));
-    if (!item) return;
+    if (!item || !boardStore.getState().config.library) return;
     e.preventDefault();
     if (editing) (document.activeElement as HTMLElement | null)?.blur();
     insertLibraryItem(boardStore, item, getScreenPoint(e));
@@ -1285,7 +1286,7 @@ export function Canvas() {
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       />
-      {!editing && !isInteracting && <StyleBar placement={styleBarPlacement} viewportWidth={size.width} />}
+      {styleBarEnabled && !editing && !isInteracting && <StyleBar placement={styleBarPlacement} viewportWidth={size.width} />}
       {editing && (
         <TextEditor
           key={editorKey(editing)}

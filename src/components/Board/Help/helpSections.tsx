@@ -2,18 +2,21 @@ import type { IconType } from "react-icons";
 import { LuCompass, LuKeyboard, LuMousePointerClick, LuPalette, LuRocket, LuType, LuWorkflow } from "react-icons/lu";
 import styles from "./Help.module.scss";
 import { Keys } from "./Keys";
-import { ShortcutTable, ToolList } from "./HelpBlocks";
+import { NavigationHelp, ShortcutTable, ToolList } from "./HelpBlocks";
+import { canEdit, type WhiteboardConfig } from "../../../store/whiteboardConfig";
 
 export interface HelpSection {
   id: string;
   title: string;
   icon: IconType;
   content: React.ReactNode;
+  visible?: (config: WhiteboardConfig) => boolean;
 }
 
 export const HELP_SECTIONS: HelpSection[] = [
   {
     id: "start",
+    visible: canEdit,
     title: "Primeiros passos",
     icon: LuRocket,
     content: (
@@ -42,12 +45,14 @@ export const HELP_SECTIONS: HelpSection[] = [
   },
   {
     id: "tools",
+    visible: (config) => config.tools.length > 0,
     title: "Ferramentas",
     icon: LuMousePointerClick,
     content: <ToolList />,
   },
   {
     id: "diagrams",
+    visible: canEdit,
     title: "Diagramas",
     icon: LuWorkflow,
     content: (
@@ -78,6 +83,7 @@ export const HELP_SECTIONS: HelpSection[] = [
   },
   {
     id: "text",
+    visible: canEdit,
     title: "Texto",
     icon: LuType,
     content: (
@@ -106,6 +112,7 @@ export const HELP_SECTIONS: HelpSection[] = [
   },
   {
     id: "style",
+    visible: canEdit,
     title: "Estilo",
     icon: LuPalette,
     content: (
@@ -133,29 +140,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     id: "navigation",
     title: "Navegação",
     icon: LuCompass,
-    content: (
-      <ul className={styles.list}>
-        <li>
-          A roda do mouse move a tela, e com Shift move na horizontal. Também dá para arrastar com Espaço, com o botão
-          do meio ou com a ferramenta mão.
-        </li>
-        <li>
-          <Keys combos={[["Ctrl", "roda"]]} /> ou a pinça no trackpad dão zoom no ponto do cursor.
-        </li>
-        <li>
-          O indicador no canto inferior direito mostra o zoom. Os botões <Keys combos={[["−"], ["+"]]} /> andam por
-          níveis fixos, e clicar na porcentagem volta a 100%.
-        </li>
-        <li>
-          A grade de fundo pode ser de pontos ou de linhas, nos botões do fim da barra de ferramentas. Ela é só visual.
-        </li>
-        <li>
-          O botão do sol (ou da lua), no canto inferior direito, escolhe o tema claro, o escuro ou o do sistema, e{" "}
-          <Keys combos={[["Alt", "Shift", "D"]]} /> alterna entre os dois. No tema escuro, as cores dos desenhos são
-          adaptadas para continuar legíveis, mas o board guarda as cores originais.
-        </li>
-      </ul>
-    ),
+    content: <NavigationHelp />,
   },
   {
     id: "shortcuts",

@@ -6,6 +6,7 @@ import { useBoardStore, useBoardStoreApi } from "../../../store/boardStoreContex
 import { LibraryPreview } from "./LibraryPreview";
 import { useFontsVersion } from "../../fonts";
 import { LIBRARY_DRAG_TYPE, insertLibraryItem } from "./libraryActions";
+import { useMessages } from "../../../i18n/useMessages";
 import styles from "./LibraryPanel.module.scss";
 
 function LibraryTile({ item, fontsVersion }: { item: LibraryItem; fontsVersion: number }) {
@@ -38,6 +39,7 @@ export function LibraryPanel() {
   const fontsVersion = useFontsVersion();
   const collapsed = useBoardStore((s) => s.collapsedLibraryGroups);
   const toggleGroup = useBoardStore((s) => s.toggleLibraryGroup);
+  const messages = useMessages();
 
   const searching = query.trim() !== "";
   const groups = LIBRARY_GROUPS.map((group) => ({
@@ -46,18 +48,18 @@ export function LibraryPanel() {
   })).filter((group) => group.items.length > 0);
 
   return (
-    <aside className={styles.panel} aria-label="Biblioteca de formas">
+    <aside className={styles.panel} aria-label={messages.library.panel}>
       <header className={styles.header}>
-        <h2 className={styles.title}>Formas</h2>
-        <IconButton icon={LuX} label="Fechar" size="sm" tooltipSide="left" onClick={() => setLibraryOpen(false)} />
+        <h2 className={styles.title}>{messages.library.title}</h2>
+        <IconButton icon={LuX} label={messages.common.close} size="sm" tooltipSide="left" onClick={() => setLibraryOpen(false)} />
       </header>
 
       <label className={styles.search}>
         <LuSearch aria-hidden />
         <input
           type="search"
-          placeholder="Buscar formas"
-          aria-label="Buscar formas"
+          placeholder={messages.library.search}
+          aria-label={messages.library.search}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
@@ -95,10 +97,10 @@ export function LibraryPanel() {
             </section>
           );
         })}
-        {groups.length === 0 && <p className={styles.empty}>Nenhuma forma encontrada.</p>}
+        {groups.length === 0 && <p className={styles.empty}>{messages.library.empty}</p>}
       </div>
 
-      <p className={styles.hint}>Clique para pôr no centro ou arraste para o quadro.</p>
+      <p className={styles.hint}>{messages.library.hint}</p>
     </aside>
   );
 }

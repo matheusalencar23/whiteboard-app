@@ -8,6 +8,7 @@ import { Panel, PanelSection } from "../../../ui/Panel/Panel";
 import { Popover } from "../../../ui/Popover/Popover";
 import { ColorPicker } from "./ColorPicker";
 import { adaptColor } from "../../../lib/colors";
+import { useMessages } from "../../../i18n/useMessages";
 import { useColorScheme } from "../../useColorScheme";
 
 export const AUTO_COLOR = "auto";
@@ -53,6 +54,7 @@ interface ColorFieldProps {
 export function ColorField({ title, value, swatches, onChange, onPreview, onPreviewEnd }: ColorFieldProps) {
   const anchorRef = useRef<HTMLDivElement>(null);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const messages = useMessages();
   const close = useCallback(() => {
     setAnchor(null);
     onPreviewEnd();
@@ -76,7 +78,7 @@ export function ColorField({ title, value, swatches, onChange, onPreview, onPrev
       <div ref={anchorRef}>
         <IconButton
           icon={isCustom ? swatchIcon(value) : LuPalette}
-          label={isCustom ? `Cor personalizada: ${value}` : "Cor personalizada"}
+          label={isCustom ? messages.colors.customValue(value) : messages.colors.custom}
           size="sm"
           tooltipSide="bottom"
           hasPopup

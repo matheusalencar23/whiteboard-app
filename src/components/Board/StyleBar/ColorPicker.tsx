@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CustomPicker, type ColorChangeHandler, type InjectedColorProps } from "react-color";
 import { Hue, Saturation } from "react-color/lib/components/common";
 import styles from "./ColorPicker.module.scss";
+import { useMessages } from "../../../i18n/useMessages";
 
 const HEX_PATTERN = /^#?([0-9a-f]{6})$/i;
 
@@ -12,11 +13,12 @@ function parseHex(value: string): string | null {
 
 function HexInput({ value, onChange }: { value: string; onChange: (hex: string) => void }) {
   const [draft, setDraft] = useState<string | null>(null);
+  const messages = useMessages();
   const invalid = draft !== null && parseHex(draft) === null;
 
   return (
     <label className={styles.hex}>
-      <span>Hex</span>
+      <span>{messages.colors.hex}</span>
       <input
         value={draft ?? value}
         spellCheck={false}

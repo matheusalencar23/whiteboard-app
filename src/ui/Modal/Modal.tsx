@@ -7,6 +7,7 @@ import { IconButton } from "../IconButton/IconButton";
 
 interface ModalProps {
   title: string;
+  closeLabel: string;
   onClose: () => void;
   closeKeys?: string[];
   className?: string;
@@ -34,7 +35,7 @@ function trapFocus(e: React.KeyboardEvent, container: HTMLElement) {
   }
 }
 
-export function Modal({ title, onClose, closeKeys = ["Escape"], className, children }: ModalProps) {
+export function Modal({ title, closeLabel, onClose, closeKeys = ["Escape"], className, children }: ModalProps) {
   const portalContainer = usePortalContainer();
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -77,7 +78,7 @@ export function Modal({ title, onClose, closeKeys = ["Escape"], className, child
           <h2 id={titleId} className={styles.title}>
             {title}
           </h2>
-          <IconButton icon={LuX} label="Fechar" shortcut="Esc" size="sm" tooltipSide="bottom" onClick={onClose} />
+          <IconButton icon={LuX} label={closeLabel} shortcut="Esc" size="sm" tooltipSide="bottom" onClick={onClose} />
         </header>
         <div className={styles.body}>{children}</div>
       </div>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { IconType } from "react-icons";
 import {
   LuGrid2X2,
   LuSquareDashedMousePointer,
@@ -12,6 +13,7 @@ import {
 import styles from "./StyleBar.module.scss";
 import {
   FONT_FAMILIES,
+  VERTICAL_ALIGNS,
   type FontFamily,
   type VerticalAlign,
 } from "../../../lib/elements/types";
@@ -24,47 +26,58 @@ import { useTextSwatches } from "./swatches";
 import { selectSingleTable, selectTextScope, styleSelectors, textSelectors } from "./selectors";
 import { getCellTextTarget, type TableTextScope } from "../../../store/boardStore";
 import { OpacityField, OptionGroup, type Option } from "./StyleControls";
+import { iconsFor } from "./iconsFor";
 import { useStylePreview } from "./useStylePreview";
-import { ALIGN_OPTIONS } from "./alignOptions";
+import { alignOptions } from "./alignOptions";
+import type { Messages } from "../../../i18n/messages";
+import { useMessages } from "../../../i18n/useMessages";
 import { focusBoard, useBoardRoot } from "../boardRoot";
 import { SHORTCUTS, formatShortcut } from "../shortcuts";
 
 
-const FONT_LABELS: Record<FontFamily, string> = {
-  hand: "Manuscrita",
-  sans: "Sem serifa",
-  mono: "Monoespaçada",
+const FONT_ICONS = iconsFor(FONT_FAMILIES, (fontFamily) => (
+  <span className={styles.fontSample} style={{ fontFamily: FONT_STACKS[fontFamily] }}>
+    Aa
+  </span>
+));
+
+const SIZE_ICONS: IconType[] = FONT_SIZE_PRESETS.map((_, i) => {
+  function SizeBadge() {
+    const messages = useMessages();
+    return <span className={styles.sizeLabel}>{messages.text.sizeBadges[i]}</span>;
+  }
+  return SizeBadge;
+});
+
+const TABLE_SCOPE_ICONS: Record<TableTextScope, IconType> = {
+  table: LuGrid2X2,
+  cells: LuSquareDashedMousePointer,
 };
 
-const FONT_OPTIONS: Option<FontFamily>[] = FONT_FAMILIES.map((fontFamily) => ({
-  value: fontFamily,
-  label: FONT_LABELS[fontFamily],
-  icon: () => (
-    <span className={styles.fontSample} style={{ fontFamily: FONT_STACKS[fontFamily] }}>
-      Aa
-    </span>
-  ),
-}));
+const VERTICAL_ALIGN_ICONS: Record<VerticalAlign, IconType> = {
+  top: LuAlignVerticalJustifyStart,
+  middle: LuAlignVerticalJustifyCenter,
+  bottom: LuAlignVerticalJustifyEnd,
+};
 
-const SIZE_NAMES = ["P", "M", "G", "GG"];
-const SIZE_LABELS = ["Pequeno", "Médio", "Grande", "Muito grande"];
+function fontOptions(messages: Messages): Option<FontFamily>[] {
+  return FONT_FAMILIES.map((value) => ({ value, label: messages.text.fonts[value], icon: FONT_ICONS[value] }));
+}
 
-const SIZE_OPTIONS: Option<number>[] = FONT_SIZE_PRESETS.map((size, i) => ({
-  value: size,
-  label: `${SIZE_LABELS[i]} (${size})`,
-  icon: () => <span className={styles.sizeLabel}>{SIZE_NAMES[i]}</span>,
-}));
+function sizeOptions(messages: Messages): Option<number>[] {
+  return FONT_SIZE_PRESETS.map((value, i) => ({ value, label: `${messages.text.sizes[i]} (${value})`, icon: SIZE_ICONS[i] }));
+}
 
-const TABLE_SCOPE_OPTIONS: Option<TableTextScope>[] = [
-  { value: "table", label: "Tabela inteira", icon: LuGrid2X2 },
-  { value: "cells", label: "Células selecionadas (clique ou Shift+clique)", icon: LuSquareDashedMousePointer },
-];
+const TABLE_SCOPES: TableTextScope[] = ["table", "cells"];
 
-const VERTICAL_ALIGN_OPTIONS: Option<VerticalAlign>[] = [
-  { value: "top", label: "Topo", icon: LuAlignVerticalJustifyStart },
-  { value: "middle", label: "Meio", icon: LuAlignVerticalJustifyCenter },
-  { value: "bottom", label: "Base", icon: LuAlignVerticalJustifyEnd },
-];
+function tableScopeOptions(messages: Messages): Option<TableTextScope>[] {
+  return TABLE_SCOPES.map((value) => ({ value, label: messages.text.scopes[value], icon: TABLE_SCOPE_ICONS[value] }));
+}
+
+function verticalAlignOptions(messages: Messages): Option<VerticalAlign>[] {
+  return VERTICAL_ALIGNS.map((value) => ({ value, label: messages.text.verticalAligns[value], icon: VERTICAL_ALIGN_ICONS[value] }));
+}
+
 
 const MIN_FONT_SIZE = 6;
 const MAX_FONT_SIZE = 200;
@@ -80,6 +93,7 @@ function FontSizeInput({
 }) {
   const rootRef = useBoardRoot();
   const [draft, setDraft] = useState<string | null>(null);
+  const messages = useMessages();
   const shown = draft ?? (value === "mixed" ? "" : String(Math.round(value)));
 
   return (
@@ -89,7 +103,7 @@ function FontSizeInput({
       min={MIN_FONT_SIZE}
       max={MAX_FONT_SIZE}
       value={shown}
-      aria-label="Tamanho da fonte"
+      aria-label={messages.text.sizeInput}
       onChange={(e) => {
         setDraft(e.target.value);
         const size = Number(e.target.value);
@@ -107,6 +121,7 @@ function FontSizeInput({
 }
 
 export function TextControls() {
+  const messages = useMessages();
   const textSwatches = useTextSwatches();
   const scope = useBoardStore(selectTextScope).split(",");
   const fontFamily = useBoardStore(textSelectors.fontFamily);
@@ -134,23 +149,23 @@ export function TextControls() {
   return (
     <>
       {hasTable && (
-        <PanelSection title="Aplicar em">
-          <OptionGroup options={TABLE_SCOPE_OPTIONS} value={tableTextScope} onChange={setTableTextScope} />
+        <PanelSection title={messages.text.scope}>
+          <OptionGroup options={tableScopeOptions(messages)} value={tableTextScope} onChange={setTableTextScope} />
         </PanelSection>
       )}
       {!onCells && (
         <>
-          <PanelSection title="Fonte">
+          <PanelSection title={messages.text.font}>
             <OptionGroup
-              options={FONT_OPTIONS}
+              options={fontOptions(messages)}
               value={fontFamily}
               onChange={(value) => setTextStyle({ fontFamily: value })}
             />
           </PanelSection>
-          <PanelSection title="Tamanho">
+          <PanelSection title={messages.text.size}>
             <div className={styles.textRow}>
               <OptionGroup
-                options={SIZE_OPTIONS}
+                options={sizeOptions(messages)}
                 value={fontSize}
                 onChange={(value) => setTextStyle({ fontSize: value })}
               />
@@ -159,11 +174,11 @@ export function TextControls() {
           </PanelSection>
         </>
       )}
-      <PanelSection title="Estilo">
+      <PanelSection title={messages.text.style}>
         <div className={styles.options}>
           <IconButton
             icon={LuBold}
-            label="Negrito"
+            label={messages.shortcuts.bold}
             shortcut={formatShortcut(SHORTCUTS.bold.keys)}
             size="sm"
             tooltipSide="bottom"
@@ -172,7 +187,7 @@ export function TextControls() {
           />
           <IconButton
             icon={LuItalic}
-            label="Itálico"
+            label={messages.shortcuts.italic}
             shortcut={formatShortcut(SHORTCUTS.italic.keys)}
             size="sm"
             tooltipSide="bottom"
@@ -181,7 +196,7 @@ export function TextControls() {
           />
           <IconButton
             icon={LuUnderline}
-            label="Sublinhado"
+            label={messages.shortcuts.underline}
             shortcut={formatShortcut(SHORTCUTS.underline.keys)}
             size="sm"
             tooltipSide="bottom"
@@ -190,9 +205,9 @@ export function TextControls() {
           />
         </div>
       </PanelSection>
-      <PanelSection title="Cor">
+      <PanelSection title={messages.style.color}>
         <ColorField
-          title="Cor do texto"
+          title={messages.text.color}
           value={colorValue}
           swatches={textSwatches}
           onChange={(value) => setTextStyle({ color: toColor(value) })}
@@ -201,12 +216,12 @@ export function TextControls() {
         />
       </PanelSection>
       {(hasFree || hasBox) && (
-        <PanelSection title="Alinhamento">
+        <PanelSection title={messages.text.align}>
           <div className={styles.textRow}>
-            <OptionGroup options={ALIGN_OPTIONS} value={align} onChange={(value) => setTextStyle({ align: value })} />
+            <OptionGroup options={alignOptions(messages)} value={align} onChange={(value) => setTextStyle({ align: value })} />
             {hasBox && (
               <OptionGroup
-                options={VERTICAL_ALIGN_OPTIONS}
+                options={verticalAlignOptions(messages)}
                 value={verticalAlign}
                 onChange={(value) => setTextStyle({ verticalAlign: value })}
               />
@@ -215,7 +230,7 @@ export function TextControls() {
         </PanelSection>
       )}
       {hasFree && (
-        <PanelSection title="Opacidade">
+        <PanelSection title={messages.style.opacity}>
           <OpacityField value={opacity} onPreview={(value) => preview({ strokeOpacity: value })} onCommit={commit} />
         </PanelSection>
       )}

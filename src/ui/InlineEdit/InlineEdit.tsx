@@ -57,7 +57,7 @@ export function InlineEdit({
   maxLength,
   className,
   inputClassName,
-  title = "Duplo clique para renomear",
+  title,
   as: Tag = "span",
   readOnly = false,
 }: InlineEditProps) {

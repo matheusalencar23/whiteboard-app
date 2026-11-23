@@ -20,6 +20,9 @@ import { ROUTING_OPTIONS } from "./routing";
 import { arrowSelectors, scopeSupports, selectScope, styleSelectors } from "./selectors";
 import { CornerStyleIcon, FillStyleIcon, RoughnessIcon, StrokeStyleIcon, StrokeWidthIcon } from "./StyleIcons";
 import { useStylePreview } from "./useStylePreview";
+import { iconsFor } from "./iconsFor";
+import type { Messages } from "../../../i18n/messages";
+import { useMessages } from "../../../i18n/useMessages";
 
 
 export interface Option<T> {
@@ -28,52 +31,41 @@ export interface Option<T> {
   icon: IconType;
 }
 
-const FILL_STYLE_LABELS: Record<FillStyle, string> = {
-  hachure: "Hachura",
-  "cross-hatch": "Hachura cruzada",
-  solid: "Sólido",
-};
+const FILL_STYLE_ICONS = iconsFor(FILL_STYLES, (fillStyle) => <FillStyleIcon fillStyle={fillStyle} />);
+const STROKE_STYLE_ICONS = iconsFor(STROKE_STYLES, (strokeStyle) => <StrokeStyleIcon strokeStyle={strokeStyle} />);
+const CORNER_STYLE_ICONS = iconsFor(CORNER_STYLES, (corners) => <CornerStyleIcon corners={corners} />);
 
-const FILL_STYLE_OPTIONS: Option<FillStyle>[] = FILL_STYLES.map((fillStyle) => ({
-  value: fillStyle,
-  label: FILL_STYLE_LABELS[fillStyle],
-  icon: () => <FillStyleIcon fillStyle={fillStyle} />,
-}));
-
-const STROKE_WIDTH_OPTIONS: Option<number>[] = [
-  { value: 1, label: "Fina", icon: () => <StrokeWidthIcon width={1.25} /> },
-  { value: 2, label: "Média", icon: () => <StrokeWidthIcon width={2.5} /> },
-  { value: 4, label: "Grossa", icon: () => <StrokeWidthIcon width={4} /> },
+const STROKE_WIDTHS: { value: number; name: keyof Messages["style"]["strokeWidths"]; icon: IconType }[] = [
+  { value: 1, name: "thin", icon: () => <StrokeWidthIcon width={1.25} /> },
+  { value: 2, name: "medium", icon: () => <StrokeWidthIcon width={2.5} /> },
+  { value: 4, name: "thick", icon: () => <StrokeWidthIcon width={4} /> },
 ];
 
-const STROKE_STYLE_LABELS: Record<StrokeStyle, string> = {
-  solid: "Contínuo",
-  dashed: "Tracejado",
-  dotted: "Pontilhado",
-};
-
-const STROKE_STYLE_OPTIONS: Option<StrokeStyle>[] = STROKE_STYLES.map((strokeStyle) => ({
-  value: strokeStyle,
-  label: STROKE_STYLE_LABELS[strokeStyle],
-  icon: () => <StrokeStyleIcon strokeStyle={strokeStyle} />,
-}));
-
-const ROUGHNESS_OPTIONS: Option<number>[] = [
-  { value: 0, label: "Limpo", icon: () => <RoughnessIcon roughness={0} /> },
-  { value: 1, label: "Esboço", icon: () => <RoughnessIcon roughness={1} /> },
-  { value: 2, label: "Esboço forte", icon: () => <RoughnessIcon roughness={2} /> },
+const ROUGHNESS_LEVELS: { value: number; name: keyof Messages["style"]["roughnessLevels"]; icon: IconType }[] = [
+  { value: 0, name: "clean", icon: () => <RoughnessIcon roughness={0} /> },
+  { value: 1, name: "sketch", icon: () => <RoughnessIcon roughness={1} /> },
+  { value: 2, name: "rough", icon: () => <RoughnessIcon roughness={2} /> },
 ];
 
-const CORNER_STYLE_LABELS: Record<CornerStyle, string> = {
-  sharp: "Retos",
-  round: "Arredondados",
-};
+function fillStyleOptions(messages: Messages): Option<FillStyle>[] {
+  return FILL_STYLES.map((value) => ({ value, label: messages.style.fillStyles[value], icon: FILL_STYLE_ICONS[value] }));
+}
 
-const CORNER_STYLE_OPTIONS: Option<CornerStyle>[] = CORNER_STYLES.map((corners) => ({
-  value: corners,
-  label: CORNER_STYLE_LABELS[corners],
-  icon: () => <CornerStyleIcon corners={corners} />,
-}));
+function strokeStyleOptions(messages: Messages): Option<StrokeStyle>[] {
+  return STROKE_STYLES.map((value) => ({ value, label: messages.style.strokeStyles[value], icon: STROKE_STYLE_ICONS[value] }));
+}
+
+function cornerStyleOptions(messages: Messages): Option<CornerStyle>[] {
+  return CORNER_STYLES.map((value) => ({ value, label: messages.style.cornerStyles[value], icon: CORNER_STYLE_ICONS[value] }));
+}
+
+function strokeWidthOptions(messages: Messages): Option<number>[] {
+  return STROKE_WIDTHS.map(({ value, name, icon }) => ({ value, label: messages.style.strokeWidths[name], icon }));
+}
+
+function roughnessOptions(messages: Messages): Option<number>[] {
+  return ROUGHNESS_LEVELS.map(({ value, name, icon }) => ({ value, label: messages.style.roughnessLevels[name], icon }));
+}
 
 export function OptionGroup<T extends string | number>({
   options,
@@ -110,6 +102,7 @@ export function OpacityField({
   onPreview: (value: number) => void;
   onCommit: () => void;
 }) {
+  const messages = useMessages();
   return (
     <div className={styles.opacity}>
       <input
@@ -118,7 +111,7 @@ export function OpacityField({
         max={100}
         step={5}
         value={value === "mixed" ? 100 : value}
-        aria-label="Opacidade"
+        aria-label={messages.style.opacity}
         onChange={(e) => onPreview(Number(e.target.value))}
         onPointerUp={onCommit}
         onKeyUp={onCommit}
@@ -130,6 +123,7 @@ export function OpacityField({
 }
 
 export function StrokeControls() {
+  const messages = useMessages();
   const strokeSwatches = useStrokeSwatches();
   const scope = useBoardStore(selectScope);
   const color = useBoardStore(styleSelectors.strokeColor);
@@ -143,9 +137,9 @@ export function StrokeControls() {
 
   return (
     <>
-      <PanelSection title="Cor">
+      <PanelSection title={messages.style.color}>
         <ColorField
-          title="Contorno"
+          title={messages.style.groups.stroke}
           value={color}
           swatches={strokeSwatches}
           onChange={(value) => setStyle({ strokeColor: value })}
@@ -154,38 +148,38 @@ export function StrokeControls() {
         />
       </PanelSection>
       {scopeSupports(scope, "strokeWidth") && (
-        <PanelSection title="Espessura">
+        <PanelSection title={messages.style.strokeWidth}>
           <OptionGroup
-            options={STROKE_WIDTH_OPTIONS}
+            options={strokeWidthOptions(messages)}
             value={width}
             onChange={(value) => setStyle({ strokeWidth: value })}
           />
         </PanelSection>
       )}
       {scopeSupports(scope, "strokeStyle") && (
-        <PanelSection title="Estilo do traço">
+        <PanelSection title={messages.style.strokeStyle}>
           <OptionGroup
-            options={STROKE_STYLE_OPTIONS}
+            options={strokeStyleOptions(messages)}
             value={lineStyle}
             onChange={(value) => setStyle({ strokeStyle: value })}
           />
         </PanelSection>
       )}
       {scopeSupports(scope, "strokeRoughness") && (
-        <PanelSection title="Esboço">
+        <PanelSection title={messages.style.roughness}>
           <OptionGroup
-            options={ROUGHNESS_OPTIONS}
+            options={roughnessOptions(messages)}
             value={roughness}
             onChange={(value) => setStyle({ strokeRoughness: value })}
           />
         </PanelSection>
       )}
       {scopeSupports(scope, "corners") && (
-        <PanelSection title="Cantos">
-          <OptionGroup options={CORNER_STYLE_OPTIONS} value={corners} onChange={(value) => setStyle({ corners: value })} />
+        <PanelSection title={messages.style.corners}>
+          <OptionGroup options={cornerStyleOptions(messages)} value={corners} onChange={(value) => setStyle({ corners: value })} />
         </PanelSection>
       )}
-      <PanelSection title="Opacidade">
+      <PanelSection title={messages.style.opacity}>
         <OpacityField value={opacity} onPreview={(value) => preview({ strokeOpacity: value })} onCommit={commit} />
       </PanelSection>
     </>
@@ -193,6 +187,7 @@ export function StrokeControls() {
 }
 
 export function FillControls() {
+  const messages = useMessages();
   const fillSwatches = useFillSwatches();
   const color = useBoardStore(styleSelectors.fillColor);
   const fillStyle = useBoardStore(styleSelectors.fillStyle);
@@ -205,9 +200,9 @@ export function FillControls() {
 
   return (
     <>
-      <PanelSection title="Cor">
+      <PanelSection title={messages.style.color}>
         <ColorField
-          title="Preenchimento"
+          title={messages.style.groups.fill}
           value={color}
           swatches={fillSwatches}
           onChange={(value) => setStyle({ fillColor: value })}
@@ -217,21 +212,21 @@ export function FillControls() {
       </PanelSection>
       {hasFill && (
         <>
-          <PanelSection title="Estilo">
+          <PanelSection title={messages.style.fillStyle}>
             <OptionGroup
-              options={FILL_STYLE_OPTIONS}
+              options={fillStyleOptions(messages)}
               value={fillStyle}
               onChange={(value) => setStyle({ fillStyle: value })}
             />
           </PanelSection>
-          <PanelSection title="Esboço">
+          <PanelSection title={messages.style.roughness}>
             <OptionGroup
-              options={ROUGHNESS_OPTIONS}
+              options={roughnessOptions(messages)}
               value={roughness}
               onChange={(value) => setStyle({ fillRoughness: value })}
             />
           </PanelSection>
-          <PanelSection title="Opacidade">
+          <PanelSection title={messages.style.opacity}>
             <OpacityField value={opacity} onPreview={(value) => preview({ fillOpacity: value })} onCommit={commit} />
           </PanelSection>
         </>
@@ -241,6 +236,7 @@ export function FillControls() {
 }
 
 export function ArrowControls() {
+  const messages = useMessages();
   const defaultRouting = useBoardStore((s) => s.arrowRouting);
   const defaultStart = useBoardStore((s) => s.arrowheads.start);
   const defaultEnd = useBoardStore((s) => s.arrowheads.end);
@@ -253,14 +249,14 @@ export function ArrowControls() {
 
   return (
     <>
-      <PanelSection title="Tipo de seta">
+      <PanelSection title={messages.arrow.routing}>
         <OptionGroup
-          options={ROUTING_OPTIONS.map(({ routing: value, label, icon }) => ({ value, label, icon }))}
+          options={ROUTING_OPTIONS.map(({ routing: value, icon }) => ({ value, label: messages.arrow.routings[value], icon }))}
           value={routing}
           onChange={setArrowRouting}
         />
       </PanelSection>
-      <PanelSection title="Pontas">
+      <PanelSection title={messages.arrow.arrowheads}>
         <div className={styles.arrowheads}>
           <div className={styles.arrowPreview}>
             <ArrowheadPicker end="start" value={start} onChange={(value) => setArrowhead("start", value)} />
@@ -268,7 +264,7 @@ export function ArrowControls() {
           </div>
           <IconButton
             icon={LuArrowLeftRight}
-            label="Inverter pontas"
+            label={messages.arrow.swap}
             size="sm"
             tooltipSide="bottom"
             onClick={swapArrowheads}

@@ -32,6 +32,7 @@ import { themeVariables } from "../../lib/theme";
 import { PortalContainerContext } from "../../ui/portal";
 import { useTheme } from "../useColorScheme";
 import { useFontStylesheet } from "../fonts";
+import { DEFAULT_LOCALE, resolveMessages, type MessagesOverride, type WhiteboardLocale } from "../../i18n/locales";
 import { canEdit, hasBoardMenu, resolveConfig, type WhiteboardConfig, type WhiteboardConfigInput } from "../../store/whiteboardConfig";
 import styles from "./Whiteboard.module.scss";
 
@@ -82,6 +83,8 @@ export interface WhiteboardProps {
   loadFonts?: boolean;
   config?: WhiteboardConfigInput;
   initialStyle?: InitialStyle;
+  locale?: WhiteboardLocale;
+  messages?: MessagesOverride;
 }
 
 export function Whiteboard({
@@ -95,6 +98,8 @@ export function Whiteboard({
   loadFonts = true,
   config,
   initialStyle,
+  locale = DEFAULT_LOCALE,
+  messages,
 }: WhiteboardProps) {
   const [store] = useState(() =>
     createBoardStore({
@@ -102,10 +107,12 @@ export function Whiteboard({
       preferences: initialPreferences,
       config: resolveConfig(config),
       style: initialStyle,
+      messages: resolveMessages(locale, messages),
     }),
   );
   useLayoutEffect(() => {
     store.getState().setConfig(resolveConfig(config));
+    store.getState().setMessages(resolveMessages(locale, messages));
   });
   useImperativeHandle(ref, () => createWhiteboardApi(store), [store]);
   useFontStylesheet(loadFonts);
@@ -131,7 +138,7 @@ export function Whiteboard({
 
   return (
     <BoardStoreContext value={store}>
-      <WhiteboardView back={back} autoFocus={autoFocus} />
+      <WhiteboardView back={back} autoFocus={autoFocus} locale={locale} />
     </BoardStoreContext>
   );
 }
@@ -144,7 +151,15 @@ function hasFiles(e: React.DragEvent) {
   return e.dataTransfer.types.includes("Files");
 }
 
-function WhiteboardView({ back, autoFocus }: { back?: WhiteboardBackAction; autoFocus: boolean }) {
+function WhiteboardView({
+  back,
+  autoFocus,
+  locale,
+}: {
+  back?: WhiteboardBackAction;
+  autoFocus: boolean;
+  locale: WhiteboardLocale;
+}) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [portalContainer, setPortalContainer] = useState<HTMLDivElement | null>(null);
   const theme = useTheme();
@@ -203,6 +218,7 @@ function WhiteboardView({ back, autoFocus }: { back?: WhiteboardBackAction; auto
         <div
           ref={rootRef}
           tabIndex={-1}
+          lang={locale}
           className={styles.board}
           style={themeStyle}
           data-dropping={dropping}

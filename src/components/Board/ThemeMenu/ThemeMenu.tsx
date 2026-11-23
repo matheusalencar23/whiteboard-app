@@ -8,13 +8,12 @@ import { useBoardStore } from "../../../store/boardStoreContext";
 import type { ThemeMode } from "../../../lib/theme";
 import { useColorScheme } from "../../useColorScheme";
 import { SHORTCUTS, formatShortcut } from "../shortcuts";
+import { useMessages } from "../../../i18n/useMessages";
 
-const MENU_LABEL = "Tema";
-
-const MODE_OPTIONS: { mode: ThemeMode; label: string; icon: IconType }[] = [
-  { mode: "light", label: "Claro", icon: LuSun },
-  { mode: "dark", label: "Escuro", icon: LuMoon },
-  { mode: "system", label: "Seguir o sistema", icon: LuMonitor },
+const MODE_OPTIONS: { mode: ThemeMode; icon: IconType }[] = [
+  { mode: "light", icon: LuSun },
+  { mode: "dark", icon: LuMoon },
+  { mode: "system", icon: LuMonitor },
 ];
 
 export function ThemeMenu() {
@@ -24,10 +23,11 @@ export function ThemeMenu() {
   const themeMode = useBoardStore((s) => s.themeMode);
   const setThemeMode = useBoardStore((s) => s.setThemeMode);
   const scheme = useColorScheme();
+  const messages = useMessages();
 
-  const entries: MenuEntry[] = MODE_OPTIONS.map(({ mode, label, icon }) => ({
+  const entries: MenuEntry[] = MODE_OPTIONS.map(({ mode, icon }) => ({
     id: mode,
-    label,
+    label: messages.theme[mode],
     icon,
     checked: themeMode === mode,
     onSelect: () => setThemeMode(mode),
@@ -37,7 +37,7 @@ export function ThemeMenu() {
     <div ref={anchorRef} className={styles.button}>
       <IconButton
         icon={scheme === "dark" ? LuMoon : LuSun}
-        label={MENU_LABEL}
+        label={messages.theme.menu}
         shortcut={formatShortcut(SHORTCUTS.toggleTheme.keys)}
         size="sm"
         tooltipSide="top"
@@ -46,7 +46,7 @@ export function ThemeMenu() {
         active={anchor !== null}
         onClick={() => setAnchor((open) => (open ? null : anchorRef.current))}
       />
-      {anchor && <Menu label={MENU_LABEL} anchor={anchor} entries={entries} onClose={close} />}
+      {anchor && <Menu label={messages.theme.menu} anchor={anchor} entries={entries} onClose={close} />}
     </div>
   );
 }

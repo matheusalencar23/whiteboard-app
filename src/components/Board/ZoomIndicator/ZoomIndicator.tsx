@@ -7,12 +7,14 @@ import { useBoardStore } from "../../../store/boardStoreContext";
 import { nextZoomStep } from "../../../lib/viewport";
 import type { BoardState } from "../../../store/boardStore";
 import { SHORTCUTS, formatShortcut } from "../shortcuts";
+import { useMessages } from "../../../i18n/useMessages";
 
 function canStepZoom(state: BoardState, direction: 1 | -1): boolean {
   return nextZoomStep(state.viewport.zoom, direction, state.config.zoomSteps) !== state.viewport.zoom;
 }
 
 export function ZoomIndicator() {
+  const messages = useMessages();
   const zoom = useBoardStore((s) => s.viewport.zoom);
   const stepZoom = useBoardStore((s) => s.stepZoom);
   const resetZoom = useBoardStore((s) => s.resetZoom);
@@ -25,10 +27,10 @@ export function ZoomIndicator() {
   }
 
   return (
-    <div className={styles.zoom} role="group" aria-label="Zoom">
+    <div className={styles.zoom} role="group" aria-label={messages.zoom.group}>
       <IconButton
         icon={LuMinus}
-        label="Diminuir zoom"
+        label={messages.shortcuts.zoomOut}
         shortcut={formatShortcut(SHORTCUTS.zoomOut.keys)}
         size="sm"
         tooltipSide="top"
@@ -38,7 +40,7 @@ export function ZoomIndicator() {
       <button
         type="button"
         className={styles.value}
-        aria-label={`Zoom em ${Math.round(zoom * 100)}%, voltar a 100%`}
+        aria-label={messages.zoom.current(Math.round(zoom * 100))}
         onPointerEnter={showTooltip}
         onPointerLeave={() => setAnchor(null)}
         onFocus={(e) => {
@@ -52,10 +54,10 @@ export function ZoomIndicator() {
       >
         {Math.round(zoom * 100)}%
       </button>
-      {anchor && <Tooltip anchor={anchor} side="top" label="Voltar a 100%" shortcut={formatShortcut(SHORTCUTS.zoomReset.keys)} />}
+      {anchor && <Tooltip anchor={anchor} side="top" label={messages.zoom.reset} shortcut={formatShortcut(SHORTCUTS.zoomReset.keys)} />}
       <IconButton
         icon={LuPlus}
-        label="Aumentar zoom"
+        label={messages.shortcuts.zoomIn}
         shortcut={formatShortcut(SHORTCUTS.zoomIn.keys)}
         size="sm"
         tooltipSide="top"

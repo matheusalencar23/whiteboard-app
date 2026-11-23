@@ -119,7 +119,7 @@ export function Home() {
       </div>
 
       {pendingDelete && (
-        <Modal title="Apagar board" onClose={() => setPendingDelete(null)} className={styles.confirm}>
+        <Modal title="Apagar board" closeLabel="Fechar" onClose={() => setPendingDelete(null)} className={styles.confirm}>
           <div className={styles.confirmBody}>
             <p>
               <strong>{pendingDelete.name}</strong> será apagado deste navegador. Não dá para desfazer. Se quiser
@@ -137,7 +137,7 @@ export function Home() {
 
       {error && (
         <div className={styles.toast}>
-          <Toast key={error} message={error} tone="error" onDismiss={dismissError} />
+          <Toast key={error} message={error} closeLabel="Fechar aviso" tone="error" onDismiss={dismissError} />
         </div>
       )}
     </div>

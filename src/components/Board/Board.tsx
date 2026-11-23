@@ -49,7 +49,7 @@ export function Board() {
       />
       {saveFailed && (
         <div className={styles.notice}>
-          <Toast message={STORAGE_FULL} tone="error" onDismiss={dismissSaveFailure} />
+          <Toast message={STORAGE_FULL} closeLabel="Fechar aviso" tone="error" onDismiss={dismissSaveFailure} />
         </div>
       )}
     </div>

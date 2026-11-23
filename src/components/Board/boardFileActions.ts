@@ -12,9 +12,9 @@ export async function importBoard(boardStore: BoardStore, file?: File) {
   const result = await readBoardFile(chosen);
   const store = boardStore.getState();
   if (!result.ok) {
-    store.showNotice(`"${result.name}" não é um board válido.`, "error");
+    store.showNotice(store.messages.board.invalidFile(result.name), "error");
     return;
   }
   store.openBoard(result.board);
-  store.showNotice(`Board "${result.board.name}" aberto. Ctrl+Z volta ao anterior.`);
+  store.showNotice(store.messages.board.fileOpened(result.board.name));
 }

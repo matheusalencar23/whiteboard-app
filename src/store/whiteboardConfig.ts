@@ -31,8 +31,8 @@ interface WhiteboardFeatures {
 }
 
 export interface WhiteboardConfig extends WhiteboardFeatures {
-  strokeColors: readonly ColorSwatch[];
-  fillColors: readonly ColorSwatch[];
+  strokeColors: readonly ColorSwatch[] | null;
+  fillColors: readonly ColorSwatch[] | null;
   zoomSteps: readonly number[];
   themes: Readonly<Record<ColorScheme, Theme>>;
 }
@@ -43,25 +43,6 @@ export interface WhiteboardConfigInput extends Partial<WhiteboardFeatures> {
   zoomSteps?: readonly number[];
   theme?: Partial<Record<ColorScheme, ThemeOverride>>;
 }
-
-const { palette } = lightTheme;
-
-const DEFAULT_STROKE_COLORS: ColorSwatch[] = [
-  { color: palette.ink, label: "Preto" },
-  { color: palette.red, label: "Vermelho" },
-  { color: palette.green, label: "Verde" },
-  { color: palette.blue, label: "Azul" },
-  { color: palette.amber, label: "Âmbar" },
-];
-
-const DEFAULT_FILL_COLORS: ColorSwatch[] = [
-  { color: palette.paper, label: "Branco" },
-  { color: palette.grayLight, label: "Cinza claro" },
-  { color: palette.redLight, label: "Vermelho claro" },
-  { color: palette.greenLight, label: "Verde claro" },
-  { color: palette.blueLight, label: "Azul claro" },
-  { color: palette.amberLight, label: "Âmbar claro" },
-];
 
 const BASE_THEMES: Record<ColorScheme, Theme> = { light: lightTheme, dark: darkTheme };
 
@@ -98,8 +79,8 @@ function toSwatch(option: ColorOption): ColorSwatch {
   return typeof option === "string" ? { color: option, label: option.toUpperCase() } : option;
 }
 
-function resolveColors(given: readonly ColorOption[] | undefined, fallback: ColorSwatch[]): ColorSwatch[] {
-  return given && given.length > 0 ? given.map(toSwatch) : fallback;
+function resolveColors(given: readonly ColorOption[] | undefined): ColorSwatch[] | null {
+  return given && given.length > 0 ? given.map(toSwatch) : null;
 }
 
 function resolveZoomSteps(given: readonly number[] | undefined): readonly number[] {
@@ -122,8 +103,8 @@ export function resolveConfig(given: WhiteboardConfigInput = {}): WhiteboardConf
   const tools = TOOL_TYPES.filter((tool) => resolved.tools.includes(tool));
   return {
     ...(resolved.readOnly ? { ...resolved, ...EDITING_FEATURES_OFF } : { ...resolved, tools }),
-    strokeColors: resolveColors(strokeColors, DEFAULT_STROKE_COLORS),
-    fillColors: resolveColors(fillColors, DEFAULT_FILL_COLORS),
+    strokeColors: resolveColors(strokeColors),
+    fillColors: resolveColors(fillColors),
     zoomSteps: resolveZoomSteps(zoomSteps),
     themes: { light: resolveTheme(BASE_THEMES.light, theme?.light), dark: resolveTheme(BASE_THEMES.dark, theme?.dark) },
   };

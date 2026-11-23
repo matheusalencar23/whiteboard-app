@@ -4,16 +4,18 @@ import { HelpDialog } from "./HelpDialog";
 import { IconButton } from "../../../ui/IconButton/IconButton";
 import { useBoardStore } from "../../../store/boardStoreContext";
 import { SHORTCUTS, formatShortcut } from "../shortcuts";
+import { useMessages } from "../../../i18n/useMessages";
 
 export function HelpButton() {
   const open = useBoardStore((s) => s.helpOpen);
   const setHelpOpen = useBoardStore((s) => s.setHelpOpen);
+  const messages = useMessages();
 
   return (
     <div className={styles.button}>
       <IconButton
         icon={LuCircleHelp}
-        label="Como usar"
+        label={messages.help.button}
         shortcut={formatShortcut(SHORTCUTS.help.keys)}
         size="sm"
         tooltipSide="top"

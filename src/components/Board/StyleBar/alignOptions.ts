@@ -1,9 +1,15 @@
 import { LuAlignCenter, LuAlignLeft, LuAlignRight } from "react-icons/lu";
-import type { TextAlign } from "../../../lib/elements/types";
+import type { IconType } from "react-icons";
+import { TEXT_ALIGNS, type TextAlign } from "../../../lib/elements/types";
 import type { Option } from "./StyleControls";
+import type { Messages } from "../../../i18n/messages";
 
-export const ALIGN_OPTIONS: Option<TextAlign>[] = [
-  { value: "left", label: "Alinhar à esquerda", icon: LuAlignLeft },
-  { value: "center", label: "Centralizar", icon: LuAlignCenter },
-  { value: "right", label: "Alinhar à direita", icon: LuAlignRight },
-];
+const ALIGN_ICONS: Record<TextAlign, IconType> = {
+  left: LuAlignLeft,
+  center: LuAlignCenter,
+  right: LuAlignRight,
+};
+
+export function alignOptions(messages: Messages): Option<TextAlign>[] {
+  return TEXT_ALIGNS.map((value) => ({ value, label: messages.text.aligns[value], icon: ALIGN_ICONS[value] }));
+}

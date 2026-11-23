@@ -4,6 +4,7 @@ import { InlineEdit } from "../../../ui/InlineEdit/InlineEdit";
 import { focusBoard, useBoardRoot } from "../boardRoot";
 import { isTypingTarget } from "../useShortcuts";
 import styles from "./BoardTitle.module.scss";
+import { useMessages } from "../../../i18n/useMessages";
 
 interface BoardTitleProps {
   editing: boolean;
@@ -15,6 +16,7 @@ export function BoardTitle({ editing, onEditingChange }: BoardTitleProps) {
   const setBoardName = useBoardStore((s) => s.setBoardName);
   const renameAllowed = useBoardStore((s) => s.config.rename);
   const rootRef = useBoardRoot();
+  const messages = useMessages();
 
   function handleEditingChange(next: boolean) {
     const active = document.activeElement;
@@ -26,7 +28,8 @@ export function BoardTitle({ editing, onEditingChange }: BoardTitleProps) {
     <InlineEdit
       as="h1"
       value={name}
-      label="Nome do board"
+      label={messages.board.name}
+      title={messages.board.renameHint}
       editing={editing}
       readOnly={!renameAllowed}
       onEditingChange={handleEditingChange}

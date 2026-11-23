@@ -36,6 +36,8 @@ import type { ThemeMode } from "../lib/theme";
 import { reorderElements, type OrderDirection } from "../lib/elements/order";
 import { addPoolLane, removePoolLane } from "../lib/elements/pool";
 import { syncIndices } from "../lib/elements/fractionalIndex";
+import type { Messages } from "../i18n/messages";
+import { resolveMessages, sameMessages } from "../i18n/locales";
 import { fallbackTool, isToolAllowed, resolveConfig, sameConfig, type Tool, type WhiteboardConfig } from "./whiteboardConfig";
 import { INITIAL_VIEWPORT, nextZoomStep, panBy, zoomAt, zoomTo, type Viewport } from "../lib/viewport";
 
@@ -97,6 +99,7 @@ export interface BoardState {
   tableTextScope: TableTextScope;
   tool: Tool;
   config: WhiteboardConfig;
+  messages: Messages;
   viewport: Viewport;
   viewportSize: { width: number; height: number };
   arrowRouting: ArrowRouting;
@@ -144,6 +147,7 @@ export interface BoardState {
   changePoolLanes: (change: "add" | "remove") => void;
   setTool: (tool: Tool) => void;
   setConfig: (config: WhiteboardConfig) => void;
+  setMessages: (messages: Messages) => void;
   setArrowRouting: (routing: ArrowRouting) => void;
   setArrowhead: (end: ArrowEnd, arrowhead: Arrowhead) => void;
   swapArrowheads: () => void;
@@ -230,6 +234,7 @@ export interface BoardStoreInit {
   preferences?: Partial<Preferences>;
   config?: WhiteboardConfig;
   style?: InitialStyle;
+  messages?: Messages;
 }
 
 type BoardPatch = Partial<BoardState>;
@@ -240,6 +245,7 @@ export function createBoardStore({
   preferences: given = {},
   config = resolveConfig(),
   style = {},
+  messages = resolveMessages(),
 }: BoardStoreInit = {}): BoardStore {
   const preferences = { ...DEFAULT_PREFERENCES, ...given };
   let noticeCount = 0;
@@ -299,6 +305,7 @@ export function createBoardStore({
       tableTextScope: "table",
       tool: fallbackTool(config),
       config,
+      messages,
       viewport: scene.viewport ?? INITIAL_VIEWPORT,
       viewportSize: { width: 0, height: 0 },
       arrowRouting: "straight",
@@ -499,6 +506,9 @@ export function createBoardStore({
       setTool: (tool) => {
         if (!isToolAllowed(get().config, tool)) return;
         set(tool === "selection" ? { tool } : { tool, selectedIds: [], editingGroupId: null });
+      },
+      setMessages: (next) => {
+        if (!sameMessages(get().messages, next)) rawSet({ messages: next });
       },
       setConfig: (next) =>
         set((state) => {

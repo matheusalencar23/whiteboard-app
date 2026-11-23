@@ -1,28 +1,43 @@
 import { useMemo } from "react";
 import { TRANSPARENT } from "../../../lib/elements/types";
+import { lightTheme } from "../../../lib/theme";
+import type { Messages, PaletteColor } from "../../../i18n/messages";
+import { useMessages } from "../../../i18n/useMessages";
+import type { ColorSwatch } from "../../../store/whiteboardConfig";
 import { useBoardStore } from "../../../store/boardStoreContext";
 import { AUTO_COLOR, type Swatch } from "./ColorField";
 
-const NO_FILL: Swatch = { color: TRANSPARENT, label: "Sem preenchimento" };
-const AUTO_TEXT_COLOR: Swatch = { color: AUTO_COLOR, label: "Automática (cor do contorno)" };
-const NO_CELL_COLOR: Swatch = { color: AUTO_COLOR, label: "Sem cor própria" };
+const DEFAULT_STROKE_COLORS: PaletteColor[] = ["ink", "red", "green", "blue", "amber"];
+const DEFAULT_FILL_COLORS: PaletteColor[] = ["paper", "grayLight", "redLight", "greenLight", "blueLight", "amberLight"];
+
+function paletteSwatches(names: PaletteColor[], messages: Messages): Swatch[] {
+  return names.map((name) => ({ color: lightTheme.palette[name], label: messages.colors[name] }));
+}
+
+function useColors(pick: (colors: { stroke: readonly ColorSwatch[] | null; fill: readonly ColorSwatch[] | null }) => readonly ColorSwatch[] | null, defaults: PaletteColor[]): Swatch[] {
+  const configured = useBoardStore((s) => pick({ stroke: s.config.strokeColors, fill: s.config.fillColors }));
+  const messages = useMessages();
+  return useMemo(() => (configured ? [...configured] : paletteSwatches(defaults, messages)), [configured, defaults, messages]);
+}
 
 export function useStrokeSwatches(): Swatch[] {
-  const colors = useBoardStore((s) => s.config.strokeColors);
-  return useMemo(() => [...colors], [colors]);
+  return useColors((colors) => colors.stroke, DEFAULT_STROKE_COLORS);
 }
 
 export function useFillSwatches(): Swatch[] {
-  const colors = useBoardStore((s) => s.config.fillColors);
-  return useMemo(() => [NO_FILL, ...colors], [colors]);
+  const colors = useColors((all) => all.fill, DEFAULT_FILL_COLORS);
+  const messages = useMessages();
+  return useMemo(() => [{ color: TRANSPARENT, label: messages.colors.none }, ...colors], [colors, messages]);
 }
 
 export function useTextSwatches(): Swatch[] {
-  const colors = useBoardStore((s) => s.config.strokeColors);
-  return useMemo(() => [AUTO_TEXT_COLOR, ...colors], [colors]);
+  const colors = useStrokeSwatches();
+  const messages = useMessages();
+  return useMemo(() => [{ color: AUTO_COLOR, label: messages.colors.autoText }, ...colors], [colors, messages]);
 }
 
 export function useCellSwatches(): Swatch[] {
   const fill = useFillSwatches();
-  return useMemo(() => [NO_CELL_COLOR, ...fill], [fill]);
+  const messages = useMessages();
+  return useMemo(() => [{ color: AUTO_COLOR, label: messages.colors.noCellColor }, ...fill], [fill, messages]);
 }

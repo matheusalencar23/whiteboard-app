@@ -25,6 +25,7 @@ import { TextControls } from "./TextControls";
 import { TableControls } from "./TableControls";
 import { OrderControls } from "./OrderControls";
 import { PoolControls } from "./PoolControls";
+import { useMessages } from "../../../i18n/useMessages";
 
 const BAR_GAP = 12;
 const VIEWPORT_MARGIN = 8;
@@ -116,6 +117,7 @@ function StyleBarContent({
   const hasTable = useBoardStore((s) => selectSingleTable(s) !== null);
   const hasSelection = useBoardStore((s) => s.selectedIds.length > 0);
   const hasPool = useBoardStore(selectHasPool);
+  const messages = useMessages();
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -138,41 +140,41 @@ function StyleBarContent({
       ref={ref}
       className={styles.bar}
       role="toolbar"
-      aria-label="Estilo"
+      aria-label={messages.style.bar}
       style={barPosition(placement, size, viewportWidth)}
     >
       {scopeSupports(scope, "strokeColor") && (
-        <StyleGroup label="Contorno" icon={strokeIcon}>
+        <StyleGroup label={messages.style.groups.stroke} icon={strokeIcon}>
           <StrokeControls />
         </StyleGroup>
       )}
       {scopeSupports(scope, "fillColor") && (
-        <StyleGroup label="Preenchimento" icon={fillIcon}>
+        <StyleGroup label={messages.style.groups.fill} icon={fillIcon}>
           <FillControls />
         </StyleGroup>
       )}
       {hasTable && (
-        <StyleGroup label="Tabela" icon={LuTable}>
+        <StyleGroup label={messages.style.groups.table} icon={LuTable}>
           <TableControls />
         </StyleGroup>
       )}
       {hasPool && (
-        <StyleGroup label="Piscina" icon={LuRows3}>
+        <StyleGroup label={messages.style.groups.pool} icon={LuRows3}>
           <PoolControls />
         </StyleGroup>
       )}
       {textScope !== "" && (
-        <StyleGroup label="Texto" icon={LuType}>
+        <StyleGroup label={messages.style.groups.text} icon={LuType}>
           <TextControls />
         </StyleGroup>
       )}
       {scope.split(",").includes("arrow") && (
-        <StyleGroup label="Seta" icon={routingIcon}>
+        <StyleGroup label={messages.style.groups.arrow} icon={routingIcon}>
           <ArrowControls />
         </StyleGroup>
       )}
       {hasSelection && (
-        <StyleGroup label="Ordem" icon={LuLayers}>
+        <StyleGroup label={messages.style.groups.order} icon={LuLayers}>
           <OrderControls />
         </StyleGroup>
       )}

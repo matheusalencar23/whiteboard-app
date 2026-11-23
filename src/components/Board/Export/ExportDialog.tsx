@@ -6,6 +6,7 @@ import { Button } from "../../../ui/Button/Button";
 import { useBoardStore } from "../../../store/boardStoreContext";
 import type { WhiteboardConfig } from "../../../store/whiteboardConfig";
 import { getExportBounds, getPngSize, renderToCanvas, type ExportOptions } from "../../../lib/export/exportScene";
+import { useMessages } from "../../../i18n/useMessages";
 import { canCopyImage, copyPng, downloadPng, downloadSvg } from "./exportActions";
 
 interface ExportDialogProps {
@@ -61,6 +62,7 @@ export function ExportDialog({ onClose }: ExportDialogProps) {
   const selectedIds = useBoardStore((s) => s.selectedIds);
   const name = useBoardStore((s) => s.name);
   const themes = useBoardStore((s) => s.config.themes);
+  const messages = useMessages();
   const hasSelection = selectedIds.length > 0;
 
   const [scope, setScope] = useState<Scope>(hasSelection ? "selection" : "all");
@@ -95,7 +97,7 @@ export function ExportDialog({ onClose }: ExportDialogProps) {
       if (success) setStatus({ message: success, error: false });
     } catch (error) {
       console.warn("Falha ao exportar.", error);
-      setStatus({ message: "Não foi possível exportar a imagem.", error: true });
+      setStatus({ message: messages.export.failed, error: true });
     } finally {
       setBusy(false);
     }
@@ -104,11 +106,11 @@ export function ExportDialog({ onClose }: ExportDialogProps) {
   const disabled = busy || elements.length === 0;
 
   return (
-    <Modal title="Exportar imagem" onClose={onClose} className={styles.dialog}>
+    <Modal title={messages.export.title} closeLabel={messages.common.close} onClose={onClose} className={styles.dialog}>
       <div className={styles.content}>
         <div className={styles.preview} data-transparent={background === "transparent"}>
           {preview ? (
-            <img src={preview} alt="Prévia da imagem exportada" className={styles.previewImage} />
+            <img src={preview} alt={messages.export.preview} className={styles.previewImage} />
           ) : (
             <span className={styles.empty}>Nada para exportar.</span>
           )}
@@ -116,26 +118,26 @@ export function ExportDialog({ onClose }: ExportDialogProps) {
 
         <div className={styles.fields}>
           <Segmented<Scope>
-            label="Conteúdo"
+            label={messages.export.content}
             value={hasSelection ? scope : "all"}
             options={[
-              { value: "all", label: "Board inteiro" },
-              { value: "selection", label: "Só a seleção", disabled: !hasSelection },
+              { value: "all", label: messages.export.all },
+              { value: "selection", label: messages.export.selection, disabled: !hasSelection },
             ]}
             onChange={setScope}
           />
           <Segmented<Background>
-            label="Fundo"
+            label={messages.export.background}
             value={background}
             options={[
-              { value: "light", label: "Branco" },
-              { value: "dark", label: "Escuro" },
-              { value: "transparent", label: "Transparente" },
+              { value: "light", label: messages.export.light },
+              { value: "dark", label: messages.export.dark },
+              { value: "transparent", label: messages.export.transparent },
             ]}
             onChange={setBackground}
           />
           <Segmented<number>
-            label="Escala do PNG"
+            label={messages.export.scale}
             value={scale}
             options={SCALES.map((value) => ({ value, label: `${value}×` }))}
             onChange={setScale}
@@ -144,12 +146,12 @@ export function ExportDialog({ onClose }: ExportDialogProps) {
 
         <footer className={styles.footer}>
           <span className={status?.error ? styles.error : styles.info} role="status">
-            {status?.message ?? (pngSize ? `PNG de ${pngSize.width} × ${pngSize.height} px` : "")}
+            {status?.message ?? (pngSize ? messages.export.size(pngSize.width, pngSize.height) : "")}
           </span>
           <div className={styles.actions}>
             {canCopyImage() && (
-              <Button icon={LuCopy} disabled={disabled} onClick={() => run(() => copyPng(elements, options), "PNG copiado.")}>
-                Copiar PNG
+              <Button icon={LuCopy} disabled={disabled} onClick={() => run(() => copyPng(elements, options), messages.export.copied)}>
+                {messages.export.copyPng}
               </Button>
             )}
             <Button icon={LuDownload} disabled={disabled} onClick={() => run(() => downloadSvg(elements, options, name))}>

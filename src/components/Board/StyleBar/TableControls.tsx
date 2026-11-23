@@ -41,7 +41,8 @@ import { useBoardStore, useBoardStoreApi } from "../../../store/boardStoreContex
 import { IconButton } from "../../../ui/IconButton/IconButton";
 import { PanelSection } from "../../../ui/Panel/Panel";
 import { AUTO_COLOR, ColorField } from "./ColorField";
-import { ALIGN_OPTIONS } from "./alignOptions";
+import { alignOptions } from "./alignOptions";
+import { useMessages } from "../../../i18n/useMessages";
 import { OptionGroup } from "./StyleControls";
 import { selectSingleTable } from "./selectors";
 import { useCellSwatches, useFillSwatches } from "./swatches";
@@ -97,6 +98,7 @@ function TableControlsContent({ table }: { table: TableElement }) {
   const { preview, commit } = useTablePreview(table.id);
   const fillSwatches = useFillSwatches();
   const cellSwatches = useCellSwatches();
+  const messages = useMessages();
   const { preview: previewStyle, commit: commitStyle } = useStylePreview();
   const setStyle = useBoardStore((s) => s.setStyle);
 
@@ -127,11 +129,11 @@ function TableControlsContent({ table }: { table: TableElement }) {
 
   return (
     <>
-      <PanelSection title="Linhas">
+      <PanelSection title={messages.table.rows}>
         <div className={styles.options}>
           <IconButton
             icon={LuBetweenVerticalStart}
-            label="Inserir linha acima"
+            label={messages.table.insertRowAbove}
             size="sm"
             tooltipSide="bottom"
             disabled={onTitle}
@@ -139,7 +141,7 @@ function TableControlsContent({ table }: { table: TableElement }) {
           />
           <IconButton
             icon={LuBetweenVerticalEnd}
-            label="Inserir linha abaixo"
+            label={messages.table.insertRowBelow}
             size="sm"
             tooltipSide="bottom"
             onClick={() =>
@@ -148,7 +150,7 @@ function TableControlsContent({ table }: { table: TableElement }) {
           />
           <IconButton
             icon={LuTableRowsSplit}
-            label="Apagar linha"
+            label={messages.table.deleteRow}
             size="sm"
             tooltipSide="bottom"
             disabled={onTitle || table.cells.length <= 1}
@@ -156,11 +158,11 @@ function TableControlsContent({ table }: { table: TableElement }) {
           />
         </div>
       </PanelSection>
-      <PanelSection title="Colunas">
+      <PanelSection title={messages.table.columns}>
         <div className={styles.options}>
           <IconButton
             icon={LuBetweenHorizontalStart}
-            label="Inserir coluna à esquerda"
+            label={messages.table.insertColumnLeft}
             size="sm"
             tooltipSide="bottom"
             disabled={onTitle}
@@ -168,7 +170,7 @@ function TableControlsContent({ table }: { table: TableElement }) {
           />
           <IconButton
             icon={LuBetweenHorizontalEnd}
-            label="Inserir coluna à direita"
+            label={messages.table.insertColumnRight}
             size="sm"
             tooltipSide="bottom"
             disabled={onTitle}
@@ -176,7 +178,7 @@ function TableControlsContent({ table }: { table: TableElement }) {
           />
           <IconButton
             icon={LuTableColumnsSplit}
-            label="Apagar coluna"
+            label={messages.table.deleteColumn}
             size="sm"
             tooltipSide="bottom"
             disabled={onTitle || table.columns.length <= 1}
@@ -185,17 +187,17 @@ function TableControlsContent({ table }: { table: TableElement }) {
         </div>
         {!onTitle && (
           <OptionGroup
-            options={ALIGN_OPTIONS}
+            options={alignOptions(messages)}
             value={getColumnAlign(table, cell.column)}
             onChange={(align) => apply((t) => setColumnAlign(t, cell.column, align))}
           />
         )}
       </PanelSection>
-      <PanelSection title="Células">
+      <PanelSection title={messages.table.cells}>
         <div className={styles.options}>
           <IconButton
             icon={LuTableCellsMerge}
-            label="Mesclar células (Shift+clique marca o intervalo)"
+            label={messages.table.merge}
             size="sm"
             tooltipSide="bottom"
             disabled={!range || !canMergeRange(table, range)}
@@ -205,7 +207,7 @@ function TableControlsContent({ table }: { table: TableElement }) {
           />
           <IconButton
             icon={LuTableCellsSplit}
-            label="Desfazer mesclagem"
+            label={messages.table.unmerge}
             size="sm"
             tooltipSide="bottom"
             disabled={!isMergedCell(table, cell)}
@@ -213,11 +215,11 @@ function TableControlsContent({ table }: { table: TableElement }) {
           />
         </div>
       </PanelSection>
-      <PanelSection title="Cabeçalho">
+      <PanelSection title={messages.table.header}>
         <div className={styles.options}>
           <IconButton
             icon={LuHeading}
-            label="Título acima das colunas"
+            label={messages.table.title}
             size="sm"
             tooltipSide="bottom"
             active={hasTitle(table)}
@@ -228,7 +230,7 @@ function TableControlsContent({ table }: { table: TableElement }) {
           />
           <IconButton
             icon={LuPanelTop}
-            label="Primeira linha como cabeçalho"
+            label={messages.table.headerRow}
             size="sm"
             tooltipSide="bottom"
             active={table.headerRow}
@@ -237,7 +239,7 @@ function TableControlsContent({ table }: { table: TableElement }) {
         </div>
         {(table.headerRow || hasTitle(table)) && (
           <ColorField
-            title="Cor do cabeçalho"
+            title={messages.table.headerColor}
             value={table.headerFill}
             swatches={fillSwatches}
             onChange={(color) => apply((t) => setHeaderFill(t, color))}
@@ -246,9 +248,9 @@ function TableControlsContent({ table }: { table: TableElement }) {
           />
         )}
       </PanelSection>
-      <PanelSection title="Corpo">
+      <PanelSection title={messages.table.body}>
         <ColorField
-          title="Cor do corpo"
+          title={messages.table.bodyColor}
           value={table.style.fillColor}
           swatches={fillSwatches}
           onChange={(color) => setStyle({ fillColor: color })}
@@ -257,9 +259,9 @@ function TableControlsContent({ table }: { table: TableElement }) {
         />
       </PanelSection>
       {!onTitle && (
-        <PanelSection title="Célula selecionada">
+        <PanelSection title={messages.table.selectedCell}>
           <ColorField
-            title="Cor da célula"
+            title={messages.table.cellColor}
             value={cellFill ?? AUTO_COLOR}
             swatches={cellSwatches}
             onChange={(color) => apply((t) => setCellFill(t, cell, toCellFill(color)))}

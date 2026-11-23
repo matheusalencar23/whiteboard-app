@@ -5,8 +5,7 @@ import { Menu, type MenuEntry } from "../../../ui/Menu/Menu";
 import { useBoardStore, useBoardStoreApi } from "../../../store/boardStoreContext";
 import { SHORTCUTS, formatShortcut } from "../shortcuts";
 import { exportBoard, importBoard } from "../boardFileActions";
-
-const MENU_LABEL = "Menu do board";
+import { useMessages } from "../../../i18n/useMessages";
 
 interface BoardMenuProps {
   onRename: () => void;
@@ -18,31 +17,32 @@ export function BoardMenu({ onRename }: BoardMenuProps) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const close = useCallback(() => setAnchor(null), []);
   const config = useBoardStore((s) => s.config);
+  const messages = useMessages();
 
   const fileEntries = [
     config.openFile && {
       id: "open",
-      label: SHORTCUTS.openFile.label,
+      label: messages.shortcuts.openFile,
       icon: LuFolderOpen,
       shortcut: formatShortcut(SHORTCUTS.openFile.keys),
       onSelect: () => void importBoard(boardStore),
     },
     config.saveFile && {
       id: "save",
-      label: SHORTCUTS.saveFile.label,
+      label: messages.shortcuts.saveFile,
       icon: LuDownload,
       shortcut: formatShortcut(SHORTCUTS.saveFile.keys),
       onSelect: () => exportBoard(boardStore),
     },
     config.exportImage && {
       id: "export",
-      label: SHORTCUTS.exportImage.label,
+      label: messages.shortcuts.exportImage,
       icon: LuImageDown,
       shortcut: formatShortcut(SHORTCUTS.exportImage.keys),
       onSelect: () => boardStore.getState().setExportOpen(true),
     },
   ].filter((entry) => entry !== false);
-  const renameEntries: MenuEntry[] = config.rename ? [{ id: "rename", label: "Renomear", icon: LuPencil, onSelect: onRename }] : [];
+  const renameEntries: MenuEntry[] = config.rename ? [{ id: "rename", label: messages.board.rename, icon: LuPencil, onSelect: onRename }] : [];
   const entries: MenuEntry[] =
     fileEntries.length > 0 && renameEntries.length > 0 ? [...fileEntries, "separator", ...renameEntries] : [...fileEntries, ...renameEntries];
 
@@ -50,7 +50,7 @@ export function BoardMenu({ onRename }: BoardMenuProps) {
     <div ref={anchorRef}>
       <IconButton
         icon={LuMenu}
-        label={MENU_LABEL}
+        label={messages.board.menu}
         size="sm"
         tooltipSide="bottom"
         hasPopup
@@ -58,7 +58,7 @@ export function BoardMenu({ onRename }: BoardMenuProps) {
         active={anchor !== null}
         onClick={() => setAnchor((open) => (open ? null : anchorRef.current))}
       />
-      {anchor && <Menu label={MENU_LABEL} anchor={anchor} entries={entries} onClose={close} />}
+      {anchor && <Menu label={messages.board.menu} anchor={anchor} entries={entries} onClose={close} />}
     </div>
   );
 }

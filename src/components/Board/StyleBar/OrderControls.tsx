@@ -6,13 +6,14 @@ import { type BoardState } from "../../../store/boardStore";
 import { useBoardStore } from "../../../store/boardStoreContext";
 import { IconButton } from "../../../ui/IconButton/IconButton";
 import { PanelSection } from "../../../ui/Panel/Panel";
-import { SHORTCUTS, formatShortcut, type Shortcut } from "../shortcuts";
+import { SHORTCUTS, formatShortcut, type ShortcutId } from "../shortcuts";
+import { useMessages } from "../../../i18n/useMessages";
 
-const ORDER_ACTIONS: Record<OrderDirection, { shortcut: Shortcut; icon: IconType }> = {
-  front: { shortcut: SHORTCUTS.bringToFront, icon: LuBringToFront },
-  forward: { shortcut: SHORTCUTS.bringForward, icon: LuArrowUp },
-  backward: { shortcut: SHORTCUTS.sendBackward, icon: LuArrowDown },
-  back: { shortcut: SHORTCUTS.sendToBack, icon: LuSendToBack },
+const ORDER_ACTIONS: Record<OrderDirection, { shortcut: ShortcutId; icon: IconType }> = {
+  front: { shortcut: "bringToFront", icon: LuBringToFront },
+  forward: { shortcut: "bringForward", icon: LuArrowUp },
+  backward: { shortcut: "sendBackward", icon: LuArrowDown },
+  back: { shortcut: "sendToBack", icon: LuSendToBack },
 };
 
 function canReorder(direction: OrderDirection) {
@@ -23,12 +24,13 @@ function canReorder(direction: OrderDirection) {
 function OrderButton({ direction }: { direction: OrderDirection }) {
   const enabled = useBoardStore(canReorder(direction));
   const reorderSelection = useBoardStore((s) => s.reorderSelection);
+  const messages = useMessages();
   const { shortcut, icon } = ORDER_ACTIONS[direction];
   return (
     <IconButton
       icon={icon}
-      label={shortcut.label}
-      shortcut={formatShortcut(shortcut.keys)}
+      label={messages.shortcuts[shortcut]}
+      shortcut={formatShortcut(SHORTCUTS[shortcut].keys)}
       size="sm"
       tooltipSide="bottom"
       disabled={!enabled}
@@ -38,8 +40,9 @@ function OrderButton({ direction }: { direction: OrderDirection }) {
 }
 
 export function OrderControls() {
+  const messages = useMessages();
   return (
-    <PanelSection title="Ordem de desenho">
+    <PanelSection title={messages.order.title}>
       <div className={styles.options}>
         {ORDER_DIRECTIONS.map((direction) => (
           <OrderButton key={direction} direction={direction} />

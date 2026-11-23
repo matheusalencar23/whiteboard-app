@@ -8,34 +8,17 @@ import { IconButton } from "../../../ui/IconButton/IconButton";
 import { Panel, PanelSection } from "../../../ui/Panel/Panel";
 import { Popover } from "../../../ui/Popover/Popover";
 import { ArrowheadIcon } from "./ArrowheadIcon";
+import type { Messages } from "../../../i18n/messages";
+import { useMessages } from "../../../i18n/useMessages";
 
-const ARROWHEAD_LABELS: Record<Arrowhead, string> = {
-  none: "Nenhuma",
-  arrow: "Seta",
-  bar: "Barra",
-  cross: "X",
-  triangle: "Triângulo",
-  triangleOutline: "Triângulo vazado",
-  diamond: "Losango",
-  diamondOutline: "Losango vazado",
-  circle: "Círculo",
-  circleOutline: "Círculo vazado",
-  erOne: "Um",
-  erMandOne: "Um e somente um",
-  erMany: "Muitos",
-  erOneToMany: "Um ou muitos",
-  erZeroToOne: "Zero ou um",
-  erZeroToMany: "Zero ou muitos",
-};
-
-const ARROWHEAD_GROUPS: { title: string; arrowheads: Arrowhead[] }[] = [
-  { title: "Básicas", arrowheads: ["none", "arrow", "bar", "cross"] },
+const ARROWHEAD_GROUPS: { title: keyof Messages["arrow"]["groups"]; arrowheads: Arrowhead[] }[] = [
+  { title: "basic", arrowheads: ["none", "arrow", "bar", "cross"] },
   {
-    title: "UML",
+    title: "uml",
     arrowheads: ["triangle", "triangleOutline", "diamond", "diamondOutline", "circle", "circleOutline"],
   },
   {
-    title: "ER",
+    title: "er",
     arrowheads: ["erOne", "erMandOne", "erMany", "erOneToMany", "erZeroToOne", "erZeroToMany"],
   },
 ];
@@ -58,8 +41,6 @@ const PREVIEW_ICONS: Record<ArrowEnd, Record<Arrowhead, IconType>> = {
   end: iconsFor("end", true),
 };
 
-const END_TITLES: Record<ArrowEnd, string> = { start: "Ponta inicial", end: "Ponta final" };
-
 interface ArrowheadPickerProps {
   end: ArrowEnd;
   value: Arrowhead | "mixed";
@@ -71,8 +52,9 @@ export function ArrowheadPicker({ end, value, onChange }: ArrowheadPickerProps) 
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const close = useCallback(() => setAnchor(null), []);
 
-  const title = END_TITLES[end];
-  const current = value === "mixed" ? "Vários" : ARROWHEAD_LABELS[value];
+  const messages = useMessages();
+  const title = messages.arrow[end];
+  const current = value === "mixed" ? messages.common.mixed : messages.arrow.shapes[value];
 
   return (
     <div ref={anchorRef}>
@@ -89,13 +71,13 @@ export function ArrowheadPicker({ end, value, onChange }: ArrowheadPickerProps) 
         <Popover anchor={anchor} side="right" boundary={anchor.closest("aside")} onClose={close}>
           <Panel label={title}>
             {ARROWHEAD_GROUPS.map((group) => (
-              <PanelSection key={group.title} title={group.title}>
+              <PanelSection key={group.title} title={messages.arrow.groups[group.title]}>
                 <div className={styles.grid}>
                   {group.arrowheads.map((arrowhead) => (
                     <IconButton
                       key={arrowhead}
                       icon={ICONS[end][arrowhead]}
-                      label={ARROWHEAD_LABELS[arrowhead]}
+                      label={messages.arrow.shapes[arrowhead]}
                       tooltipSide="top"
                       active={value === arrowhead}
                       onClick={() => {

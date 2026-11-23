@@ -1,6 +1,8 @@
 import styles from "./Help.module.scss";
 import { Keys } from "./Keys";
-import { SHORTCUTS, type Shortcut } from "../shortcuts";
+import { SHORTCUTS, type ShortcutId } from "../shortcuts";
+import type { Messages } from "../../../i18n/messages";
+import { useMessages } from "../../../i18n/useMessages";
 import { TOOLS } from "../Toolbar/tools";
 import type { Tool } from "../../../store/boardStore";
 import { useBoardStore } from "../../../store/boardStoreContext";
@@ -20,106 +22,103 @@ const TOOL_DESCRIPTIONS: Record<Tool, string> = {
 type ConfigCheck = (config: WhiteboardConfig) => boolean;
 
 interface ShortcutRow {
-  label: string;
+  label: (messages: Messages) => string;
   combos: string[][];
   when?: ConfigCheck;
 }
 
 const whenEditable: ConfigCheck = canEdit;
 
-function fromShortcut(shortcut: Shortcut, when?: ConfigCheck): ShortcutRow {
-  return { label: shortcut.label, combos: [shortcut.keys], when };
+function fromShortcut(id: ShortcutId, when?: ConfigCheck): ShortcutRow {
+  return { label: (messages) => messages.shortcuts[id], combos: [SHORTCUTS[id].keys], when };
 }
 
-function editing(shortcut: Shortcut): ShortcutRow {
-  return fromShortcut(shortcut, whenEditable);
+function editingRows(ids: ShortcutId[]): ShortcutRow[] {
+  return ids.map((id) => fromShortcut(id, whenEditable));
 }
 
 const SHORTCUT_GROUPS: { title: string; rows: ShortcutRow[] }[] = [
   {
     title: "Ferramentas",
-    rows: TOOLS.map(({ tool, label, keys }) => ({
-      label,
+    rows: TOOLS.map(({ tool, keys }) => ({
+      label: (messages) => messages.tools[tool],
       combos: keys.map((key) => [key.toUpperCase()]),
       when: (config) => config.tools.includes(tool),
     })),
   },
   {
     title: "Edição",
-    rows: [
-      SHORTCUTS.undo,
-      SHORTCUTS.redo,
-      SHORTCUTS.delete,
-      SHORTCUTS.deselect,
-      SHORTCUTS.duplicate,
-      SHORTCUTS.copy,
-      SHORTCUTS.cut,
-      SHORTCUTS.paste,
-      SHORTCUTS.group,
-      SHORTCUTS.ungroup,
-      SHORTCUTS.bringToFront,
-      SHORTCUTS.bringForward,
-      SHORTCUTS.sendBackward,
-      SHORTCUTS.sendToBack,
-      SHORTCUTS.nudge,
-      SHORTCUTS.nudgeFar,
-    ]
-      .map(editing)
-      .concat(fromShortcut(SHORTCUTS.selectAll, (config) => isToolAllowed(config, "selection"))),
+    rows: editingRows([
+      "undo",
+      "redo",
+      "delete",
+      "deselect",
+      "duplicate",
+      "copy",
+      "cut",
+      "paste",
+      "group",
+      "ungroup",
+      "bringToFront",
+      "bringForward",
+      "sendBackward",
+      "sendToBack",
+      "nudge",
+      "nudgeFar",
+    ]).concat(fromShortcut("selectAll", (config) => isToolAllowed(config, "selection"))),
   },
   {
     title: "Arquivo",
     rows: [
-      fromShortcut(SHORTCUTS.saveFile, (config) => config.saveFile),
-      fromShortcut(SHORTCUTS.openFile, (config) => config.openFile),
-      fromShortcut(SHORTCUTS.exportImage, (config) => config.exportImage),
+      fromShortcut("saveFile", (config) => config.saveFile),
+      fromShortcut("openFile", (config) => config.openFile),
+      fromShortcut("exportImage", (config) => config.exportImage),
     ],
   },
   {
     title: "Texto",
-    rows: [
-      SHORTCUTS.editText,
-      SHORTCUTS.bold,
-      SHORTCUTS.italic,
-      SHORTCUTS.underline,
-      SHORTCUTS.textBigger,
-      SHORTCUTS.textSmaller,
-    ]
-      .map(editing)
-      .concat({ label: SHORTCUTS.confirmText.label, combos: [SHORTCUTS.confirmText.keys, ["Esc"]], when: whenEditable }),
+    rows: editingRows([
+      "editText",
+      "bold",
+      "italic",
+      "underline",
+      "textBigger",
+      "textSmaller",
+    ]).concat({ label: (messages) => messages.shortcuts.confirmText, combos: [SHORTCUTS.confirmText.keys, ["Esc"]], when: whenEditable }),
   },
   {
     title: "Visualização",
     rows: [
-      fromShortcut(SHORTCUTS.zoomIn, (config) => config.zoomControls),
-      fromShortcut(SHORTCUTS.zoomOut, (config) => config.zoomControls),
-      fromShortcut(SHORTCUTS.zoomReset, (config) => config.zoomControls),
-      fromShortcut(SHORTCUTS.library, (config) => config.library),
-      fromShortcut(SHORTCUTS.toggleGrid, (config) => config.grid),
-      fromShortcut(SHORTCUTS.cycleGrid, (config) => config.grid),
-      fromShortcut(SHORTCUTS.toggleTheme, (config) => config.themeToggle),
-      fromShortcut(SHORTCUTS.help),
+      fromShortcut("zoomIn", (config) => config.zoomControls),
+      fromShortcut("zoomOut", (config) => config.zoomControls),
+      fromShortcut("zoomReset", (config) => config.zoomControls),
+      fromShortcut("library", (config) => config.library),
+      fromShortcut("toggleGrid", (config) => config.grid),
+      fromShortcut("cycleGrid", (config) => config.grid),
+      fromShortcut("toggleTheme", (config) => config.themeToggle),
+      fromShortcut("help"),
     ],
   },
   {
     title: "Com o mouse",
     rows: [
-      { label: "Manter a proporção ao desenhar ou redimensionar", combos: [["Shift", "arrastar"]], when: whenEditable },
-      { label: "Girar em passos de 15°", combos: [["Shift", "girar"]], when: whenEditable },
-      { label: "Seta em ângulos de 45° ao desenhar ou arrastar as pontas e os pontos", combos: [["Shift", "arrastar"]], when: whenEditable },
-      { label: "Mover a tela", combos: [["Espaço", "arrastar"], ["botão do meio"], ["roda"]] },
-      { label: "Mover a tela na horizontal", combos: [["Shift", "roda"]] },
-      { label: "Zoom no cursor", combos: [["Ctrl", "roda"], ["pinça"]] },
-      { label: "Escrever um texto, um rótulo ou uma seção da entidade", combos: [["duplo clique"]], when: whenEditable },
-      { label: "Inserir uma forma da biblioteca", combos: [["clique"], ["arrastar para o quadro"]], when: (config) => config.library },
-      { label: "Entrar no grupo para mexer num elemento dele", combos: [["duplo clique"]], when: whenEditable },
-      { label: "Levar o texto da seta ao longo dela (com a seta selecionada)", combos: [["arrastar o texto"]], when: whenEditable },
+      { label: () => "Manter a proporção ao desenhar ou redimensionar", combos: [["Shift", "arrastar"]], when: whenEditable },
+      { label: () => "Girar em passos de 15°", combos: [["Shift", "girar"]], when: whenEditable },
+      { label: () => "Seta em ângulos de 45° ao desenhar ou arrastar as pontas e os pontos", combos: [["Shift", "arrastar"]], when: whenEditable },
+      { label: () => "Mover a tela", combos: [["Espaço", "arrastar"], ["botão do meio"], ["roda"]] },
+      { label: () => "Mover a tela na horizontal", combos: [["Shift", "roda"]] },
+      { label: () => "Zoom no cursor", combos: [["Ctrl", "roda"], ["pinça"]] },
+      { label: () => "Escrever um texto, um rótulo ou uma seção da entidade", combos: [["duplo clique"]], when: whenEditable },
+      { label: () => "Inserir uma forma da biblioteca", combos: [["clique"], ["arrastar para o quadro"]], when: (config) => config.library },
+      { label: () => "Entrar no grupo para mexer num elemento dele", combos: [["duplo clique"]], when: whenEditable },
+      { label: () => "Levar o texto da seta ao longo dela (com a seta selecionada)", combos: [["arrastar o texto"]], when: whenEditable },
     ],
   },
 ];
 
 export function ShortcutTable() {
   const config = useBoardStore((s) => s.config);
+  const messages = useMessages();
   const groups = SHORTCUT_GROUPS.map((group) => ({
     ...group,
     rows: group.rows.filter((row) => !row.when || row.when(config)),
@@ -132,8 +131,8 @@ export function ShortcutTable() {
           <h3 className={styles.groupTitle}>{group.title}</h3>
           <dl className={styles.table}>
             {group.rows.map((row) => (
-              <div key={row.label} className={styles.row}>
-                <dt>{row.label}</dt>
+              <div key={row.label(messages)} className={styles.row}>
+                <dt>{row.label(messages)}</dt>
                 <dd>
                   <Keys combos={row.combos} />
                 </dd>
@@ -148,16 +147,17 @@ export function ShortcutTable() {
 
 export function ToolList() {
   const tools = useBoardStore((s) => s.config.tools);
+  const messages = useMessages();
   return (
     <ul className={styles.tools}>
-      {TOOLS.filter(({ tool }) => tools.includes(tool)).map(({ tool, label, icon: Icon, keys }) => (
+      {TOOLS.filter(({ tool }) => tools.includes(tool)).map(({ tool, icon: Icon, keys }) => (
         <li key={tool} className={styles.tool}>
           <span className={styles.toolIcon}>
             <Icon />
           </span>
           <span className={styles.toolText}>
             <span className={styles.toolName}>
-              {label} <Keys combos={keys.map((key) => [key.toUpperCase()])} />
+              {messages.tools[tool]} <Keys combos={keys.map((key) => [key.toUpperCase()])} />
             </span>
             <span>{TOOL_DESCRIPTIONS[tool]}</span>
           </span>

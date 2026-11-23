@@ -9,10 +9,11 @@ import type { GridStyle } from "../../../lib/render/grid";
 import { SHORTCUTS, formatShortcut } from "../shortcuts";
 import { canGroup, canUngroup } from "../../../lib/elements/groups";
 import { canEdit } from "../../../store/whiteboardConfig";
+import { useMessages } from "../../../i18n/useMessages";
 
-const GRID_OPTIONS: { style: GridStyle; label: string; icon: IconType }[] = [
-  { style: "dots", label: "Grade em pontos", icon: LuGrip },
-  { style: "lines", label: "Grade em linhas", icon: LuGrid3X3 },
+const GRID_OPTIONS: { style: GridStyle; label: "gridDots" | "gridLines"; icon: IconType }[] = [
+  { style: "dots", label: "gridDots", icon: LuGrip },
+  { style: "lines", label: "gridLines", icon: LuGrid3X3 },
 ];
 
 function shortcutLabel(keys: string[]) {
@@ -20,6 +21,7 @@ function shortcutLabel(keys: string[]) {
 }
 
 export function Toolbar() {
+  const messages = useMessages();
   const tool = useBoardStore((s) => s.tool);
   const setTool = useBoardStore((s) => s.setTool);
   const showGrid = useBoardStore((s) => s.showGrid);
@@ -34,12 +36,12 @@ export function Toolbar() {
   const editable = canEdit(config);
 
   return (
-    <nav className={styles.toolbar} aria-label="Ferramentas">
-      {tools.map(({ tool: t, label, icon, keys }) => (
+    <nav className={styles.toolbar} aria-label={messages.toolbar.label}>
+      {tools.map(({ tool: t, icon, keys }) => (
         <IconButton
           key={t}
           icon={icon}
-          label={label}
+          label={messages.tools[t]}
           shortcut={shortcutLabel(keys)}
           badge={keys.find((k) => /\d/.test(k))}
           active={tool === t}
@@ -50,7 +52,7 @@ export function Toolbar() {
       {config.library && (
         <IconButton
           icon={LuShapes}
-          label="Biblioteca de formas"
+          label={messages.toolbar.library}
           shortcut={formatShortcut(SHORTCUTS.library.keys)}
           active={libraryOpen}
           activeMarker
@@ -74,7 +76,7 @@ export function Toolbar() {
             <IconButton
               key={style}
               icon={icon}
-              label={label}
+              label={messages.toolbar[label]}
               shortcut={formatShortcut((gridStyle === style ? SHORTCUTS.toggleGrid : SHORTCUTS.cycleGrid).keys)}
               active={active}
               activeMarker
@@ -87,6 +89,7 @@ export function Toolbar() {
 }
 
 function EditButtons() {
+  const messages = useMessages();
   const boardStore = useBoardStoreApi();
   const canUndo = useBoardStore((s) => s.past.length > 0);
   const canRedo = useBoardStore((s) => s.future.length > 0);
@@ -101,25 +104,25 @@ function EditButtons() {
 
   return (
     <>
-      <IconButton icon={LuUndo2} label="Desfazer" shortcut={formatShortcut(SHORTCUTS.undo.keys)} disabled={!canUndo} onClick={undo} />
-      <IconButton icon={LuRedo2} label="Refazer" shortcut={formatShortcut(SHORTCUTS.redo.keys)} disabled={!canRedo} onClick={redo} />
+      <IconButton icon={LuUndo2} label={messages.shortcuts.undo} shortcut={formatShortcut(SHORTCUTS.undo.keys)} disabled={!canUndo} onClick={undo} />
+      <IconButton icon={LuRedo2} label={messages.shortcuts.redo} shortcut={formatShortcut(SHORTCUTS.redo.keys)} disabled={!canRedo} onClick={redo} />
       <IconButton
         icon={LuTrash2}
-        label="Apagar seleção"
+        label={messages.shortcuts.delete}
         shortcut={formatShortcut(SHORTCUTS.delete.keys)}
         disabled={!hasSelection}
         onClick={() => deleteElements(boardStore.getState().selectedIds)}
       />
       <IconButton
         icon={LuGroup}
-        label={SHORTCUTS.group.label}
+        label={messages.shortcuts.group}
         shortcut={formatShortcut(SHORTCUTS.group.keys)}
         disabled={!groupAllowed}
         onClick={groupSelection}
       />
       <IconButton
         icon={LuUngroup}
-        label={SHORTCUTS.ungroup.label}
+        label={messages.shortcuts.ungroup}
         shortcut={formatShortcut(SHORTCUTS.ungroup.keys)}
         disabled={!ungroupAllowed}
         onClick={ungroupSelection}

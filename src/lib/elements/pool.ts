@@ -18,8 +18,6 @@ export interface PoolChange {
   selectedIds: string[];
 }
 
-const LANE_NAME = "Raia";
-
 function isShapeOfKind(element: BoardElement, kind: ShapeElement["kind"]): element is ShapeElement {
   return element.type === "shape" && element.kind === kind;
 }
@@ -96,10 +94,6 @@ function getContentBelow(elements: BoardElement[], pool: ShapeElement, splitY: n
   });
 }
 
-function nextLaneName(lanes: ShapeElement[]): string {
-  return `${LANE_NAME} ${lanes.length + 1}`;
-}
-
 function applyChanges(elements: BoardElement[], changed: Map<string, BoardElement>, inserted?: { after: string; element: BoardElement }) {
   return elements.flatMap((el) => {
     const current = changed.get(el.id) ?? el;
@@ -107,7 +101,11 @@ function applyChanges(elements: BoardElement[], changed: Map<string, BoardElemen
   });
 }
 
-export function addPoolLane(elements: BoardElement[], selectedIds: string[]): PoolChange | null {
+export function addPoolLane(
+  elements: BoardElement[],
+  selectedIds: string[],
+  laneName: (index: number) => string,
+): PoolChange | null {
   const target = getPoolTarget(elements, selectedIds);
   if (!target) return null;
   const { pool, lanes, lane } = target;
@@ -122,7 +120,7 @@ export function addPoolLane(elements: BoardElement[], selectedIds: string[]): Po
     ...shiftDown(source, pool, height),
     id: nanoid(),
     seed: rough.newSeed(),
-    label: source.label && { ...source.label, text: nextLaneName(lanes) },
+    label: source.label && { ...source.label, text: laneName(lanes.length + 1) },
   };
   const changed = new Map<string, BoardElement>([[pool.id, growDown(pool, height)]]);
   for (const el of below) changed.set(el.id, shiftDown(el, pool, height));

@@ -11,6 +11,7 @@ import type {
   VerticalAlign,
 } from "../lib/elements/types";
 import type { ShortcutId } from "../components/Board/shortcuts";
+import type { LibraryGroupId, LibraryItemId, LibraryItemTexts } from "../lib/elements/library";
 
 export type PaletteColor = keyof Theme["palette"];
 
@@ -115,6 +116,8 @@ export interface Messages {
     search: string;
     empty: string;
     hint: string;
+    groups: Record<LibraryGroupId, string>;
+    items: Record<LibraryItemId, LibraryItemTexts>;
   };
   export: {
     title: string;
@@ -219,5 +222,31 @@ export interface Messages {
   };
   order: {
     title: string;
+  };
+  content: {
+    untitledBoard: string;
+    lane: string;
+    numberedLane: (index: number) => string;
+    pool: string;
+    group: string;
+    object: string;
+    actor: string;
+    system: string;
+    classSections: readonly string[];
+    interfaceSections: readonly string[];
+    keyAttribute: string;
+    entity: string;
+    entityRows: readonly (readonly string[])[];
+    tableColumn: (index: number) => string;
+    tableTitle: string;
+    task: string;
+    server: string;
+    person: string;
+    softwareSystem: string;
+    button: string;
+    textField: string;
+    option: string;
+    cardTitle: string;
+    cardDescription: string;
   };
 }

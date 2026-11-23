@@ -77,8 +77,6 @@ export function isMergedCell(el: TableElement, position: CellPosition): boolean 
 
 export const TITLE_ROW = -1;
 
-export const TITLE_PLACEHOLDER = "Título";
-
 export function hasTitle(el: TableElement): boolean {
   return el.title !== undefined;
 }

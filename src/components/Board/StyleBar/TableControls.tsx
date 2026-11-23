@@ -19,7 +19,6 @@ import {
   deleteRow,
   insertColumn,
   insertRow,
-  TITLE_PLACEHOLDER,
   canMergeRange,
   getColumnAlign,
   getMergeRange,
@@ -225,7 +224,7 @@ function TableControlsContent({ table }: { table: TableElement }) {
             active={hasTitle(table)}
             onClick={() => {
               const next = hasTitle(table) ? { row: 0, column: 0 } : cell;
-              apply((t) => setTitle(t, hasTitle(t) ? undefined : TITLE_PLACEHOLDER), next);
+              apply((t) => setTitle(t, hasTitle(t) ? undefined : messages.content.tableTitle), next);
             }}
           />
           <IconButton

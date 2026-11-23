@@ -5,6 +5,7 @@ import { createLibraryElements, type LibraryItem } from "../../../lib/elements/l
 import { getElementBounds, renderElement } from "../../../lib/elements/registry";
 import { DEFAULT_STYLE, DEFAULT_TEXT_STYLE } from "../../../lib/elements/types";
 import { useColorScheme } from "../../useColorScheme";
+import { useMessages } from "../../../i18n/useMessages";
 import styles from "./LibraryPanel.module.scss";
 
 const PREVIEW_WIDTH = 64;
@@ -22,6 +23,7 @@ interface LibraryPreviewProps {
 export function LibraryPreview({ item, fontsVersion }: LibraryPreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scheme = useColorScheme();
+  const content = useMessages().content;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -35,7 +37,7 @@ export function LibraryPreview({ item, fontsVersion }: LibraryPreviewProps) {
     );
     const style = { ...DEFAULT_STYLE, strokeWidth: PREVIEW_STROKE / fitScale, strokeRoughness: 0.6 };
     const bounds = { x: 0, y: 0, width: item.width, height: item.height };
-    const elements = createLibraryElements(item, bounds, style, DEFAULT_TEXT_STYLE);
+    const elements = createLibraryElements(item, bounds, style, DEFAULT_TEXT_STYLE, content);
     const drawn = unionBounds(elements.map(getElementBounds));
     const scale = Math.min(
       fitScale,
@@ -55,7 +57,7 @@ export function LibraryPreview({ item, fontsVersion }: LibraryPreviewProps) {
 
     const rc = rough.canvas(canvas);
     for (const element of elements) renderElement({ ...element, seed: PREVIEW_SEED }, rc, ctx, null, scheme);
-  }, [item, fontsVersion, scheme]);
+  }, [item, fontsVersion, scheme, content]);
 
   return (
     <canvas

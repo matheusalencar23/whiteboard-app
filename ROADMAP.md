@@ -67,7 +67,6 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
   - **Tema e estilos:** as variáveis (`--wb-*`) já ficam na raiz do board, e o board ocupa o contêiner pai. O tema próprio já entra pelo `config.theme`. Faltam os SCSS modules virarem um CSS gerado no build, importado pelo usuário (`import "pacote/style.css"`). Avaliar também se o fundo escurecido do `Modal` deve cobrir só o board quando ele não ocupa a tela toda (hoje cobre a janela).
   - **SSR:** nenhum módulo do board toca no `window` ou no `document` fora de efeitos e handlers (só o `appBoardSaving.ts`, que é do app), e isso precisa continuar assim. Falta o README documentar o uso com `"use client"` ou importação dinâmica.
   - **Fontes:** o board já acrescenta a folha do Google Fonts sozinho, e `loadFonts={false}` desliga. Falta o README do pacote dizer as famílias ("Caveat", "IBM Plex Sans" e "IBM Plex Mono") para quem hospeda por conta própria, e que a exportação SVG ainda busca os subconjuntos no Google Fonts mesmo com `loadFonts={false}`. Trazer os arquivos das fontes no pacote fica para quando alguém pedir.
-  - **Idioma da interface:** o dicionário (`Messages`, com pt-BR e inglês), as props `locale` e `messages`, a interface do board e a ajuda já usam o dicionário (veja o CLAUDE.md). Falta o catálogo da biblioteca (nomes dos grupos e itens, palavras de busca e o texto que os itens põem no board) e os textos que viram conteúdo (o nome padrão "Board sem título", a "Raia N" nova da piscina, os rótulos padrão das tabelas).
   - **`react-color`:** está sem manutenção há anos e não declara suporte ao React 19, o que gera aviso de peer dependency em quem instala. É usado só no `ColorPicker`: trocar por um seletor próprio (saturação e matiz) ou pelo `react-colorful`.
   - **Tamanho:** o build de hoje tem uns 736 KB de JS num arquivo só. No pacote, carregar sob demanda o que é ocasional (diálogo de exportação com as fontes do SVG, painel da biblioteca, ajuda) e medir o tamanho na CI (`size-limit`).
 - **Como:**
@@ -118,7 +117,7 @@ O painel, o catálogo, o tipo genérico `shape`, a forma de compartimentos (`com
   - **Depois da primeira versão:** acessibilidade do canvas (anunciar seleção e criação por `aria-live`) e o app publicado no GitHub Pages como demonstração.
 - **Por quê:** permite usar o quadro branco dentro de outros projetos (documentação, ferramentas internas, apps com diagramas) sem copiar o código, mantendo uma base só.
 - **Ordem:** depende pouco dos outros itens, mas fica mais barato se as decisões acima forem seguidas desde já. O tema ativo hoje sai da store (`themeMode`) e é aplicado no `document.documentElement` pelo `App`; no pacote, passa a ser por instância. Sequência sugerida:
-  1. Dicionário de textos, troca do `react-color` e carregamento sob demanda.
+  1. Troca do `react-color` e carregamento sob demanda.
   2. Versão no formato salvo, migrações e os testes delas.
   3. Checagens de pacote na CI, Changesets, README com três exemplos (só leitura, salvar numa API, trocar a cena por fora) e publicação da `0.1.0`.
   4. Depois: histórico por alterações e a sincronização de abas (nível 2).

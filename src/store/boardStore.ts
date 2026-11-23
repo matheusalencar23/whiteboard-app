@@ -25,7 +25,6 @@ import {
 } from "../lib/elements/groups";
 import type { Point } from "../lib/types";
 import {
-  DEFAULT_BOARD_NAME,
   DEFAULT_PREFERENCES,
   normalizeBoardName,
   type BoardContent,
@@ -286,7 +285,7 @@ export function createBoardStore({
         const elements = patch.elements ? updateBoundArrows(patch.elements, []) : state.elements;
         const recorded = history === "record" && elements !== state.elements;
         return {
-          ...(patch.name !== undefined && { name: normalizeBoardName(patch.name) ?? DEFAULT_BOARD_NAME }),
+          ...(patch.name !== undefined && { name: normalizeBoardName(patch.name) ?? state.messages.content.untitledBoard }),
           ...(patch.viewport && { viewport: patch.viewport }),
           elements,
           ...sanitizeTransient(state, elements),
@@ -297,7 +296,7 @@ export function createBoardStore({
     }
 
     return {
-      name: scene.name ?? DEFAULT_BOARD_NAME,
+      name: normalizeBoardName(scene.name) ?? messages.content.untitledBoard,
       elements: syncIndices(scene.elements ?? []),
       selectedIds: [],
       editingGroupId: null,
@@ -401,7 +400,7 @@ export function createBoardStore({
           future: [],
         })),
 
-      setBoardName: (value) => set({ name: normalizeBoardName(value) ?? DEFAULT_BOARD_NAME }),
+      setBoardName: (value) => set((state) => ({ name: normalizeBoardName(value) ?? state.messages.content.untitledBoard })),
 
       updateElements: (updated) =>
         set((state) => {
@@ -493,8 +492,10 @@ export function createBoardStore({
         }),
       changePoolLanes: (change) =>
         set((state) => {
-          const apply = change === "add" ? addPoolLane : removePoolLane;
-          const result = apply(state.elements, state.selectedIds);
+          const result =
+            change === "add"
+              ? addPoolLane(state.elements, state.selectedIds, state.messages.content.numberedLane)
+              : removePoolLane(state.elements, state.selectedIds);
           if (!result) return {};
           return {
             elements: updateBoundArrows(result.elements, result.changedIds, state.elements),

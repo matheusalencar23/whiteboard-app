@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { LuChevronRight, LuSearch, LuX } from "react-icons/lu";
-import { LIBRARY_GROUPS, LIBRARY_ITEMS, matchesLibraryItem, type LibraryItem } from "../../../lib/elements/library";
+import { LIBRARY_GROUP_IDS, LIBRARY_ITEMS, matchesLibraryItem, type LibraryItem } from "../../../lib/elements/library";
 import { IconButton } from "../../../ui/IconButton/IconButton";
 import { useBoardStore, useBoardStoreApi } from "../../../store/boardStoreContext";
 import { LibraryPreview } from "./LibraryPreview";
@@ -11,6 +11,7 @@ import styles from "./LibraryPanel.module.scss";
 
 function LibraryTile({ item, fontsVersion }: { item: LibraryItem; fontsVersion: number }) {
   const boardStore = useBoardStoreApi();
+  const messages = useMessages();
 
   function handleDragStart(e: React.DragEvent<HTMLButtonElement>) {
     e.dataTransfer.setData(LIBRARY_DRAG_TYPE, item.id);
@@ -27,7 +28,7 @@ function LibraryTile({ item, fontsVersion }: { item: LibraryItem; fontsVersion: 
         onClick={() => insertLibraryItem(boardStore, item)}
       >
         <LibraryPreview item={item} fontsVersion={fontsVersion} />
-        <span className={styles.tileName}>{item.name}</span>
+        <span className={styles.tileName}>{messages.library.items[item.id].name}</span>
       </button>
     </li>
   );
@@ -42,9 +43,12 @@ export function LibraryPanel() {
   const messages = useMessages();
 
   const searching = query.trim() !== "";
-  const groups = LIBRARY_GROUPS.map((group) => ({
-    ...group,
-    items: LIBRARY_ITEMS.filter((item) => item.group === group.id && (!searching || matchesLibraryItem(item, query))),
+  const groups = LIBRARY_GROUP_IDS.map((id) => ({
+    id,
+    name: messages.library.groups[id],
+    items: LIBRARY_ITEMS.filter(
+      (item) => item.group === id && (!searching || matchesLibraryItem(messages.library.items[item.id], query)),
+    ),
   })).filter((group) => group.items.length > 0);
 
   return (

@@ -37,12 +37,12 @@ export const ZOOM_STEPS = [0.1, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4, 6, 8, 10
 
 const ZOOM_EPSILON = 0.001;
 
-export function nextZoomStep(zoom: number, direction: 1 | -1): number {
+export function nextZoomStep(zoom: number, direction: 1 | -1, steps: readonly number[] = ZOOM_STEPS): number {
   const step =
     direction === 1
-      ? ZOOM_STEPS.find((s) => s > zoom + ZOOM_EPSILON)
-      : ZOOM_STEPS.findLast((s) => s < zoom - ZOOM_EPSILON);
-  return step ?? (direction === 1 ? MAX_ZOOM : MIN_ZOOM);
+      ? steps.find((s) => s > zoom + ZOOM_EPSILON)
+      : steps.findLast((s) => s < zoom - ZOOM_EPSILON);
+  return step ?? zoom;
 }
 
 export function zoomTo(viewport: Viewport, screenPoint: Point, zoom: number): Viewport {

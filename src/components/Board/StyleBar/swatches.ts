@@ -1,23 +1,28 @@
+import { useMemo } from "react";
 import { TRANSPARENT } from "../../../lib/elements/types";
-import { lightTheme } from "../../../lib/theme";
-import type { Swatch } from "./ColorField";
+import { useBoardStore } from "../../../store/boardStoreContext";
+import { AUTO_COLOR, type Swatch } from "./ColorField";
 
-const { palette } = lightTheme;
+const NO_FILL: Swatch = { color: TRANSPARENT, label: "Sem preenchimento" };
+const AUTO_TEXT_COLOR: Swatch = { color: AUTO_COLOR, label: "Automática (cor do contorno)" };
+const NO_CELL_COLOR: Swatch = { color: AUTO_COLOR, label: "Sem cor própria" };
 
-export const STROKE_SWATCHES: Swatch[] = [
-  { color: palette.ink, label: "Preto" },
-  { color: palette.red, label: "Vermelho" },
-  { color: palette.green, label: "Verde" },
-  { color: palette.blue, label: "Azul" },
-  { color: palette.amber, label: "Âmbar" },
-];
+export function useStrokeSwatches(): Swatch[] {
+  const colors = useBoardStore((s) => s.config.strokeColors);
+  return useMemo(() => [...colors], [colors]);
+}
 
-export const FILL_SWATCHES: Swatch[] = [
-  { color: TRANSPARENT, label: "Sem preenchimento" },
-  { color: palette.paper, label: "Branco" },
-  { color: palette.grayLight, label: "Cinza claro" },
-  { color: palette.redLight, label: "Vermelho claro" },
-  { color: palette.greenLight, label: "Verde claro" },
-  { color: palette.blueLight, label: "Azul claro" },
-  { color: palette.amberLight, label: "Âmbar claro" },
-];
+export function useFillSwatches(): Swatch[] {
+  const colors = useBoardStore((s) => s.config.fillColors);
+  return useMemo(() => [NO_FILL, ...colors], [colors]);
+}
+
+export function useTextSwatches(): Swatch[] {
+  const colors = useBoardStore((s) => s.config.strokeColors);
+  return useMemo(() => [AUTO_TEXT_COLOR, ...colors], [colors]);
+}
+
+export function useCellSwatches(): Swatch[] {
+  const fill = useFillSwatches();
+  return useMemo(() => [NO_CELL_COLOR, ...fill], [fill]);
+}

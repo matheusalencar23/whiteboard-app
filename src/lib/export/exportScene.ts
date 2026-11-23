@@ -10,6 +10,11 @@ export interface ExportOptions {
   background: boolean;
   scheme: ColorScheme;
   scale: number;
+  backgroundColor?: string;
+}
+
+function exportBackground(options: Pick<ExportOptions, "scheme" | "backgroundColor">): string {
+  return options.backgroundColor ?? getTheme(options.scheme).canvas.exportBackground;
 }
 
 export const EXPORT_PADDING = 24;
@@ -48,7 +53,7 @@ export function renderToCanvas(elements: BoardElement[], options: ExportOptions)
   if (!ctx) return null;
 
   if (options.background) {
-    ctx.fillStyle = getTheme(options.scheme).canvas.exportBackground;
+    ctx.fillStyle = exportBackground(options);
     ctx.fillRect(0, 0, size.width, size.height);
   }
   ctx.setTransform(size.scale, 0, 0, size.scale, -bounds.x * size.scale, -bounds.y * size.scale);
@@ -65,7 +70,7 @@ export function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
 
 export async function renderToSvg(
   elements: BoardElement[],
-  options: Pick<ExportOptions, "background" | "scheme">,
+  options: Pick<ExportOptions, "background" | "scheme" | "backgroundColor">,
 ): Promise<string | null> {
   const bounds = getExportBounds(elements);
   if (!bounds) return null;
@@ -78,6 +83,6 @@ export async function renderToSvg(
   const fontStyles = await buildFontStyles(collectFontUsage(elements));
   return svg.toSvg(bounds.width, bounds.height, {
     defs: fontStyles ? `<style>${escapeXml(fontStyles)}</style>` : "",
-    background: options.background ? getTheme(options.scheme).canvas.exportBackground : undefined,
+    background: options.background ? exportBackground(options) : undefined,
   });
 }

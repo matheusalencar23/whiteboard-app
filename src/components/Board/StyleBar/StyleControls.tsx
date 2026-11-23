@@ -15,7 +15,7 @@ import { IconButton } from "../../../ui/IconButton/IconButton";
 import { PanelSection } from "../../../ui/Panel/Panel";
 import { ArrowheadPicker } from "./ArrowheadPicker";
 import { ColorField } from "./ColorField";
-import { FILL_SWATCHES, STROKE_SWATCHES } from "./swatches";
+import { useFillSwatches, useStrokeSwatches } from "./swatches";
 import { ROUTING_OPTIONS } from "./routing";
 import { arrowSelectors, scopeSupports, selectScope, styleSelectors } from "./selectors";
 import { CornerStyleIcon, FillStyleIcon, RoughnessIcon, StrokeStyleIcon, StrokeWidthIcon } from "./StyleIcons";
@@ -130,6 +130,7 @@ export function OpacityField({
 }
 
 export function StrokeControls() {
+  const strokeSwatches = useStrokeSwatches();
   const scope = useBoardStore(selectScope);
   const color = useBoardStore(styleSelectors.strokeColor);
   const width = useBoardStore(styleSelectors.strokeWidth);
@@ -146,7 +147,7 @@ export function StrokeControls() {
         <ColorField
           title="Contorno"
           value={color}
-          swatches={STROKE_SWATCHES}
+          swatches={strokeSwatches}
           onChange={(value) => setStyle({ strokeColor: value })}
           onPreview={(value) => preview({ strokeColor: value })}
           onPreviewEnd={commit}
@@ -192,6 +193,7 @@ export function StrokeControls() {
 }
 
 export function FillControls() {
+  const fillSwatches = useFillSwatches();
   const color = useBoardStore(styleSelectors.fillColor);
   const fillStyle = useBoardStore(styleSelectors.fillStyle);
   const roughness = useBoardStore(styleSelectors.fillRoughness);
@@ -207,7 +209,7 @@ export function FillControls() {
         <ColorField
           title="Preenchimento"
           value={color}
-          swatches={FILL_SWATCHES}
+          swatches={fillSwatches}
           onChange={(value) => setStyle({ fillColor: value })}
           onPreview={(value) => preview({ fillColor: value })}
           onPreviewEnd={commit}

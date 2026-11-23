@@ -40,14 +40,13 @@ import type { BoardStore } from "../../../store/boardStore";
 import { useBoardStore, useBoardStoreApi } from "../../../store/boardStoreContext";
 import { IconButton } from "../../../ui/IconButton/IconButton";
 import { PanelSection } from "../../../ui/Panel/Panel";
-import { AUTO_COLOR, ColorField, type Swatch } from "./ColorField";
+import { AUTO_COLOR, ColorField } from "./ColorField";
 import { ALIGN_OPTIONS } from "./alignOptions";
 import { OptionGroup } from "./StyleControls";
 import { selectSingleTable } from "./selectors";
-import { FILL_SWATCHES } from "./swatches";
+import { useCellSwatches, useFillSwatches } from "./swatches";
 import { useStylePreview } from "./useStylePreview";
 
-const CELL_SWATCHES: Swatch[] = [{ color: AUTO_COLOR, label: "Sem cor própria" }, ...FILL_SWATCHES];
 
 type TableUpdate = (table: TableElement) => TableElement;
 
@@ -96,6 +95,8 @@ function TableControlsContent({ table }: { table: TableElement }) {
   const boardStore = useBoardStoreApi();
   const tableCell = useBoardStore((s) => s.tableCell);
   const { preview, commit } = useTablePreview(table.id);
+  const fillSwatches = useFillSwatches();
+  const cellSwatches = useCellSwatches();
   const { preview: previewStyle, commit: commitStyle } = useStylePreview();
   const setStyle = useBoardStore((s) => s.setStyle);
 
@@ -238,7 +239,7 @@ function TableControlsContent({ table }: { table: TableElement }) {
           <ColorField
             title="Cor do cabeçalho"
             value={table.headerFill}
-            swatches={FILL_SWATCHES}
+            swatches={fillSwatches}
             onChange={(color) => apply((t) => setHeaderFill(t, color))}
             onPreview={(color) => preview((t) => setHeaderFill(t, color))}
             onPreviewEnd={commit}
@@ -249,7 +250,7 @@ function TableControlsContent({ table }: { table: TableElement }) {
         <ColorField
           title="Cor do corpo"
           value={table.style.fillColor}
-          swatches={FILL_SWATCHES}
+          swatches={fillSwatches}
           onChange={(color) => setStyle({ fillColor: color })}
           onPreview={(color) => previewStyle({ fillColor: color })}
           onPreviewEnd={commitStyle}
@@ -260,7 +261,7 @@ function TableControlsContent({ table }: { table: TableElement }) {
           <ColorField
             title="Cor da célula"
             value={cellFill ?? AUTO_COLOR}
-            swatches={CELL_SWATCHES}
+            swatches={cellSwatches}
             onChange={(color) => apply((t) => setCellFill(t, cell, toCellFill(color)))}
             onPreview={(color) => preview((t) => setCellFill(t, cell, toCellFill(color)))}
             onPreviewEnd={commit}

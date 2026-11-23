@@ -16,11 +16,11 @@ import {
   type VerticalAlign,
 } from "../../../lib/elements/types";
 import { FONT_SIZE_PRESETS, FONT_STACKS } from "../../../lib/text";
-import { lightTheme } from "../../../lib/theme";
 import { useBoardStore } from "../../../store/boardStoreContext";
 import { IconButton } from "../../../ui/IconButton/IconButton";
 import { PanelSection } from "../../../ui/Panel/Panel";
-import { AUTO_COLOR, ColorField, type Swatch } from "./ColorField";
+import { AUTO_COLOR, ColorField } from "./ColorField";
+import { useTextSwatches } from "./swatches";
 import { selectSingleTable, selectTextScope, styleSelectors, textSelectors } from "./selectors";
 import { getCellTextTarget, type TableTextScope } from "../../../store/boardStore";
 import { OpacityField, OptionGroup, type Option } from "./StyleControls";
@@ -29,16 +29,6 @@ import { ALIGN_OPTIONS } from "./alignOptions";
 import { focusBoard, useBoardRoot } from "../boardRoot";
 import { SHORTCUTS, formatShortcut } from "../shortcuts";
 
-const { palette } = lightTheme;
-
-const TEXT_SWATCHES: Swatch[] = [
-  { color: AUTO_COLOR, label: "Automática (cor do contorno)" },
-  { color: palette.ink, label: "Preto" },
-  { color: palette.red, label: "Vermelho" },
-  { color: palette.green, label: "Verde" },
-  { color: palette.blue, label: "Azul" },
-  { color: palette.amber, label: "Âmbar" },
-];
 
 const FONT_LABELS: Record<FontFamily, string> = {
   hand: "Manuscrita",
@@ -117,6 +107,7 @@ function FontSizeInput({
 }
 
 export function TextControls() {
+  const textSwatches = useTextSwatches();
   const scope = useBoardStore(selectTextScope).split(",");
   const fontFamily = useBoardStore(textSelectors.fontFamily);
   const fontSize = useBoardStore(textSelectors.fontSize);
@@ -203,7 +194,7 @@ export function TextControls() {
         <ColorField
           title="Cor do texto"
           value={colorValue}
-          swatches={TEXT_SWATCHES}
+          swatches={textSwatches}
           onChange={(value) => setTextStyle({ color: toColor(value) })}
           onPreview={(value) => previewText({ color: toColor(value) })}
           onPreviewEnd={commit}

@@ -216,6 +216,11 @@ function screenCenter({ viewportSize }: BoardState): Point {
 
 export type BoardStore = StoreApi<BoardState>;
 
+export interface InitialStyle {
+  element?: Partial<ElementStyle>;
+  text?: Partial<TextStyle>;
+}
+
 function toolAfterInsert(state: BoardState): Tool {
   return isToolAllowed(state.config, "selection") ? "selection" : state.tool;
 }
@@ -224,12 +229,18 @@ export interface BoardStoreInit {
   scene?: Partial<WhiteboardScene>;
   preferences?: Partial<Preferences>;
   config?: WhiteboardConfig;
+  style?: InitialStyle;
 }
 
 type BoardPatch = Partial<BoardState>;
 type BoardUpdate = BoardPatch | ((state: BoardState) => BoardPatch);
 
-export function createBoardStore({ scene = {}, preferences: given = {}, config = resolveConfig() }: BoardStoreInit = {}): BoardStore {
+export function createBoardStore({
+  scene = {},
+  preferences: given = {},
+  config = resolveConfig(),
+  style = {},
+}: BoardStoreInit = {}): BoardStore {
   const preferences = { ...DEFAULT_PREFERENCES, ...given };
   let noticeCount = 0;
   let pendingIds = new Set<string>();
@@ -292,8 +303,8 @@ export function createBoardStore({ scene = {}, preferences: given = {}, config =
       viewportSize: { width: 0, height: 0 },
       arrowRouting: "straight",
       arrowheads: DEFAULT_ARROWHEADS,
-      currentStyle: DEFAULT_STYLE,
-      currentTextStyle: DEFAULT_TEXT_STYLE,
+      currentStyle: { ...DEFAULT_STYLE, ...style.element },
+      currentTextStyle: { ...DEFAULT_TEXT_STYLE, ...style.text },
       showGrid: preferences.showGrid,
       gridStyle: preferences.gridStyle,
       libraryOpen: preferences.libraryOpen,
@@ -622,7 +633,7 @@ export function createBoardStore({ scene = {}, preferences: given = {}, config =
         set((state) => ({ viewport: zoomAt(state.viewport, screenPoint, factor) })),
       stepZoom: (direction) =>
         set((state) => ({
-          viewport: zoomTo(state.viewport, screenCenter(state), nextZoomStep(state.viewport.zoom, direction)),
+          viewport: zoomTo(state.viewport, screenCenter(state), nextZoomStep(state.viewport.zoom, direction, state.config.zoomSteps)),
         })),
       resetZoom: () => set((state) => ({ viewport: zoomTo(state.viewport, screenCenter(state), 1) })),
     };

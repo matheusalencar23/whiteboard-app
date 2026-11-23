@@ -18,6 +18,7 @@ import { canvasToBlob, renderToCanvas, type ExportOptions } from "../../lib/expo
 import { IconButton } from "../../ui/IconButton/IconButton";
 import {
   createBoardStore,
+  type InitialStyle,
   getPreferences,
   preferencesChanged,
   type BoardStore,
@@ -31,7 +32,7 @@ import { themeVariables } from "../../lib/theme";
 import { PortalContainerContext } from "../../ui/portal";
 import { useTheme } from "../useColorScheme";
 import { useFontStylesheet } from "../fonts";
-import { canEdit, hasBoardMenu, resolveConfig, type WhiteboardConfig } from "../../store/whiteboardConfig";
+import { canEdit, hasBoardMenu, resolveConfig, type WhiteboardConfig, type WhiteboardConfigInput } from "../../store/whiteboardConfig";
 import styles from "./Whiteboard.module.scss";
 
 export interface WhiteboardBackAction {
@@ -61,7 +62,10 @@ function createWhiteboardApi(store: BoardStore): WhiteboardApi {
     redo: () => store.getState().redo(),
     resetHistory: () => store.getState().resetHistory(),
     async exportPng(options) {
-      const canvas = renderToCanvas(store.getState().elements, { ...DEFAULT_PNG_OPTIONS, ...options });
+      const { elements, config } = store.getState();
+      const merged = { ...DEFAULT_PNG_OPTIONS, ...options };
+      const backgroundColor = merged.backgroundColor ?? config.themes[merged.scheme].canvas.exportBackground;
+      const canvas = renderToCanvas(elements, { ...merged, backgroundColor });
       return canvas ? canvasToBlob(canvas) : null;
     },
   };
@@ -76,7 +80,8 @@ export interface WhiteboardProps {
   back?: WhiteboardBackAction;
   autoFocus?: boolean;
   loadFonts?: boolean;
-  config?: Partial<WhiteboardConfig>;
+  config?: WhiteboardConfigInput;
+  initialStyle?: InitialStyle;
 }
 
 export function Whiteboard({
@@ -89,9 +94,15 @@ export function Whiteboard({
   autoFocus = false,
   loadFonts = true,
   config,
+  initialStyle,
 }: WhiteboardProps) {
   const [store] = useState(() =>
-    createBoardStore({ scene: initialData, preferences: initialPreferences, config: resolveConfig(config) }),
+    createBoardStore({
+      scene: initialData,
+      preferences: initialPreferences,
+      config: resolveConfig(config),
+      style: initialStyle,
+    }),
   );
   useLayoutEffect(() => {
     store.getState().setConfig(resolveConfig(config));

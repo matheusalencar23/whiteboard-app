@@ -4,6 +4,7 @@ import styles from "./Export.module.scss";
 import { Modal } from "../../../ui/Modal/Modal";
 import { Button } from "../../../ui/Button/Button";
 import { useBoardStore } from "../../../store/boardStoreContext";
+import type { WhiteboardConfig } from "../../../store/whiteboardConfig";
 import { getExportBounds, getPngSize, renderToCanvas, type ExportOptions } from "../../../lib/export/exportScene";
 import { canCopyImage, copyPng, downloadPng, downloadSvg } from "./exportActions";
 
@@ -15,8 +16,9 @@ type Scope = "all" | "selection";
 
 type Background = "light" | "dark" | "transparent";
 
-function backgroundOptions(background: Background): Omit<ExportOptions, "scale"> {
-  return { background: background !== "transparent", scheme: background === "dark" ? "dark" : "light" };
+function backgroundOptions(background: Background, themes: WhiteboardConfig["themes"]): Omit<ExportOptions, "scale"> {
+  const scheme = background === "dark" ? "dark" : "light";
+  return { background: background !== "transparent", scheme, backgroundColor: themes[scheme].canvas.exportBackground };
 }
 
 const SCALES = [1, 2, 3] as const;
@@ -58,6 +60,7 @@ export function ExportDialog({ onClose }: ExportDialogProps) {
   const allElements = useBoardStore((s) => s.elements);
   const selectedIds = useBoardStore((s) => s.selectedIds);
   const name = useBoardStore((s) => s.name);
+  const themes = useBoardStore((s) => s.config.themes);
   const hasSelection = selectedIds.length > 0;
 
   const [scope, setScope] = useState<Scope>(hasSelection ? "selection" : "all");
@@ -72,7 +75,7 @@ export function ExportDialog({ onClose }: ExportDialogProps) {
     return allElements.filter((el) => ids.has(el.id));
   }, [allElements, selectedIds, scope, hasSelection]);
 
-  const options: ExportOptions = { ...backgroundOptions(background), scale };
+  const options: ExportOptions = { ...backgroundOptions(background, themes), scale };
   const bounds = getExportBounds(elements);
   const pngSize = bounds ? getPngSize(bounds, scale) : null;
 
@@ -80,9 +83,9 @@ export function ExportDialog({ onClose }: ExportDialogProps) {
     const exportBounds = getExportBounds(elements);
     if (!exportBounds) return null;
     const fit = Math.min(PREVIEW_WIDTH / exportBounds.width, PREVIEW_HEIGHT / exportBounds.height, 2);
-    const previewOptions = { ...backgroundOptions(background), scale: fit * window.devicePixelRatio };
+    const previewOptions = { ...backgroundOptions(background, themes), scale: fit * window.devicePixelRatio };
     return renderToCanvas(elements, previewOptions)?.toDataURL() ?? null;
-  }, [elements, background]);
+  }, [elements, background, themes]);
 
   async function run(action: () => Promise<void>, success?: string) {
     setBusy(true);

@@ -4,13 +4,20 @@ import styles from "./ZoomIndicator.module.scss";
 import { IconButton } from "../../../ui/IconButton/IconButton";
 import { Tooltip } from "../../../ui/Tooltip/Tooltip";
 import { useBoardStore } from "../../../store/boardStoreContext";
-import { MAX_ZOOM, MIN_ZOOM } from "../../../lib/viewport";
+import { nextZoomStep } from "../../../lib/viewport";
+import type { BoardState } from "../../../store/boardStore";
 import { SHORTCUTS, formatShortcut } from "../shortcuts";
+
+function canStepZoom(state: BoardState, direction: 1 | -1): boolean {
+  return nextZoomStep(state.viewport.zoom, direction, state.config.zoomSteps) !== state.viewport.zoom;
+}
 
 export function ZoomIndicator() {
   const zoom = useBoardStore((s) => s.viewport.zoom);
   const stepZoom = useBoardStore((s) => s.stepZoom);
   const resetZoom = useBoardStore((s) => s.resetZoom);
+  const canZoomOut = useBoardStore((s) => canStepZoom(s, -1));
+  const canZoomIn = useBoardStore((s) => canStepZoom(s, 1));
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
 
   function showTooltip(e: React.SyntheticEvent<HTMLButtonElement>) {
@@ -25,7 +32,7 @@ export function ZoomIndicator() {
         shortcut={formatShortcut(SHORTCUTS.zoomOut.keys)}
         size="sm"
         tooltipSide="top"
-        disabled={zoom <= MIN_ZOOM}
+        disabled={!canZoomOut}
         onClick={() => stepZoom(-1)}
       />
       <button
@@ -52,7 +59,7 @@ export function ZoomIndicator() {
         shortcut={formatShortcut(SHORTCUTS.zoomIn.keys)}
         size="sm"
         tooltipSide="top"
-        disabled={zoom >= MAX_ZOOM}
+        disabled={!canZoomIn}
         onClick={() => stepZoom(1)}
       />
     </div>
